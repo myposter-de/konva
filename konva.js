@@ -8,7 +8,7 @@
    * Konva JavaScript Framework v3.4.1
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Thu Jul 18 2019
+   * Date: Mon Jul 29 2019
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -5812,7 +5812,7 @@
           setPointerCapture(pointerId, this);
       };
       Stage.prototype.releaseCapture = function (pointerId) {
-          releaseCapture(pointerId, this);
+          releaseCapture(pointerId);
       };
       /**
        * returns a {@link Konva.Collection} of layers
@@ -7199,7 +7199,7 @@
           setPointerCapture(pointerId, this);
       };
       Shape.prototype.releaseCapture = function (pointerId) {
-          releaseCapture(pointerId, this);
+          releaseCapture(pointerId);
       };
       return Shape;
   }(Node));
@@ -12781,13 +12781,32 @@
           return _this;
       }
       Text.prototype._sceneFunc = function (context) {
+          // context.translate = function (x, y) {
+          //   console.log(x, y);
+          // }
+          // context = {
+          //   setAttr: function(attr) {
+          //     console.log(attr)
+          //   },
+          //   translate: function (x, y) {
+          //     console.log(x, y);
+          //   },
+          //   save: function() {
+          //     console.log('save')
+          //   },
+          //   fillStrokeShape: function() {
+          //     console.log('fillStrokeShape')
+          //   },
+          //   restore: function() {
+          //     console.log('restore')
+          //   }
+          // };
           var padding = this.padding(), fontSize = this.fontSize(), lineHeightPx = this.lineHeight() * fontSize, textArr = this.textArr, textArrLen = textArr.length, verticalAlign = this.verticalAlign(), alignY = 0, align = this.align(), totalWidth = this.getWidth(), letterSpacing = this.letterSpacing(), fill = this.fill(), textDecoration = this.textDecoration(), shouldUnderline = textDecoration.indexOf('underline') !== -1, shouldLineThrough = textDecoration.indexOf('line-through') !== -1, n;
           var translateY = 0;
-          var translateY = lineHeightPx / 2;
+          var translateY = 0;
           var lineTranslateX = 0;
           var lineTranslateY = 0;
           context.setAttr('font', this._getContextFont());
-          context.setAttr('textBaseline', MIDDLE);
           context.setAttr('textAlign', LEFT$1);
           // handle vertical alignment
           if (verticalAlign === MIDDLE) {
@@ -12796,7 +12815,14 @@
           else if (verticalAlign === BOTTOM) {
               alignY = this.getHeight() - textArrLen * lineHeightPx - padding * 2;
           }
-          context.translate(padding, alignY + padding);
+          if (padding) {
+              context.translate(padding, alignY + padding + this.textOffsetY());
+              console.log(alignY + padding + this.textOffsetY());
+              // context.translate(0, alignY + padding + lineHeightPx / 2);
+          }
+          else {
+              context.translate(0, this.textOffsetY());
+          }
           // draw text lines
           for (n = 0; n < textArrLen; n++) {
               var lineTranslateX = 0;
@@ -12811,6 +12837,7 @@
                   lineTranslateX += (totalWidth - width - padding * 2) / 2;
               }
               if (shouldUnderline) {
+                  console.log('underline');
                   context.save();
                   context.beginPath();
                   context.moveTo(lineTranslateX, translateY + lineTranslateY + Math.round(fontSize / 2));
@@ -12829,6 +12856,7 @@
                   context.restore();
               }
               if (shouldLineThrough) {
+                  console.log('lineThrough');
                   context.save();
                   context.beginPath();
                   context.moveTo(lineTranslateX, translateY + lineTranslateY);
@@ -12845,6 +12873,7 @@
                   context.restore();
               }
               if (letterSpacing !== 0 || align === JUSTIFY) {
+                  console.log('align justify');
                   //   var words = text.split(' ');
                   spacesNumber = text.split(' ').length - 1;
                   for (var li = 0; li < text.length; li++) {
@@ -13317,6 +13346,20 @@
    * text.textDecoration('underline line-through');
    */
   Factory.addGetterSetter(Text, 'textDecoration', '');
+  /**
+   * get/set textOffsetY
+   * @name Konva.Text#textDecoration
+   * @method
+   * @param {Number} textOffsetY
+   * @returns {Number}
+   * @example
+   * // get text offsetY
+   * var text = text.textOffsetY();
+   *
+   * // set text offsetY
+   * text.textOffsetY(10);
+   */
+  Factory.addGetterSetter(Text, 'textOffsetY', 0, getNumberValidator());
   Collection.mapMethods(Text);
 
   var EMPTY_STRING$2 = '', NORMAL$1 = 'normal';

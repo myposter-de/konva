@@ -22,6 +22,7 @@ export interface TextConfig extends ShapeConfig {
   lineHeight?: number;
   wrap?: string;
   ellipsis?: boolean;
+  textOffsetY?: number;
 }
 
 // constants
@@ -142,6 +143,26 @@ export class Text extends Shape<TextConfig> {
   }
 
   _sceneFunc(context) {
+    // context.translate = function (x, y) {
+    //   console.log(x, y);
+    // }
+    // context = {
+    //   setAttr: function(attr) {
+    //     console.log(attr)
+    //   },
+    //   translate: function (x, y) {
+    //     console.log(x, y);
+    //   },
+    //   save: function() {
+    //     console.log('save')
+    //   },
+    //   fillStrokeShape: function() {
+    //     console.log('fillStrokeShape')
+    //   },
+    //   restore: function() {
+    //     console.log('restore')
+    //   }
+    // };
     var padding = this.padding(),
       fontSize = this.fontSize(),
       lineHeightPx = this.lineHeight() * fontSize,
@@ -159,14 +180,12 @@ export class Text extends Shape<TextConfig> {
       n;
 
     var translateY = 0;
-    var translateY = lineHeightPx / 2;
+    var translateY = 0;
 
     var lineTranslateX = 0;
     var lineTranslateY = 0;
 
     context.setAttr('font', this._getContextFont());
-
-    context.setAttr('textBaseline', MIDDLE);
 
     context.setAttr('textAlign', LEFT);
 
@@ -177,7 +196,13 @@ export class Text extends Shape<TextConfig> {
       alignY = this.getHeight() - textArrLen * lineHeightPx - padding * 2;
     }
 
-    context.translate(padding, alignY + padding);
+    if (padding) {
+      context.translate(padding, alignY + padding + this.textOffsetY());
+      console.log(alignY + padding + this.textOffsetY())
+      // context.translate(0, alignY + padding + lineHeightPx / 2);
+    } else {
+      context.translate(0, this.textOffsetY());
+    }
 
     // draw text lines
     for (n = 0; n < textArrLen; n++) {
@@ -200,6 +225,7 @@ export class Text extends Shape<TextConfig> {
       }
 
       if (shouldUnderline) {
+        console.log('underline')
         context.save();
         context.beginPath();
 
@@ -226,6 +252,7 @@ export class Text extends Shape<TextConfig> {
         context.restore();
       }
       if (shouldLineThrough) {
+        console.log('lineThrough')
         context.save();
         context.beginPath();
         context.moveTo(lineTranslateX, translateY + lineTranslateY);
@@ -245,6 +272,7 @@ export class Text extends Shape<TextConfig> {
         context.restore();
       }
       if (letterSpacing !== 0 || align === JUSTIFY) {
+        console.log('align justify')
         //   var words = text.split(' ');
         spacesNumber = text.split(' ').length - 1;
         for (var li = 0; li < text.length; li++) {
@@ -532,6 +560,7 @@ export class Text extends Shape<TextConfig> {
   text: GetSet<string, this>;
   wrap: GetSet<string, this>;
   ellipsis: GetSet<boolean, this>;
+  textOffsetY: GetSet<number, this>;
 }
 
 Text.prototype._fillFunc = _fillFunc;
@@ -795,5 +824,21 @@ Factory.addGetterSetter(Text, 'text', '', getStringValidator());
  */
 
 Factory.addGetterSetter(Text, 'textDecoration', '');
+
+/**
+ * get/set textOffsetY
+ * @name Konva.Text#textDecoration
+ * @method
+ * @param {Number} textOffsetY
+ * @returns {Number}
+ * @example
+ * // get text offsetY
+ * var text = text.textOffsetY();
+ *
+ * // set text offsetY
+ * text.textOffsetY(10);
+ */
+
+Factory.addGetterSetter(Text, 'textOffsetY', 0, getNumberValidator());
 
 Collection.mapMethods(Text);
