@@ -143,26 +143,6 @@ export class Text extends Shape<TextConfig> {
   }
 
   _sceneFunc(context) {
-    // context.translate = function (x, y) {
-    //   console.log(x, y);
-    // }
-    // context = {
-    //   setAttr: function(attr) {
-    //     console.log(attr)
-    //   },
-    //   translate: function (x, y) {
-    //     console.log(x, y);
-    //   },
-    //   save: function() {
-    //     console.log('save')
-    //   },
-    //   fillStrokeShape: function() {
-    //     console.log('fillStrokeShape')
-    //   },
-    //   restore: function() {
-    //     console.log('restore')
-    //   }
-    // };
     var padding = this.padding(),
       fontSize = this.fontSize(),
       lineHeightPx = this.lineHeight() * fontSize,
@@ -198,8 +178,6 @@ export class Text extends Shape<TextConfig> {
 
     if (padding) {
       context.translate(padding, alignY + padding + this.textOffsetY());
-      console.log(alignY + padding + this.textOffsetY())
-      // context.translate(0, alignY + padding + lineHeightPx / 2);
     } else {
       context.translate(0, this.textOffsetY());
     }
@@ -225,7 +203,6 @@ export class Text extends Shape<TextConfig> {
       }
 
       if (shouldUnderline) {
-        console.log('underline')
         context.save();
         context.beginPath();
 
@@ -252,7 +229,6 @@ export class Text extends Shape<TextConfig> {
         context.restore();
       }
       if (shouldLineThrough) {
-        console.log('lineThrough')
         context.save();
         context.beginPath();
         context.moveTo(lineTranslateX, translateY + lineTranslateY);
@@ -272,7 +248,6 @@ export class Text extends Shape<TextConfig> {
         context.restore();
       }
       if (letterSpacing !== 0 || align === JUSTIFY) {
-        console.log('align justify')
         //   var words = text.split(' ');
         spacesNumber = text.split(' ').length - 1;
         for (var li = 0; li < text.length; li++) {

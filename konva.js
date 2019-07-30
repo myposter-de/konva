@@ -8,7 +8,7 @@
    * Konva JavaScript Framework v3.4.1
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Mon Jul 29 2019
+   * Date: Tue Jul 30 2019
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -12781,26 +12781,6 @@
           return _this;
       }
       Text.prototype._sceneFunc = function (context) {
-          // context.translate = function (x, y) {
-          //   console.log(x, y);
-          // }
-          // context = {
-          //   setAttr: function(attr) {
-          //     console.log(attr)
-          //   },
-          //   translate: function (x, y) {
-          //     console.log(x, y);
-          //   },
-          //   save: function() {
-          //     console.log('save')
-          //   },
-          //   fillStrokeShape: function() {
-          //     console.log('fillStrokeShape')
-          //   },
-          //   restore: function() {
-          //     console.log('restore')
-          //   }
-          // };
           var padding = this.padding(), fontSize = this.fontSize(), lineHeightPx = this.lineHeight() * fontSize, textArr = this.textArr, textArrLen = textArr.length, verticalAlign = this.verticalAlign(), alignY = 0, align = this.align(), totalWidth = this.getWidth(), letterSpacing = this.letterSpacing(), fill = this.fill(), textDecoration = this.textDecoration(), shouldUnderline = textDecoration.indexOf('underline') !== -1, shouldLineThrough = textDecoration.indexOf('line-through') !== -1, n;
           var translateY = 0;
           var translateY = 0;
@@ -12817,8 +12797,6 @@
           }
           if (padding) {
               context.translate(padding, alignY + padding + this.textOffsetY());
-              console.log(alignY + padding + this.textOffsetY());
-              // context.translate(0, alignY + padding + lineHeightPx / 2);
           }
           else {
               context.translate(0, this.textOffsetY());
@@ -12837,7 +12815,6 @@
                   lineTranslateX += (totalWidth - width - padding * 2) / 2;
               }
               if (shouldUnderline) {
-                  console.log('underline');
                   context.save();
                   context.beginPath();
                   context.moveTo(lineTranslateX, translateY + lineTranslateY + Math.round(fontSize / 2));
@@ -12856,7 +12833,6 @@
                   context.restore();
               }
               if (shouldLineThrough) {
-                  console.log('lineThrough');
                   context.save();
                   context.beginPath();
                   context.moveTo(lineTranslateX, translateY + lineTranslateY);
@@ -12873,7 +12849,6 @@
                   context.restore();
               }
               if (letterSpacing !== 0 || align === JUSTIFY) {
-                  console.log('align justify');
                   //   var words = text.split(' ');
                   spacesNumber = text.split(' ').length - 1;
                   for (var li = 0; li < text.length; li++) {
