@@ -1,3 +1,4 @@
+import { Point } from './Util';
 import { BaseLayer } from './BaseLayer';
 import { HitCanvas } from './Canvas';
 import { GetSet } from './types';
@@ -5,7 +6,7 @@ export declare class Layer extends BaseLayer {
     hitCanvas: HitCanvas;
     _setCanvasSize(width: any, height: any): void;
     _validateAdd(child: any): void;
-    getIntersection(pos: any, selector: any): any;
+    getIntersection(pos: Point, selector?: string): any;
     _getIntersection(pos: any): {
         shape: any;
         antialiased?: undefined;

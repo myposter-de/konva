@@ -5,6 +5,7 @@ import { GetSet, Vector2d, IRect } from './types';
 import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
+import { BaseLayer } from './BaseLayer';
 export declare const ids: any;
 export declare const names: any;
 export declare const _removeId: (id: string, node: any) => void;
@@ -68,6 +69,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     children: Collection<any>;
     nodeType: string;
     className: string;
+    _dragEventId: number | null;
     constructor(config?: Config);
     hasChildren(): boolean;
     getChildren(): Collection<any>;
@@ -86,6 +88,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
         pixelRatio?: number;
         imageSmoothingEnabled?: boolean;
     }): this;
+    isCached(): boolean;
     abstract drawScene(canvas?: Canvas, top?: Node, caching?: boolean, skipBuffer?: boolean): void;
     abstract drawHit(canvas?: Canvas, top?: Node, caching?: boolean, skipBuffer?: boolean): void;
     getClientRect(config?: {
@@ -171,8 +174,8 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     isAncestorOf(node: any): boolean;
     findAncestor(selector: any, includeSelf: any, stopNode: any): Node<NodeConfig>;
     _isMatch(selector: any): any;
-    getLayer(): any;
-    getStage(): any;
+    getLayer(): BaseLayer | null;
+    getStage(): Stage | null;
     _getStage(): Stage | undefined;
     fire(eventType: any, evt: any, bubble?: any): this;
     getAbsoluteTransform(top?: Node): Transform;
@@ -228,8 +231,9 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _fireAndBubble(eventType: any, evt: any, compareShape?: any): void;
     _fire(eventType: any, evt: any): void;
     draw(): this;
-    startDrag(): void;
-    _setDragPosition(evt?: any): void;
+    _createDragElement(evt: any): void;
+    startDrag(evt?: any): void;
+    _setDragPosition(evt: any, elem: any): void;
     stopDrag(): void;
     setDraggable(draggable: any): void;
     isDragging(): boolean;
@@ -256,6 +260,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     value: GetSet<number, this>;
     dragBoundFunc: GetSet<(pos: Vector2d) => Vector2d, this>;
     draggable: GetSet<boolean, this>;
+    dragDistance: GetSet<number, this>;
     embossBlend: GetSet<boolean, this>;
     embossDirection: GetSet<string, this>;
     embossStrength: GetSet<number, this>;

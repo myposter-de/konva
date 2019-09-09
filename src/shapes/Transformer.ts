@@ -35,6 +35,8 @@ export interface TransformerConfig extends ContainerConfig {
   boundBoxFunc?: (oldBox: Box, newBox: Box) => Box;
 }
 
+var EVENTS_NAME = 'tr-konva';
+
 var ATTR_CHANGE_LIST = [
   'resizeEnabledChange',
   'rotateAnchorOffsetChange',
@@ -50,23 +52,27 @@ var ATTR_CHANGE_LIST = [
   'anchorFillChange',
   'anchorCornerRadiusChange',
   'ignoreStrokeChange'
-].join(' ');
+]
+  .map(e => e + `.${EVENTS_NAME}`)
+  .join(' ');
 
 var NODE_RECT = 'nodeRect';
 
 var TRANSFORM_CHANGE_STR = [
-  'widthChange.tr',
-  'heightChange.tr',
-  'scaleXChange.tr',
-  'scaleYChange.tr',
-  'skewXChange.tr',
-  'skewYChange.tr',
-  'rotationChange.tr',
-  'offsetXChange.tr',
-  'offsetYChange.tr',
-  'transformsEnabledChange.tr',
-  'strokeWidthChange.tr'
-].join(' ');
+  'widthChange',
+  'heightChange',
+  'scaleXChange',
+  'scaleYChange',
+  'skewXChange',
+  'skewYChange',
+  'rotationChange',
+  'offsetXChange',
+  'offsetYChange',
+  'transformsEnabledChange',
+  'strokeWidthChange'
+]
+  .map(e => e + `.${EVENTS_NAME}`)
+  .join(' ');
 
 var ANGLES = {
   'top-left': -45,
@@ -174,7 +180,7 @@ var MAX_SAFE_INTEGER = 100000000;
 
 export class Transformer extends Group {
   _node: Node;
-  movingResizer: string;
+  _movingAnchorName: string;
   _transforming = false;
   sin: number;
   cos: number;
@@ -217,7 +223,7 @@ export class Transformer extends Group {
     this._resetTransformCache();
 
     const additionalEvents = node._attrsAffectingSize
-      .map(prop => prop + 'Change.tr')
+      .map(prop => prop + 'Change.' + EVENTS_NAME)
       .join(' ');
 
     const onChange = () => {
@@ -228,7 +234,9 @@ export class Transformer extends Group {
     };
     node.on(additionalEvents, onChange);
     node.on(TRANSFORM_CHANGE_STR, onChange);
-    node.on('xChange.tr yChange.tr', () => this._resetTransformCache());
+    node.on(`xChange.${EVENTS_NAME} yChange.${EVENTS_NAME}`, () =>
+      this._resetTransformCache()
+    );
     // we may need it if we set node in initial props
     // so elements are not defined yet
     var elementsCreated = !!this.findOne('.top-left');
@@ -250,7 +258,7 @@ export class Transformer extends Group {
    */
   detach() {
     if (this.getNode()) {
-      this.getNode().off('.tr');
+      this.getNode().off('.' + EVENTS_NAME);
       this._node = undefined;
     }
     this._resetTransformCache();
@@ -397,7 +405,7 @@ export class Transformer extends Group {
     this.add(back);
   }
   _handleMouseDown(e) {
-    this.movingResizer = e.target.name().split(' ')[0];
+    this._movingAnchorName = e.target.name().split(' ')[0];
 
     // var node = this.getNode();
     var attrs = this._getNodeRect();
@@ -419,8 +427,8 @@ export class Transformer extends Group {
   }
   _handleMouseMove(e) {
     var x, y, newHypotenuse;
-    var resizerNode = this.findOne('.' + this.movingResizer);
-    var stage = resizerNode.getStage();
+    var anchorNode = this.findOne('.' + this._movingAnchorName);
+    var stage = anchorNode.getStage();
 
     var box = stage.getContent().getBoundingClientRect();
     var zeroPoint = {
@@ -436,106 +444,126 @@ export class Transformer extends Group {
       y: pointerPos.top - zeroPoint.y
     };
 
-    resizerNode.setAbsolutePosition(newAbsPos);
+    anchorNode.setAbsolutePosition(newAbsPos);
 
     var keepProportion = this.keepRatio() || e.shiftKey;
 
     // console.log(keepProportion);
 
-    if (this.movingResizer === 'top-left') {
+    if (this._movingAnchorName === 'top-left') {
       if (keepProportion) {
         newHypotenuse = Math.sqrt(
-          Math.pow(this.findOne('.bottom-right').x() - resizerNode.x(), 2) +
-            Math.pow(this.findOne('.bottom-right').y() - resizerNode.y(), 2)
+          Math.pow(this.findOne('.bottom-right').x() - anchorNode.x(), 2) +
+            Math.pow(this.findOne('.bottom-right').y() - anchorNode.y(), 2)
         );
 
-        var reverse =
+        var reverseX =
           this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
             ? -1
             : 1;
 
-        x = newHypotenuse * this.cos * reverse;
-        y = newHypotenuse * this.sin * reverse;
+        var reverseY =
+          this.findOne('.top-left').y() > this.findOne('.bottom-right').y()
+            ? -1
+            : 1;
+
+        x = newHypotenuse * this.cos * reverseX;
+        y = newHypotenuse * this.sin * reverseY;
 
         this.findOne('.top-left').x(this.findOne('.bottom-right').x() - x);
         this.findOne('.top-left').y(this.findOne('.bottom-right').y() - y);
       }
-    } else if (this.movingResizer === 'top-center') {
-      this.findOne('.top-left').y(resizerNode.y());
-    } else if (this.movingResizer === 'top-right') {
+    } else if (this._movingAnchorName === 'top-center') {
+      this.findOne('.top-left').y(anchorNode.y());
+    } else if (this._movingAnchorName === 'top-right') {
       if (keepProportion) {
         newHypotenuse = Math.sqrt(
-          Math.pow(this.findOne('.bottom-left').x() - resizerNode.x(), 2) +
-            Math.pow(this.findOne('.bottom-left').y() - resizerNode.y(), 2)
+          Math.pow(this.findOne('.bottom-left').x() - anchorNode.x(), 2) +
+            Math.pow(this.findOne('.bottom-left').y() - anchorNode.y(), 2)
         );
 
-        var reverse =
+        var reverseX =
           this.findOne('.top-right').x() < this.findOne('.top-left').x()
             ? -1
             : 1;
 
-        x = newHypotenuse * this.cos * reverse;
-        y = newHypotenuse * this.sin * reverse;
+        var reverseY =
+          this.findOne('.top-right').y() > this.findOne('.bottom-left').y()
+            ? -1
+            : 1;
+
+        x = newHypotenuse * this.cos * reverseX;
+        y = newHypotenuse * this.sin * reverseY;
 
         this.findOne('.top-right').x(x);
         this.findOne('.top-right').y(this.findOne('.bottom-left').y() - y);
       }
-      var pos = resizerNode.position();
+      var pos = anchorNode.position();
 
       this.findOne('.top-left').y(pos.y);
       this.findOne('.bottom-right').x(pos.x);
-    } else if (this.movingResizer === 'middle-left') {
-      this.findOne('.top-left').x(resizerNode.x());
-    } else if (this.movingResizer === 'middle-right') {
-      this.findOne('.bottom-right').x(resizerNode.x());
-    } else if (this.movingResizer === 'bottom-left') {
+    } else if (this._movingAnchorName === 'middle-left') {
+      this.findOne('.top-left').x(anchorNode.x());
+    } else if (this._movingAnchorName === 'middle-right') {
+      this.findOne('.bottom-right').x(anchorNode.x());
+    } else if (this._movingAnchorName === 'bottom-left') {
       if (keepProportion) {
         newHypotenuse = Math.sqrt(
-          Math.pow(this.findOne('.top-right').x() - resizerNode.x(), 2) +
-            Math.pow(this.findOne('.top-right').y() - resizerNode.y(), 2)
+          Math.pow(this.findOne('.top-right').x() - anchorNode.x(), 2) +
+            Math.pow(this.findOne('.top-right').y() - anchorNode.y(), 2)
         );
 
-        var reverse =
+        var reverseX =
           this.findOne('.top-right').x() < this.findOne('.bottom-left').x()
             ? -1
             : 1;
 
-        x = newHypotenuse * this.cos * reverse;
-        y = newHypotenuse * this.sin * reverse;
+        var reverseY =
+          this.findOne('.bottom-right').y() < this.findOne('.top-left').y()
+            ? -1
+            : 1;
+
+        x = newHypotenuse * this.cos * reverseX;
+        y = newHypotenuse * this.sin * reverseY;
 
         this.findOne('.bottom-left').x(this.findOne('.top-right').x() - x);
         this.findOne('.bottom-left').y(y);
       }
 
-      pos = resizerNode.position();
+      pos = anchorNode.position();
 
       this.findOne('.top-left').x(pos.x);
       this.findOne('.bottom-right').y(pos.y);
-    } else if (this.movingResizer === 'bottom-center') {
-      this.findOne('.bottom-right').y(resizerNode.y());
-    } else if (this.movingResizer === 'bottom-right') {
+    } else if (this._movingAnchorName === 'bottom-center') {
+      this.findOne('.bottom-right').y(anchorNode.y());
+    } else if (this._movingAnchorName === 'bottom-right') {
       if (keepProportion) {
         newHypotenuse = Math.sqrt(
           Math.pow(this.findOne('.bottom-right').x(), 2) +
             Math.pow(this.findOne('.bottom-right').y(), 2)
         );
 
-        var reverse =
+        var reverseX =
           this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
             ? -1
             : 1;
 
-        x = newHypotenuse * this.cos * reverse;
-        y = newHypotenuse * this.sin * reverse;
+        var reverseY =
+          this.findOne('.top-left').y() > this.findOne('.bottom-right').y()
+            ? -1
+            : 1;
+
+        x = newHypotenuse * this.cos * reverseX;
+        y = newHypotenuse * this.sin * reverseY;
 
         this.findOne('.bottom-right').x(x);
         this.findOne('.bottom-right').y(y);
       }
-    } else if (this.movingResizer === 'rotater') {
+    } else if (this._movingAnchorName === 'rotater') {
       var padding = this.padding();
       var attrs = this._getNodeRect();
-      x = resizerNode.x() - attrs.width / 2;
-      y = -resizerNode.y() + attrs.height / 2;
+      x = anchorNode.x() - attrs.width / 2;
+      y = -anchorNode.y() + attrs.height / 2;
 
       var dAlpha = Math.atan2(-y, x) + Math.PI / 2;
 
@@ -591,12 +619,13 @@ export class Transformer extends Group {
     } else {
       console.error(
         new Error(
-          'Wrong position argument of selection resizer: ' + this.movingResizer
+          'Wrong position argument of selection resizer: ' +
+            this._movingAnchorName
         )
       );
     }
 
-    if (this.movingResizer === 'rotater') {
+    if (this._movingAnchorName === 'rotater') {
       return;
     }
 
@@ -831,9 +860,9 @@ export class Transformer extends Group {
   stopTransform() {
     if (this._transforming) {
       this._removeEvents();
-      var resizerNode = this.findOne('.' + this.movingResizer);
-      if (resizerNode) {
-        resizerNode.stopDrag();
+      var anchorNode = this.findOne('.' + this._movingAnchorName);
+      if (anchorNode) {
+        anchorNode.stopDrag();
       }
     }
   }

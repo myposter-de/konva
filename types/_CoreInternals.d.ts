@@ -19,6 +19,8 @@ export declare const Konva: {
     getAngle(angle: any): any;
     enableTrace: boolean;
     _pointerEventsEnabled: boolean;
+    hitOnDragEnabled: boolean;
+    captureTouchEventsEnabled: boolean;
     listenClickTap: boolean;
     inDblClickWindow: boolean;
     pixelRatio: any;
@@ -108,6 +110,12 @@ export declare const Konva: {
             b: number;
             a: number;
         };
+        _hslColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        };
         haveIntersection(r1: import("./types").IRect, r2: import("./types").IRect): boolean;
         cloneObject<Any>(obj: Any): Any;
         cloneArray(arr: any[]): any[];
@@ -127,6 +135,7 @@ export declare const Konva: {
         _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): any[];
         _prepareToStringify(obj: any): any;
         _assign<T, U>(target: T, source: U): T & U;
+        _getFirstPointerId(evt: any): any;
     };
     Node: typeof Node;
     ids: any;
@@ -138,18 +147,16 @@ export declare const Konva: {
     FastLayer: typeof FastLayer;
     Group: typeof Group;
     DD: {
-        startPointerPos: {
-            x: number;
-            y: number;
-        };
-        anim: Animation;
-        isDragging: boolean;
+        readonly isDragging: boolean;
         justDragged: boolean;
-        offset: {
-            x: number;
-            y: number;
-        };
-        node: any;
+        readonly node: Node<import("./Node").NodeConfig>;
+        _dragElements: Map<number, {
+            node: Node<import("./Node").NodeConfig>;
+            startPointerPos: import("./types").Vector2d;
+            offset: import("./types").Vector2d;
+            pointerId?: number;
+            dragStatus: "ready" | "dragging" | "stopped";
+        }>;
         _drag(evt: any): void;
         _endDragBefore(evt: any): void;
         _endDragAfter(evt: any): void;

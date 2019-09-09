@@ -1,17 +1,16 @@
-import { Animation } from './Animation';
+import { Node } from './Node';
+import { Vector2d } from './types';
 export declare const DD: {
-    startPointerPos: {
-        x: number;
-        y: number;
-    };
-    anim: Animation;
-    isDragging: boolean;
+    readonly isDragging: boolean;
     justDragged: boolean;
-    offset: {
-        x: number;
-        y: number;
-    };
-    node: any;
+    readonly node: Node<import("./Node").NodeConfig>;
+    _dragElements: Map<number, {
+        node: Node<import("./Node").NodeConfig>;
+        startPointerPos: Vector2d;
+        offset: Vector2d;
+        pointerId?: number;
+        dragStatus: "ready" | "dragging" | "stopped";
+    }>;
     _drag(evt: any): void;
     _endDragBefore(evt: any): void;
     _endDragAfter(evt: any): void;

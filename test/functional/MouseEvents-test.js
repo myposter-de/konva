@@ -162,7 +162,6 @@ suite('MouseEvents', function() {
       y: 112
     });
 
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 291,
       y: 112
@@ -202,7 +201,6 @@ suite('MouseEvents', function() {
       x: 291,
       y: 112
     });
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 291,
       y: 112
@@ -215,7 +213,6 @@ suite('MouseEvents', function() {
       x: 291,
       y: 112
     });
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 291,
       y: 112
@@ -232,7 +229,6 @@ suite('MouseEvents', function() {
       x: 291,
       y: 112
     });
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 291,
       y: 112
@@ -297,12 +293,10 @@ suite('MouseEvents', function() {
       y: 113
     });
 
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 284,
       y: 113
     });
-    Konva.DD._endDragAfter({ dragEndNode: redCircle });
 
     assert.equal(redClicks, 1, 'red circle should have 1 click');
     assert.equal(greenClicks, 0, 'green circle should have 0 clicks');
@@ -313,12 +307,10 @@ suite('MouseEvents', function() {
       y: 108
     });
 
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 397,
       y: 108
     });
-    Konva.DD._endDragAfter({ dragEndNode: redCircle });
 
     assert.equal(redClicks, 1, 'red circle should have 1 click');
     assert.equal(greenClicks, 1, 'green circle should have 1 click');
@@ -329,12 +321,10 @@ suite('MouseEvents', function() {
       y: 113
     });
 
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 397,
       y: 108
     });
-    Konva.DD._endDragAfter({ dragEndNode: redCircle });
 
     assert.equal(redClicks, 1, 'red circle should still have 1 click');
     assert.equal(greenClicks, 1, 'green circle should still have 1 click');
@@ -364,8 +354,6 @@ suite('MouseEvents', function() {
     layer.add(text);
     stage.add(layer);
 
-    var top = stage.content.getBoundingClientRect().top;
-
     showHit(layer);
 
     stage.simulateMouseDown({
@@ -373,12 +361,10 @@ suite('MouseEvents', function() {
       y: 120
     });
 
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 300,
       y: 120
     });
-    Konva.DD._endDragAfter({ dragEndNode: text });
 
     assert.equal(
       click,
@@ -527,7 +513,7 @@ suite('MouseEvents', function() {
       });
 
       assert(mouseover, '1) mouseover should be true');
-      assert(!mousemove, '1) mousemove should be true');
+      assert(mousemove, '1) mousemove should be true');
       assert(!mousedown, '1) mousedown should be false');
       assert(!mouseup, '1) mouseup should be false');
       assert(!click, '1) click should be false');
@@ -1596,7 +1582,6 @@ suite('MouseEvents', function() {
       x: 374,
       y: 114
     });
-    Konva.DD._endDragBefore();
     stage.simulateMouseUp({
       x: 374,
       y: 114
@@ -2067,5 +2052,48 @@ suite('MouseEvents', function() {
     stage._mouseout(evt);
 
     assert.equal(mouseenter, 1, 'mouseenter should be 1');
+  });
+
+  test('should trigger mouse events if we set Konva.hitOnDragEnabled = true', function() {
+    Konva.hitOnDragEnabled = true;
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var rect = new Konva.Rect({
+      width: 50,
+      height: 50,
+      fill: 'red',
+      draggable: true
+    });
+    layer.add(rect);
+
+    layer.draw();
+
+    var mousemove = 0;
+    rect.on('mousemove', () => {
+      mousemove += 1;
+    });
+
+    stage.simulateMouseDown({
+      x: 10,
+      y: 10
+    });
+
+    stage.simulateMouseMove({
+      x: 20,
+      y: 20
+    });
+    stage.simulateMouseMove({
+      x: 30,
+      y: 30
+    });
+    stage.simulateMouseUp({
+      x: 30,
+      y: 30
+    });
+
+    assert.equal(mousemove, 2, 'mousemove should be 2');
+    Konva.hitOnDragEnabled = false;
   });
 });

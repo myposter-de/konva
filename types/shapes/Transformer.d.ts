@@ -27,7 +27,7 @@ export interface TransformerConfig extends ContainerConfig {
 }
 export declare class Transformer extends Group {
     _node: Node;
-    movingResizer: string;
+    _movingAnchorName: string;
     _transforming: boolean;
     sin: number;
     cos: number;

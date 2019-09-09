@@ -56,7 +56,7 @@ echo "create new git tag"
 git tag $1 >/dev/null
 
 echo "generate documentation"
-npm start api >/dev/null
+npx gulp api >/dev/null
 
 
 
@@ -74,20 +74,15 @@ npm publish >/dev/null
 
 echo "copy konva.js into konva-site"
 cp ./konva.js ../konva-site/
-# cd ../konva-site
+cd ../konva-site
 
-# echo "replace CDN links"
+echo "replace CDN links"
 
 
-# find source themes -exec perl -i -pe "s|${old_cdn}|${new_cdn}|g" {} + >/dev/null
-# find source themes -exec perl -i -pe "s|${old_cdn_min}|${new_cdn_min}|g" {} + >/dev/null
+find source themes/hexo3/layout react-demos vue-demos main-demo -name "*.json" -exec perl -i -pe "s|${old_version}|${new_version}|g" {} + >/dev/null
+find source themes/hexo3/layout react-demos vue-demos main-demo -name "*.html" -exec perl -i -pe "s|${old_version}|${new_version}|g" {} + >/dev/null
 
-# echo "regenerate site"
-# ./deploy.sh >/dev/null
+echo "regenerate site"
+./deploy.sh >/dev/null
 
 echo "DONE!"
-
-echo "-------"
-echo "Now you need:"
-echo "1. Update CDN link to ${new_cdn} at http://codepen.io/lavrton/pen/myBPGo"
-echo "2. Update cdn links on konva website from ${old_version} to ${new_version}"

@@ -1,5 +1,6 @@
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet } from '../types';
+import { Context } from '../Context';
 export interface LineConfig extends ShapeConfig {
     points: number[];
     tension?: number;
@@ -8,7 +9,7 @@ export interface LineConfig extends ShapeConfig {
 }
 export declare class Line<Config extends LineConfig = LineConfig> extends Shape<Config> {
     constructor(config?: Config);
-    _sceneFunc(context: any): void;
+    _sceneFunc(context: Context): void;
     getTensionPoints(): any;
     _getTensionPoints(): any[];
     _getTensionPointsClosed(): any[];

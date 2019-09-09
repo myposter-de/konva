@@ -15,6 +15,8 @@ export declare const Konva: {
     getAngle(angle: any): any;
     enableTrace: boolean;
     _pointerEventsEnabled: boolean;
+    hitOnDragEnabled: boolean;
+    captureTouchEventsEnabled: boolean;
     listenClickTap: boolean;
     inDblClickWindow: boolean;
     pixelRatio: any;

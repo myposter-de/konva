@@ -1,3 +1,4 @@
+import { Point } from './Util';
 import { Container, ContainerConfig } from './Container';
 import { SceneCanvas, HitCanvas } from './Canvas';
 import { GetSet } from './types';
@@ -24,6 +25,7 @@ export declare abstract class BaseLayer extends Container<Group | Shape> {
     moveDown(): boolean;
     moveToBottom(): boolean;
     getLayer(): this;
+    hitGraphEnabled(): boolean;
     remove(): this;
     getStage(): any;
     setSize({ width, height }: {
@@ -37,7 +39,7 @@ export declare abstract class BaseLayer extends Container<Group | Shape> {
     setWidth(): void;
     getHeight(): number;
     setHeight(): void;
-    getIntersection(pos: any, selector?: any): any;
+    getIntersection(pos: Point, selector?: string): any;
     batchDraw(): this;
     _applyTransform(shape: any, context: any, top: any): void;
     clearBeforeDraw: GetSet<boolean, this>;

@@ -14,7 +14,7 @@ export declare class Collection<Child extends Node> {
     [index: number]: Child;
     length: number;
     each: (f: (child: Child, index: number) => void) => void;
-    toArray: () => Array<any>;
+    toArray: () => Array<Child>;
     push: (item: Child) => void;
     unshift: (item: Child) => void;
     splice: (start: number, length: number, replace?: any) => void;
@@ -105,6 +105,12 @@ export declare const Util: {
         b: number;
         a: number;
     };
+    _hslColorToRGBA(str: string): {
+        r: number;
+        g: number;
+        b: number;
+        a: number;
+    };
     haveIntersection(r1: IRect, r2: IRect): boolean;
     cloneObject<Any>(obj: Any): Any;
     cloneArray(arr: any[]): any[];
@@ -124,4 +130,5 @@ export declare const Util: {
     _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): any[];
     _prepareToStringify(obj: any): any;
     _assign<T, U>(target: T, source: U): T & U;
+    _getFirstPointerId(evt: any): any;
 };

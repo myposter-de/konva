@@ -11,6 +11,12 @@ export declare const stages: Stage[];
 export declare class Stage extends Container<BaseLayer> {
     content: HTMLDivElement;
     pointerPos: Vector2d | null;
+    _pointerPositions: (Vector2d & {
+        id?: number;
+    })[];
+    _changedPointerPositions: (Vector2d & {
+        id?: number;
+    })[];
     bufferCanvas: SceneCanvas;
     bufferHitCanvas: HitCanvas;
     targetShape: Shape;
@@ -26,11 +32,17 @@ export declare class Stage extends Container<BaseLayer> {
     clear(): this;
     clone(obj: any): any;
     destroy(): this;
-    getPointerPosition(): Vector2d;
+    getPointerPosition(): Vector2d | null;
+    _getPointerById(id?: number): Vector2d & {
+        id?: number;
+    };
+    getPointersPositions(): (Vector2d & {
+        id?: number;
+    })[];
     getStage(): this;
     getContent(): HTMLDivElement;
     _toKonvaCanvas(config: any): SceneCanvas;
-    getIntersection(pos: Vector2d, selector?: string): Shape | null;
+    getIntersection(pos: Vector2d | null, selector?: string): Shape | null;
     _resizeDOM(): void;
     add(layer: any): this;
     getParent(): any;
@@ -48,8 +60,8 @@ export declare class Stage extends Container<BaseLayer> {
     _mouseup(evt: any): void;
     _contextmenu(evt: any): void;
     _touchstart(evt: any): void;
-    _touchend(evt: any): void;
     _touchmove(evt: any): void;
+    _touchend(evt: any): void;
     _wheel(evt: any): void;
     _pointerdown(evt: PointerEvent): void;
     _pointermove(evt: PointerEvent): void;

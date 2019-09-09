@@ -841,6 +841,11 @@ suite('Transformer', function() {
     assert.equal(tr.isTransforming(), false);
 
     assert.equal(tr.getNode(), undefined);
+
+    stage.simulateMouseUp({
+      x: 100,
+      y: 60
+    });
   });
 
   test('can add padding', function() {
@@ -1809,6 +1814,60 @@ suite('Transformer', function() {
     });
   });
 
+  test('transform scaled (in one direction) node', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var rect = new Konva.Rect({
+      draggable: true,
+      fill: 'yellow',
+      x: 150,
+      y: 50,
+      width: 100,
+      height: 100,
+      scaleX: -1
+    });
+    layer.add(rect);
+
+    var tr = new Konva.Transformer({
+      node: rect
+    });
+    layer.add(tr);
+
+    layer.draw();
+
+    stage.simulateMouseDown({
+      x: 150,
+      y: 150
+    });
+
+    var target = stage.getIntersection({
+      x: 150,
+      y: 150
+    });
+    var top = Math.round(stage.content.getBoundingClientRect().top);
+    tr._handleMouseMove({
+      target: target,
+      clientX: 100,
+      clientY: 100 + top
+    });
+
+    // here is duplicate, because transformer is listening window events
+    tr._handleMouseUp({
+      clientX: 100,
+      clientY: 100 + top
+    });
+    stage.simulateMouseUp({
+      x: 100,
+      y: 100
+    });
+    layer.draw();
+
+    assert.equal(rect.width() * rect.scaleX() + 50 < 1, true, ' width check');
+    assert.equal(rect.height() * rect.scaleY() - 50 < 1, true, ' height check');
+  });
+
   test('transformer should ignore shadow', function() {
     var stage = addStage();
     var layer = new Konva.Layer();
@@ -2326,5 +2385,46 @@ suite('Transformer', function() {
     var rect = Object.assign({}, tr._getNodeRect());
     delete rect.rotation;
     assert.deepEqual(shape.getClientRect(), rect), 'change data';
+  });
+
+  test('make sure transformer events are not cloned', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    const rect1 = new Konva.Rect({
+      x: stage.width() / 5,
+      y: stage.height() / 5,
+      width: 50,
+      height: 50,
+      fill: 'green',
+      draggable: true
+    });
+
+    layer.add(rect1);
+
+    const tr1 = new Konva.Transformer({
+      node: rect1
+    });
+    layer.add(tr1);
+
+    const rect2 = rect1.clone({
+      fill: 'red',
+      x: stage.width() / 3,
+      y: stage.height() / 3
+    });
+    layer.add(rect2);
+
+    tr1.destroy();
+
+    let tr2 = new Konva.Transformer({
+      node: rect2
+    });
+    layer.add(tr2);
+
+    // should not throw error
+    rect2.width(100);
+
+    stage.draw();
   });
 });

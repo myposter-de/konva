@@ -127,6 +127,9 @@ function checkNoClip(attrs: any = {}) {
 export class Stage extends Container<BaseLayer> {
   content: HTMLDivElement;
   pointerPos: Vector2d | null;
+  _pointerPositions: (Vector2d & { id?: number })[] = [];
+  _changedPointerPositions: (Vector2d & { id?: number })[] = [];
+
   bufferCanvas: SceneCanvas;
   bufferHitCanvas: HitCanvas;
   targetShape: Shape;
@@ -241,13 +244,24 @@ export class Stage extends Container<BaseLayer> {
    * get pointer position which can be a touch position or mouse position
    * @method
    * @name Konva.Stage#getPointerPosition
-   * @returns {Object}
+   * @returns {Vector2d|null}
    */
-  getPointerPosition() {
-    if (!this.pointerPos) {
+  getPointerPosition(): Vector2d | null {
+    const pos = this._pointerPositions[0] || this._changedPointerPositions[0];
+    if (!pos) {
       Util.warn(NO_POINTERS_MESSAGE);
+      return null;
     }
-    return this.pointerPos;
+    return {
+      x: pos.x,
+      y: pos.y
+    };
+  }
+  _getPointerById(id?: number) {
+    return this._pointerPositions.find(p => p.id === id);
+  }
+  getPointersPositions() {
+    return this._pointerPositions;
   }
   getStage() {
     return this;
@@ -303,7 +317,10 @@ export class Stage extends Container<BaseLayer> {
    * // or if you interested in shape parent:
    * var group = stage.getIntersection({x: 50, y: 50}, 'Group');
    */
-  getIntersection(pos: Vector2d, selector?: string): Shape | null {
+  getIntersection(pos: Vector2d | null, selector?: string): Shape | null {
+    if (!pos) {
+      return null;
+    }
     var layers = this.children,
       len = layers.length,
       end = len - 1,
@@ -420,11 +437,12 @@ export class Stage extends Container<BaseLayer> {
     this.setPointersPositions(evt);
     var targetShape = this.targetShape;
 
-    if (targetShape && !DD.isDragging) {
+    var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
+    if (targetShape && eventsEnabled) {
       targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
       targetShape._fireAndBubble(MOUSELEAVE, { evt: evt });
       this.targetShape = null;
-    } else if (!DD.isDragging) {
+    } else if (eventsEnabled) {
       this._fire(MOUSELEAVE, {
         evt: evt,
         target: this,
@@ -437,6 +455,7 @@ export class Stage extends Container<BaseLayer> {
       });
     }
     this.pointerPos = undefined;
+    this._pointerPositions = [];
 
     this._fire(CONTENT_MOUSEOUT, { evt: evt });
   }
@@ -446,42 +465,63 @@ export class Stage extends Container<BaseLayer> {
       return this._touchmove(evt);
     }
     this.setPointersPositions(evt);
+    var pointerId = Util._getFirstPointerId(evt);
     var shape: Shape;
 
-    if (!DD.isDragging) {
+    var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
+    if (eventsEnabled) {
       shape = this.getIntersection(this.getPointerPosition());
       if (shape && shape.isListening()) {
         var differentTarget = !this.targetShape || this.targetShape !== shape;
-        if (!DD.isDragging && differentTarget) {
+        if (eventsEnabled && differentTarget) {
           if (this.targetShape) {
-            this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt }, shape);
-            this.targetShape._fireAndBubble(MOUSELEAVE, { evt: evt }, shape);
+            this.targetShape._fireAndBubble(
+              MOUSEOUT,
+              { evt: evt, pointerId },
+              shape
+            );
+            this.targetShape._fireAndBubble(
+              MOUSELEAVE,
+              { evt: evt, pointerId },
+              shape
+            );
           }
-          shape._fireAndBubble(MOUSEOVER, { evt: evt }, this.targetShape);
-          shape._fireAndBubble(MOUSEENTER, { evt: evt }, this.targetShape);
+          shape._fireAndBubble(
+            MOUSEOVER,
+            { evt: evt, pointerId },
+            this.targetShape
+          );
+          shape._fireAndBubble(
+            MOUSEENTER,
+            { evt: evt, pointerId },
+            this.targetShape
+          );
+          shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId });
           this.targetShape = shape;
         } else {
-          shape._fireAndBubble(MOUSEMOVE, { evt: evt });
+          shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId });
         }
       } else {
         /*
          * if no shape was detected, clear target shape and try
          * to run mouseout from previous target shape
          */
-        if (this.targetShape && !DD.isDragging) {
-          this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
-          this.targetShape._fireAndBubble(MOUSELEAVE, { evt: evt });
+        if (this.targetShape && eventsEnabled) {
+          this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt, pointerId });
+          this.targetShape._fireAndBubble(MOUSELEAVE, { evt: evt, pointerId });
           this._fire(MOUSEOVER, {
             evt: evt,
             target: this,
-            currentTarget: this
+            currentTarget: this,
+            pointerId
           });
           this.targetShape = null;
         }
         this._fire(MOUSEMOVE, {
           evt: evt,
           target: this,
-          currentTarget: this
+          currentTarget: this,
+          pointerId
         });
       }
 
@@ -501,18 +541,20 @@ export class Stage extends Container<BaseLayer> {
       return this._touchstart(evt);
     }
     this.setPointersPositions(evt);
+    var pointerId = Util._getFirstPointerId(evt);
     var shape = this.getIntersection(this.getPointerPosition());
 
     Konva.listenClickTap = true;
 
     if (shape && shape.isListening()) {
       this.clickStartShape = shape;
-      shape._fireAndBubble(MOUSEDOWN, { evt: evt });
+      shape._fireAndBubble(MOUSEDOWN, { evt: evt, pointerId });
     } else {
       this._fire(MOUSEDOWN, {
         evt: evt,
         target: this,
-        currentTarget: this
+        currentTarget: this,
+        pointerId
       });
     }
 
@@ -532,6 +574,7 @@ export class Stage extends Container<BaseLayer> {
       return this._touchend(evt);
     }
     this.setPointersPositions(evt);
+    var pointerId = Util._getFirstPointerId(evt);
     var shape = this.getIntersection(this.getPointerPosition()),
       clickStartShape = this.clickStartShape,
       clickEndShape = this.clickEndShape,
@@ -555,7 +598,7 @@ export class Stage extends Container<BaseLayer> {
 
     if (shape && shape.isListening()) {
       this.clickEndShape = shape;
-      shape._fireAndBubble(MOUSEUP, { evt: evt });
+      shape._fireAndBubble(MOUSEUP, { evt: evt, pointerId });
 
       // detect if click or double click occurred
       if (
@@ -563,23 +606,34 @@ export class Stage extends Container<BaseLayer> {
         clickStartShape &&
         clickStartShape._id === shape._id
       ) {
-        shape._fireAndBubble(CLICK, { evt: evt });
+        shape._fireAndBubble(CLICK, { evt: evt, pointerId });
 
         if (fireDblClick && clickEndShape && clickEndShape === shape) {
-          shape._fireAndBubble(DBL_CLICK, { evt: evt });
+          shape._fireAndBubble(DBL_CLICK, { evt: evt, pointerId });
         }
       }
     } else {
-      this._fire(MOUSEUP, { evt: evt, target: this, currentTarget: this });
+      this._fire(MOUSEUP, {
+        evt: evt,
+        target: this,
+        currentTarget: this,
+        pointerId
+      });
       if (Konva.listenClickTap) {
-        this._fire(CLICK, { evt: evt, target: this, currentTarget: this });
+        this._fire(CLICK, {
+          evt: evt,
+          target: this,
+          currentTarget: this,
+          pointerId
+        });
       }
 
       if (fireDblClick) {
         this._fire(DBL_CLICK, {
           evt: evt,
           target: this,
-          currentTarget: this
+          currentTarget: this,
+          pointerId
         });
       }
     }
@@ -617,39 +671,93 @@ export class Stage extends Container<BaseLayer> {
   }
   _touchstart(evt) {
     this.setPointersPositions(evt);
-    var shape = this.getIntersection(this.getPointerPosition());
+    var triggeredOnShape = false;
+    this._changedPointerPositions.forEach(pos => {
+      var shape = this.getIntersection(pos);
+      Konva.listenClickTap = true;
+      const hasShape = shape && shape.isListening();
 
-    Konva.listenClickTap = true;
+      if (!hasShape) {
+        return;
+      }
 
-    if (shape && shape.isListening()) {
+      if (Konva.captureTouchEventsEnabled) {
+        shape.setPointerCapture(pos.id);
+      }
+
       this.tapStartShape = shape;
-      shape._fireAndBubble(TOUCHSTART, { evt: evt });
-
+      shape._fireAndBubble(TOUCHSTART, { evt: evt, pointerId: pos.id }, this);
+      triggeredOnShape = true;
       // only call preventDefault if the shape is listening for events
       if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
         evt.preventDefault();
       }
-    } else {
+    });
+
+    if (!triggeredOnShape) {
       this._fire(TOUCHSTART, {
         evt: evt,
         target: this,
-        currentTarget: this
+        currentTarget: this,
+        pointerId: this._changedPointerPositions[0].id
       });
     }
+
     // content event
     this._fire(CONTENT_TOUCHSTART, { evt: evt });
   }
+  _touchmove(evt) {
+    this.setPointersPositions(evt);
+    var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
+    if (eventsEnabled) {
+      var triggeredOnShape = false;
+      var processedShapesIds = {};
+      this._changedPointerPositions.forEach(pos => {
+        const shape =
+          PointerEvents.getCapturedShape(pos.id) || this.getIntersection(pos);
+
+        const hasShape = shape && shape.isListening();
+        if (!hasShape) {
+          return;
+        }
+        if (processedShapesIds[shape._id]) {
+          return;
+        }
+        processedShapesIds[shape._id] = true;
+        shape._fireAndBubble(TOUCHMOVE, { evt: evt, pointerId: pos.id });
+        triggeredOnShape = true;
+        // only call preventDefault if the shape is listening for events
+        if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
+          evt.preventDefault();
+        }
+      });
+
+      if (!triggeredOnShape) {
+        this._fire(TOUCHMOVE, {
+          evt: evt,
+          target: this,
+          currentTarget: this,
+          pointerId: this._changedPointerPositions[0].id
+        });
+      }
+
+      this._fire(CONTENT_TOUCHMOVE, { evt: evt });
+    }
+    if (DD.isDragging && DD.node.preventDefault() && evt.cancelable) {
+      evt.preventDefault();
+    }
+  }
   _touchend(evt) {
     this.setPointersPositions(evt);
-    var shape = this.getIntersection(this.getPointerPosition()),
-      clickEndShape = this.clickEndShape,
+
+    var clickEndShape = this.clickEndShape,
       fireDblClick = false;
 
     if (Konva.inDblClickWindow) {
       fireDblClick = true;
       clearTimeout(this.dblTimeout);
       // Konva.inDblClickWindow = false;
-    } else {
+    } else if (!DD.justDragged) {
       Konva.inDblClickWindow = true;
       clearTimeout(this.dblTimeout);
     }
@@ -658,38 +766,74 @@ export class Stage extends Container<BaseLayer> {
       Konva.inDblClickWindow = false;
     }, Konva.dblClickWindow);
 
-    if (shape && shape.isListening()) {
+    var triggeredOnShape = false;
+    var processedShapesIds = {};
+    var tapTriggered = false;
+    var dblTapTriggered = false;
+
+    this._changedPointerPositions.forEach(pos => {
+      var shape =
+        (PointerEvents.getCapturedShape(pos.id) as Shape) ||
+        this.getIntersection(pos);
+
+      if (shape) {
+        shape.releaseCapture(pos.id);
+      }
+
+      const hasShape = shape && shape.isListening();
+      if (!hasShape) {
+        return;
+      }
+      if (processedShapesIds[shape._id]) {
+        return;
+      }
+      processedShapesIds[shape._id] = true;
+
       this.clickEndShape = shape;
-      shape._fireAndBubble(TOUCHEND, { evt: evt });
+      shape._fireAndBubble(TOUCHEND, { evt: evt, pointerId: pos.id });
+      triggeredOnShape = true;
 
       // detect if tap or double tap occurred
-      if (
-        Konva.listenClickTap &&
-        this.tapStartShape &&
-        shape._id === this.tapStartShape._id
-      ) {
-        shape._fireAndBubble(TAP, { evt: evt });
+      if (Konva.listenClickTap && shape === this.tapStartShape) {
+        tapTriggered = true;
+        shape._fireAndBubble(TAP, { evt: evt, pointerId: pos.id });
 
         if (fireDblClick && clickEndShape && clickEndShape === shape) {
-          shape._fireAndBubble(DBL_TAP, { evt: evt });
+          dblTapTriggered = true;
+          shape._fireAndBubble(DBL_TAP, { evt: evt, pointerId: pos.id });
         }
       }
+
       // only call preventDefault if the shape is listening for events
       if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
         evt.preventDefault();
       }
-    } else {
-      this._fire(TOUCHEND, { evt: evt, target: this, currentTarget: this });
-      if (Konva.listenClickTap) {
-        this._fire(TAP, { evt: evt, target: this, currentTarget: this });
-      }
-      if (fireDblClick) {
-        this._fire(DBL_TAP, {
-          evt: evt,
-          target: this,
-          currentTarget: this
-        });
-      }
+    });
+
+    if (!triggeredOnShape) {
+      this._fire(TOUCHEND, {
+        evt: evt,
+        target: this,
+        currentTarget: this,
+        pointerId: this._changedPointerPositions[0].id
+      });
+    }
+
+    if (Konva.listenClickTap && !tapTriggered) {
+      this._fire(TAP, {
+        evt: evt,
+        target: this,
+        currentTarget: this,
+        pointerId: this._changedPointerPositions[0].id
+      });
+    }
+    if (fireDblClick && !dblTapTriggered) {
+      this._fire(DBL_TAP, {
+        evt: evt,
+        target: this,
+        currentTarget: this,
+        pointerId: this._changedPointerPositions[0].id
+      });
     }
     // content events
     this._fire(CONTENT_TOUCHEND, { evt: evt });
@@ -702,30 +846,7 @@ export class Stage extends Container<BaseLayer> {
 
     Konva.listenClickTap = false;
   }
-  _touchmove(evt) {
-    this.setPointersPositions(evt);
-    var shape;
-    if (!DD.isDragging) {
-      shape = this.getIntersection(this.getPointerPosition());
-      if (shape && shape.isListening()) {
-        shape._fireAndBubble(TOUCHMOVE, { evt: evt });
-        // only call preventDefault if the shape is listening for events
-        if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
-          evt.preventDefault();
-        }
-      } else {
-        this._fire(TOUCHMOVE, {
-          evt: evt,
-          target: this,
-          currentTarget: this
-        });
-      }
-      this._fire(CONTENT_TOUCHMOVE, { evt: evt });
-    }
-    if (DD.isDragging && DD.node.preventDefault() && evt.cancelable) {
-      evt.preventDefault();
-    }
-  }
+
   _wheel(evt) {
     this.setPointersPositions(evt);
     var shape = this.getIntersection(this.getPointerPosition());
@@ -830,6 +951,29 @@ export class Stage extends Container<BaseLayer> {
 
     // touch events
     if (evt.touches !== undefined) {
+      // touchlist has not support for map method
+      // so we have to iterate
+      this._pointerPositions = [];
+      this._changedPointerPositions = [];
+      Collection.prototype.each.call(evt.touches, (touch: any) => {
+        this._pointerPositions.push({
+          id: touch.identifier,
+          x: touch.clientX - contentPosition.left,
+          y: touch.clientY - contentPosition.top
+        });
+      });
+
+      Collection.prototype.each.call(
+        evt.changedTouches || evt.touches,
+        (touch: any) => {
+          this._changedPointerPositions.push({
+            id: touch.identifier,
+            x: touch.clientX - contentPosition.left,
+            y: touch.clientY - contentPosition.top
+          });
+        }
+      );
+
       // currently, only handle one finger
       if (evt.touches.length > 0) {
         var touch = evt.touches[0];
@@ -841,12 +985,14 @@ export class Stage extends Container<BaseLayer> {
       // mouse events
       x = evt.clientX - contentPosition.left;
       y = evt.clientY - contentPosition.top;
-    }
-    if (x !== null && y !== null) {
       this.pointerPos = {
         x: x,
         y: y
       };
+      this._pointerPositions = [{ x, y, id: Util._getFirstPointerId(evt) }];
+      this._changedPointerPositions = [
+        { x, y, id: Util._getFirstPointerId(evt) }
+      ];
     }
   }
   _setPointerPosition(evt) {

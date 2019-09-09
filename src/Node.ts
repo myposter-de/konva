@@ -13,6 +13,8 @@ import {
 import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
+import { Layer } from './Layer';
+import { BaseLayer } from './BaseLayer';
 
 export const ids: any = {};
 export const names: any = {};
@@ -205,6 +207,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   children = emptyChildren;
   nodeType!: string;
   className!: string;
+  _dragEventId: number | null = null;
 
   constructor(config?: Config) {
     this.setAttrs(config);
@@ -449,6 +452,16 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     });
 
     return this;
+  }
+
+  /**
+   * determine if node is currently cached
+   * @method
+   * @name Konva.Node#isCached
+   * @returns {Boolean}
+   */
+  isCached() {
+    return this._cache.has('canvas');
   }
 
   abstract drawScene(
@@ -822,9 +835,12 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.remove();
    */
   remove() {
-    if (DD.node && DD.node === this) {
+    if (this.isDragging()) {
       this.stopDrag();
     }
+    // we can have drag element but that is not dragged yet
+    // so just clear it
+    DD._dragElements.delete(this._id);
     this._remove();
     return this;
   }
@@ -1470,7 +1486,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this.parent;
   }
   /**
-   * get all ancestros (parent then parent of the parent, etc) of the node
+   * get all ancestors (parent then parent of the parent, etc) of the node
    * @method
    * @name Konva.Node#findAncestors
    * @param {String} [selector] selector for search
@@ -1565,7 +1581,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @name Konva.Node#getLayer
    * @returns {Konva.Layer}
    */
-  getLayer() {
+  getLayer(): BaseLayer | null {
     var parent = this.getParent();
     return parent ? parent.getLayer() : null;
   }
@@ -1575,7 +1591,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @name Konva.Node#getStage
    * @returns {Konva.Stage}
    */
-  getStage(): any {
+  getStage(): Stage | null {
     return this._getCache(STAGE, this._getStage);
   }
 
@@ -1636,7 +1652,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return this._getAbsoluteTransform(top);
     } else {
       // if no argument, we can cache the result
-    return this._getCache(
+      return this._getCache(
         ABSOLUTE_TRANSFORM,
         this._getAbsoluteTransform
       ) as Transform;
@@ -1805,8 +1821,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       y = config.y !== undefined ? config.y : box.y,
       pixelRatio = config.pixelRatio || 1,
       canvas = new SceneCanvas({
-        width: config.width || box.width || (stage ? stage.getWidth() : 0),
-        height: config.height || box.height || (stage ? stage.getHeight() : 0),
+        width: config.width || box.width || (stage ? stage.width() : 0),
+        height: config.height || box.height || (stage ? stage.height() : 0),
         pixelRatio: pixelRatio
       }),
       context = canvas.getContext();
@@ -2213,55 +2229,78 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
 
   // drag & drop
+  _createDragElement(evt) {
+    var pointerId = evt ? evt.pointerId : undefined;
+    var stage = this.getStage();
+    var ap = this.getAbsolutePosition();
+    var pos =
+      stage._getPointerById(pointerId) ||
+      stage._changedPointerPositions[0] ||
+      ap;
+    DD._dragElements.set(this._id, {
+      node: this,
+      startPointerPos: pos,
+      offset: {
+        x: pos.x - ap.x,
+        y: pos.y - ap.y
+      },
+      dragStatus: 'ready',
+      pointerId
+    });
+  }
+
   /**
-   * initiate drag and drop
+   * initiate drag and drop.
    * @method
    * @name Konva.Node#startDrag
    */
-  startDrag() {
-    var stage = this.getStage(),
-      layer = this.getLayer(),
-      pos = stage.getPointerPosition(),
-      ap = this.getAbsolutePosition();
-
-    if (pos) {
-      if (DD.node) {
-        DD.node.stopDrag();
-      }
-
-      DD.node = this;
-      DD.startPointerPos = pos;
-      DD.offset.x = pos.x - ap.x;
-      DD.offset.y = pos.y - ap.y;
-      DD.anim.setLayers(layer || this['getLayers']());
-      DD.anim.start();
-
-      this._setDragPosition();
+  startDrag(evt?: any) {
+    if (!DD._dragElements.has(this._id)) {
+      this._createDragElement(evt);
     }
+
+    const elem = DD._dragElements.get(this._id);
+    elem.dragStatus = 'dragging';
+    this.fire(
+      'dragstart',
+      {
+        type: 'dragstart',
+        target: this,
+        evt: evt && evt.evt
+      },
+      true
+    );
   }
 
-  _setDragPosition(evt?) {
-    var pos = this.getStage().getPointerPosition(),
-      dbf = this.dragBoundFunc();
+  _setDragPosition(evt, elem) {
+    // const pointers = this.getStage().getPointersPositions();
+    // const pos = pointers.find(p => p.id === this._dragEventId);
+    const pos = this.getStage()._getPointerById(elem.pointerId);
+
+    var dbf = this.dragBoundFunc();
     if (!pos) {
       return;
     }
     var newNodePos = {
-      x: pos.x - DD.offset.x,
-      y: pos.y - DD.offset.y
+      x: pos.x - elem.offset.x,
+      y: pos.y - elem.offset.y
     };
 
     if (dbf !== undefined) {
       newNodePos = dbf.call(this, newNodePos, evt);
     }
-    this.setAbsolutePosition(newNodePos);
 
     if (
       !this._lastPos ||
       this._lastPos.x !== newNodePos.x ||
       this._lastPos.y !== newNodePos.y
     ) {
-      DD.anim['dirty'] = true;
+      this.setAbsolutePosition(newNodePos);
+      if (this.getLayer()) {
+        this.getLayer().batchDraw();
+      } else if (this.getStage()) {
+        this.getStage().batchDraw();
+      }
     }
 
     this._lastPos = newNodePos;
@@ -2274,6 +2313,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    */
   stopDrag() {
     var evt = {};
+    const elem = DD._dragElements.get(this._id);
+    if (elem) {
+      elem.dragStatus = 'stopped';
+    }
     DD._endDragBefore(evt);
     DD._endDragAfter(evt);
   }
@@ -2289,7 +2332,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @name Konva.Node#isDragging
    */
   isDragging() {
-    return !!(DD.node && DD.node === this && DD.isDragging);
+    const elem = DD._dragElements.get(this._id);
+    return elem ? elem.dragStatus === 'dragging' : false;
   }
 
   _listenDrag() {
@@ -2302,8 +2346,20 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       if (!canDrag) {
         return;
       }
-      if (!DD.node) {
-        this.startDrag();
+      if (this.isDragging()) {
+        return;
+      }
+
+      var hasDraggingChild = false;
+      DD._dragElements.forEach(elem => {
+        if (this.isAncestorOf(elem.node)) {
+          hasDraggingChild = true;
+        }
+      });
+      // nested drag can be started
+      // in that case we don't need to start new drag
+      if (!hasDraggingChild) {
+        this._createDragElement(evt);
       }
     });
   }
@@ -2321,9 +2377,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
        * drag and drop mode
        */
       var stage = this.getStage();
-      var dd = DD;
-      if (stage && dd.node && dd.node._id === this._id) {
-        dd.node.stopDrag();
+      if (stage && DD._dragElements.has(this._id)) {
+        this.stopDrag();
       }
     }
   }
@@ -2356,6 +2411,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
   dragBoundFunc: GetSet<(pos: Vector2d) => Vector2d, this>;
   draggable: GetSet<boolean, this>;
+  dragDistance: GetSet<number, this>;
   embossBlend: GetSet<boolean, this>;
   embossDirection: GetSet<string, this>;
   embossStrength: GetSet<number, this>;

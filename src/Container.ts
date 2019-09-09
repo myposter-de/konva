@@ -3,6 +3,7 @@ import { Factory } from './Factory';
 import { Node, NodeConfig } from './Node';
 import { DD } from './DragAndDrop';
 import { getNumberValidator } from './Validators';
+import { Konva } from './Global';
 
 import { GetSet, IRect } from './types';
 import { Shape } from './Shape';
@@ -134,12 +135,6 @@ export abstract class Container<ChildType extends Node> extends Node<
     this._fire('add', {
       child: child
     });
-
-    // if node under drag we need to update drag animation
-    if (child.isDragging()) {
-      DD.anim.setLayers(child.getLayer());
-    }
-
     // chainable
     return this;
   }
@@ -442,13 +437,19 @@ export abstract class Container<ChildType extends Node> extends Node<
     }
   }
   shouldDrawHit(canvas?) {
+    if (canvas && canvas.isCache) {
+      return true;
+    }
     var layer = this.getLayer();
-    var layerUnderDrag =
-      DD.isDragging && DD.anim.getLayers().indexOf(layer) !== -1;
-    return (
-      (canvas && canvas.isCache) ||
-      (layer && layer.hitGraphEnabled() && this.isVisible() && !layerUnderDrag)
-    );
+    var layerUnderDrag = false;
+    DD._dragElements.forEach(elem => {
+      if (elem.dragStatus === 'dragging' && elem.node.getLayer() === layer) {
+        layerUnderDrag = true;
+      }
+    });
+
+    var dragSkip = !Konva.hitOnDragEnabled && layerUnderDrag;
+    return layer && layer.hitGraphEnabled() && this.isVisible() && !dragSkip;
   }
   getClientRect(attrs): IRect {
     attrs = attrs || {};
@@ -532,7 +533,12 @@ export abstract class Container<ChildType extends Node> extends Node<
   clipY: GetSet<number, this>;
   clipWidth: GetSet<number, this>;
   clipHeight: GetSet<number, this>;
-  clipFunc: GetSet<(ctx: CanvasRenderingContext2D, shape: this) => void, this>;
+  // there was "this" instead of "Container<ChildType>",
+  // but it breaks react-konva types: https://github.com/konvajs/react-konva/issues/390
+  clipFunc: GetSet<
+    (ctx: CanvasRenderingContext2D, shape: Container<ChildType>) => void,
+    this
+  >;
 }
 
 // add getters setters

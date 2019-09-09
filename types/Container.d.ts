@@ -32,12 +32,12 @@ export declare abstract class Container<ChildType extends Node> extends Node<Con
     drawScene(can: any, top: any, caching: any): this;
     drawHit(can: any, top: any, caching: any): this;
     _drawChildren(canvas: any, drawMethod: any, top: any, caching?: any, skipBuffer?: any, skipComposition?: any): void;
-    shouldDrawHit(canvas?: any): any;
+    shouldDrawHit(canvas?: any): boolean;
     getClientRect(attrs: any): IRect;
     clip: GetSet<IRect, this>;
     clipX: GetSet<number, this>;
     clipY: GetSet<number, this>;
     clipWidth: GetSet<number, this>;
     clipHeight: GetSet<number, this>;
-    clipFunc: GetSet<(ctx: CanvasRenderingContext2D, shape: this) => void, this>;
+    clipFunc: GetSet<(ctx: CanvasRenderingContext2D, shape: Container<ChildType>) => void, this>;
 }
