@@ -118,6 +118,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     removeEventListener(type: string): this;
     _delegate(event: string, selector: string, handler: (e: Event) => void): void;
     remove(): this;
+    _clearCaches(): void;
     _remove(): void;
     destroy(): this;
     getAttr(attr: string): any;
@@ -170,21 +171,22 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     toObject(): any;
     toJSON(): string;
     getParent(): Container<Node<NodeConfig>>;
-    findAncestors(selector: any, includeSelf: any, stopNode: any): Node<NodeConfig>[];
+    findAncestors(selector: any, includeSelf?: any, stopNode?: any): Node<NodeConfig>[];
     isAncestorOf(node: any): boolean;
-    findAncestor(selector: any, includeSelf: any, stopNode: any): Node<NodeConfig>;
+    findAncestor(selector: any, includeSelf?: any, stopNode?: any): Node<NodeConfig>;
     _isMatch(selector: any): any;
     getLayer(): BaseLayer | null;
     getStage(): Stage | null;
     _getStage(): Stage | undefined;
     fire(eventType: any, evt: any, bubble?: any): this;
-    getAbsoluteTransform(top?: Node): Transform;
-    _getAbsoluteTransform(top?: Node): Transform;
+    getAbsoluteTransform(top?: Node): any;
+    _getAbsoluteTransform(top?: Node): any;
     getAbsoluteScale(top?: any): any;
     _getAbsoluteScale(top: any): {
         x: number;
         y: number;
     };
+    getAbsoluteRotation(): number;
     getTransform(): Transform;
     _getTransform(): Transform;
     clone(obj?: any): any;
@@ -234,7 +236,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _createDragElement(evt: any): void;
     startDrag(evt?: any): void;
     _setDragPosition(evt: any, elem: any): void;
-    stopDrag(): void;
+    stopDrag(evt?: any): void;
     setDraggable(draggable: any): void;
     isDragging(): boolean;
     _listenDrag(): void;

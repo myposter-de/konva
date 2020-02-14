@@ -5,6 +5,74 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Not released:
 
+## 4.1.4 - 2020-02-10
+
+* Fix wrong internal caching of absolute attributes
+* Fix `Konva.Transformer` behavior on scaled with CSS stage
+
+## 4.1.3 - 2020-01-30
+
+* Fix line with tension calculations
+* Add `node.getAbsoluteRotation()` method
+* Fix cursor on anchors for rotated parent
+
+## 4.1.2 - 2020-01-08
+
+* Fix possible `NaN` in content calculations
+
+## 4.1.1 - 2020-01-07
+
+* Add ability to use `width = 0` and `height = 0` for `Konva.Image`.
+* Fix `cache()` method of `Konva.Arrow()`
+* Add `Transform` to `Konva` default exports. So `Konva.Transform` is available now.
+
+## 4.1.0 - 2019-12-23
+
+* Make events work on some CSS transforms
+* Fix caching on float dimensions
+* Fix `mouseleave` event on stage.
+* Increase default anchor size for `Konva.Transformer` on touch devices
+
+## 4.0.18 - 2019-11-20
+
+* Fix `path.getClientRect()` calculations for `Konva.Path`
+* Fix wrong fire of `click` and `tap` events on stopped drag events.
+
+## 4.0.17 - 2019-11-08
+
+* Allow hitStrokeWidth usage, even if a shape has not stroke visible
+* Better IE11 support
+
+## 4.0.16 - 2019-10-21
+
+* Warn on undefined return value of `dragBoundFunc`.
+* Better calculations for `container.getClientRect()`
+
+## 4.0.15 - 2019-10-15
+
+* TS fixes
+* Better calculations for `TextPath` with align = right
+* Better `textPath.getClientRect()`
+
+## 4.0.14 - 2019-10-11
+
+* TS fixes
+* Fix globalCompositeOperation + cached hit detections.
+* Fix absolute position calculations for cached parent
+
+## 4.0.13 - 2019-10-02
+
+* Fix `line.getClientRect()` calculations for line with a tension or low number of points
+
+## 4.0.12 - 2019-09-17
+
+* Fix some bugs when `Konva.Transformer` has `padding > 0`
+
+## 4.0.10 - 2019-09-10
+
+* Fix drag position handling
+* Fix multiple selector for find() method
+
 ## 4.0.9 - 2019-09-06
 
 * Fix `Konva.Transformer` behavior on mirrored nodes

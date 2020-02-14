@@ -241,7 +241,9 @@ export class Stage extends Container<BaseLayer> {
     return this;
   }
   /**
-   * get pointer position which can be a touch position or mouse position
+   * returns absolute pointer position which can be a touch position or mouse position
+   * pointer position doesn't include any transforms (such as scale) of the stage
+   * it is just a plain position of pointer relative to top-left corner of the stage container
    * @method
    * @name Konva.Stage#getPointerPosition
    * @returns {Vector2d|null}
@@ -374,7 +376,7 @@ export class Stage extends Container<BaseLayer> {
       Util.warn(
         'The stage has ' +
           length +
-          ' layers. Recommended maximin number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group.'
+          ' layers. Recommended maximum number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group.'
       );
     }
     layer._setCanvasSize(this.width(), this.height());
@@ -441,6 +443,7 @@ export class Stage extends Container<BaseLayer> {
     if (targetShape && eventsEnabled) {
       targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
       targetShape._fireAndBubble(MOUSELEAVE, { evt: evt });
+      this._fire(MOUSELEAVE, { evt: evt, target: this, currentTarget: this });
       this.targetShape = null;
     } else if (eventsEnabled) {
       this._fire(MOUSELEAVE, {
@@ -544,6 +547,7 @@ export class Stage extends Container<BaseLayer> {
     var pointerId = Util._getFirstPointerId(evt);
     var shape = this.getIntersection(this.getPointerPosition());
 
+    DD.justDragged = false;
     Konva.listenClickTap = true;
 
     if (shape && shape.isListening()) {
@@ -588,8 +592,6 @@ export class Stage extends Container<BaseLayer> {
       // don't set inDblClickWindow after dragging
       Konva.inDblClickWindow = true;
       clearTimeout(this.dblTimeout);
-    } else if (DD) {
-      DD.justDragged = false;
     }
 
     this.dblTimeout = setTimeout(function() {
@@ -675,6 +677,7 @@ export class Stage extends Container<BaseLayer> {
     this._changedPointerPositions.forEach(pos => {
       var shape = this.getIntersection(pos);
       Konva.listenClickTap = true;
+      DD.justDragged = false;
       const hasShape = shape && shape.isListening();
 
       if (!hasShape) {
@@ -958,8 +961,8 @@ export class Stage extends Container<BaseLayer> {
       Collection.prototype.each.call(evt.touches, (touch: any) => {
         this._pointerPositions.push({
           id: touch.identifier,
-          x: touch.clientX - contentPosition.left,
-          y: touch.clientY - contentPosition.top
+          x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
+          y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
         });
       });
 
@@ -968,23 +971,15 @@ export class Stage extends Container<BaseLayer> {
         (touch: any) => {
           this._changedPointerPositions.push({
             id: touch.identifier,
-            x: touch.clientX - contentPosition.left,
-            y: touch.clientY - contentPosition.top
+            x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
+            y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
           });
         }
       );
-
-      // currently, only handle one finger
-      if (evt.touches.length > 0) {
-        var touch = evt.touches[0];
-        // get the information for finger #1
-        x = touch.clientX - contentPosition.left;
-        y = touch.clientY - contentPosition.top;
-      }
     } else {
       // mouse events
-      x = evt.clientX - contentPosition.left;
-      y = evt.clientY - contentPosition.top;
+      x = (evt.clientX - contentPosition.left) / contentPosition.scaleX;
+      y = (evt.clientY - contentPosition.top) / contentPosition.scaleY;
       this.pointerPos = {
         x: x,
         y: y
@@ -1004,10 +999,16 @@ export class Stage extends Container<BaseLayer> {
   _getContentPosition() {
     var rect = this.content.getBoundingClientRect
       ? this.content.getBoundingClientRect()
-      : { top: 0, left: 0 };
+      : { top: 0, left: 0, width: 1000, height: 1000 };
+
+    
     return {
       top: rect.top,
-      left: rect.left
+      left: rect.left,
+      // sometimes clientWidth can be equals to 0
+      // i saw it in react-konva test, looks like it is because of hidden testing element
+      scaleX: rect.width / this.content.clientWidth || 1,
+      scaleY: rect.height / this.content.clientHeight || 1,
     };
   }
   _buildDOM() {

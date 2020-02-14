@@ -117,7 +117,7 @@ suite('Image', function() {
     imageObj.onload = function() {
       var stage = addStage();
       var layer = new Konva.Layer();
-      darth = new Konva.Image({
+      var darth = new Konva.Image({
         x: 200,
         y: 75,
         image: imageObj,
@@ -174,7 +174,8 @@ suite('Image', function() {
   });
 
   // ======================================================
-  test.skip('image with svg source', function(done) {
+  // TODO: what can we test here?
+  test('image with svg source', function(done) {
     var imageObj = new Image();
 
     var stage = addStage();
@@ -364,6 +365,25 @@ suite('Image', function() {
       assert.equal(nativeImg instanceof Image, true);
       assert.equal(nativeImg.src.indexOf(src) !== -1, true);
       assert.equal(nativeImg.complete, true);
+      done();
+    });
+  });
+
+  test('check zero values', function(done) {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var src = 'assets/darth-vader.jpg';
+    Konva.Image.fromURL(src, function(image) {
+      layer.add(image);
+      layer.draw();
+
+      image.width(0);
+      image.height(0);
+      layer.draw();
+
+      assert.equal(image.width(), 0);
+      assert.equal(image.height(), 0);
       done();
     });
   });

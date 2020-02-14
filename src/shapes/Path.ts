@@ -103,7 +103,17 @@ export class Path extends Shape<PathConfig> {
   getSelfRect() {
     var points = [];
     this.dataArray.forEach(function(data) {
-      points = points.concat(data.points);
+      if (data.command === 'A') {
+        points = points.concat([
+          data.points[0] - data.points[2],
+          data.points[1] - data.points[3],
+          data.points[0] + data.points[2],
+          data.points[1] + data.points[3]
+        ])
+      } else {
+        // TODO: how can we calculate bezier curves better?
+        points = points.concat(data.points);
+      }
     });
     var minX = points[0];
     var maxX = points[0];

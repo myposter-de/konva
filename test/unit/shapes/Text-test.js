@@ -14,6 +14,32 @@ suite('Text', function() {
   });
 
   // ======================================================
+  // TODO: what is the best UX here?
+  test('check text with FALSY values', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+
+    stage.add(layer);
+    var text = new Konva.Text();
+
+    layer.add(text);
+    layer.draw();
+
+
+    text.text(0);
+    assert.equal(text.text(), '0');
+
+    text.text(true);
+    assert.equal(text.text(), 'true');
+
+    text.text(false);
+    assert.equal(text.text(), 'false');
+
+    text.setText(undefined);
+    assert.equal(text.text(), '');
+  });
+
+  // ======================================================
   test('text with undefined text property should not throw an error', function() {
     var stage = addStage();
     var layer = new Konva.Layer();

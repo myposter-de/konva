@@ -1,7 +1,8 @@
 import { glob } from './Global';
 import { Layer } from './Layer';
+import { IFrame, AnimationFn } from './types';
 
-var now = (function() {
+var now = (function(): () => number {
   if (glob.performance && glob.performance.now) {
     return function() {
       return glob.performance.now();
@@ -17,12 +18,11 @@ var now = (function() {
  * Animation constructor.
  * @constructor
  * @memberof Konva
- * @param {Function} func function executed on each animation frame.  The function is passed a frame object, which contains
+ * @param {AnimationFn} func function executed on each animation frame.  The function is passed a frame object, which contains
  *  timeDiff, lastTime, time, and frameRate properties.  The timeDiff property is the number of milliseconds that have passed
- *  since the last animation frame.  The lastTime property is time in milliseconds that elapsed from the moment the animation started
- *  to the last animation frame.  The time property is the time in milliseconds that elapsed from the moment the animation started
- *  to the current animation frame.  The frameRate property is the current frame rate in frames / second. Return false from function,
- *  if you don't need to redraw layer/layers on some frames.
+ *  since the last animation frame. The time property is the time in milliseconds that elapsed from the moment the animation started
+ *  to the current animation frame. The lastTime property is a `time` value from the previous frame.  The frameRate property is the current frame rate in frames / second.
+ *  Return false from function, if you don't need to redraw layer/layers on some frames.
  * @param {Konva.Layer|Array} [layers] layer(s) to be redrawn on each animation frame. Can be a layer, an array of layers, or null.
  *  Not specifying a node will result in no redraw.
  * @example
@@ -37,19 +37,19 @@ var now = (function() {
  * anim.start();
  */
 export class Animation {
-  func: () => boolean;
+  func: AnimationFn;
   id = Animation.animIdCounter++;
 
   layers: Layer[];
 
-  frame = {
+  frame : IFrame = {
     time: 0,
     timeDiff: 0,
     lastTime: now(),
     frameRate: 0
   };
 
-  constructor(func, layers?) {
+  constructor(func: AnimationFn, layers?) {
     this.func = func;
     this.setLayers(layers);
   }

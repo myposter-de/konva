@@ -54,14 +54,14 @@ export declare const Konva: {
 } & {
     Collection: typeof import("./Util").Collection;
     Util: {
-        _isElement(obj: any): boolean;
+        _isElement(obj: any): obj is Element;
         _isFunction(obj: any): boolean;
         _isPlainObject(obj: any): boolean;
         _isArray(obj: any): boolean;
-        _isNumber(obj: any): boolean;
-        _isString(obj: any): boolean;
-        _isBoolean(obj: any): boolean;
-        isObject(val: any): boolean;
+        _isNumber(obj: any): obj is number;
+        _isString(obj: any): obj is string;
+        _isBoolean(obj: any): obj is boolean;
+        isObject(val: any): val is Object;
         isValidSelector(selector: any): boolean;
         _sign(number: number): 1 | 0 | -1;
         requestAnimFrame(callback: Function): void;
@@ -71,56 +71,22 @@ export declare const Konva: {
         _simplifyArray(arr: any[]): any[];
         _urlToImage(url: string, callback: Function): void;
         _rgbToHex(r: number, g: number, b: number): string;
-        _hexToRgb(hex: string): {
-            r: number;
-            g: number;
-            b: number;
-        };
+        _hexToRgb(hex: string): import("./types").RGB;
         getRandomColor(): string;
         get(val: any, def: any): any;
-        getRGB(color: string): any;
-        colorToRGBA(str: string): {
-            r: any;
-            g: any;
-            b: any;
-            a: number;
-        };
+        getRGB(color: string): import("./types").RGB;
+        colorToRGBA(str: string): import("./types").RGBA;
         _namedColorToRBA(str: string): {
             r: any;
             g: any;
             b: any;
             a: number;
         };
-        _rgbColorToRGBA(str: string): {
-            r: number;
-            g: number;
-            b: number;
-            a: number;
-        };
-        _rgbaColorToRGBA(str: string): {
-            r: number;
-            g: number;
-            b: number;
-            a: number;
-        };
-        _hex6ColorToRGBA(str: string): {
-            r: number;
-            g: number;
-            b: number;
-            a: number;
-        };
-        _hex3ColorToRGBA(str: string): {
-            r: number;
-            g: number;
-            b: number;
-            a: number;
-        };
-        _hslColorToRGBA(str: string): {
-            r: number;
-            g: number;
-            b: number;
-            a: number;
-        };
+        _rgbColorToRGBA(str: string): import("./types").RGBA;
+        _rgbaColorToRGBA(str: string): import("./types").RGBA;
+        _hex6ColorToRGBA(str: string): import("./types").RGBA;
+        _hex3ColorToRGBA(str: string): import("./types").RGBA;
+        _hslColorToRGBA(str: string): import("./types").RGBA;
         haveIntersection(r1: import("./types").IRect, r2: import("./types").IRect): boolean;
         cloneObject<Any>(obj: Any): Any;
         cloneArray(arr: any[]): any[];
@@ -142,6 +108,7 @@ export declare const Konva: {
         _assign<T, U>(target: T, source: U): T & U;
         _getFirstPointerId(evt: any): any;
     };
+    Transform: typeof import("./Util").Transform;
     Node: typeof import("./Node").Node;
     ids: any;
     names: any;
@@ -163,7 +130,7 @@ export declare const Konva: {
             dragStatus: "ready" | "dragging" | "stopped";
         }>;
         _drag(evt: any): void;
-        _endDragBefore(evt: any): void;
+        _endDragBefore(evt?: any): void;
         _endDragAfter(evt: any): void;
     };
     Shape: typeof import("./Shape").Shape;

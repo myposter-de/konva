@@ -2,13 +2,13 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.Konva = factory());
-}(this, function () { 'use strict';
+}(this, (function () { 'use strict';
 
   /*
-   * Konva JavaScript Framework v4.0.9
+   * Konva JavaScript Framework v4.1.4
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Mon Sep 09 2019
+   * Date: Fri Feb 14 2020
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -76,7 +76,7 @@
               : {};
   var Konva = {
       _global: glob,
-      version: '4.0.9',
+      version: '4.1.4',
       isBrowser: detectBrowser(),
       isUnminified: /param/.test(function (param) { }.toString()),
       dblClickWindow: 400,
@@ -1425,6 +1425,14 @@
       d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
   }
 
+  function __spreadArrays() {
+      for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+      for (var r = Array(s), k = 0, i = 0; i < il; i++)
+          for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+              r[k] = a[j];
+      return r;
+  }
+
   var COMMA = ',', OPEN_PAREN = '(', CLOSE_PAREN = ')', OPEN_PAREN_BRACKET = '([', CLOSE_BRACKET_PAREN = '])', SEMICOLON = ';', DOUBLE_PAREN = '()', 
   // EMPTY_STRING = '',
   EQUALS = '=', 
@@ -1520,7 +1528,7 @@
        * @param {Konva.Shape} shape
        */
       Context.prototype.fillShape = function (shape) {
-          if (shape.getFillEnabled()) {
+          if (shape.fillEnabled()) {
               this._fill(shape);
           }
       };
@@ -1534,7 +1542,7 @@
        * @param {Konva.Shape} shape
        */
       Context.prototype.strokeShape = function (shape) {
-          if (shape.getStrokeEnabled()) {
+          if (shape.hasStroke()) {
               this._stroke(shape);
           }
       };
@@ -1548,12 +1556,8 @@
        * @param {Konva.Shape} shape
        */
       Context.prototype.fillStrokeShape = function (shape) {
-          if (shape.getFillEnabled()) {
-              this._fill(shape);
-          }
-          if (shape.getStrokeEnabled()) {
-              this._stroke(shape);
-          }
+          this.fillShape(shape);
+          this.strokeShape(shape);
       };
       Context.prototype.getTrace = function (relaxed) {
           var traceArr = this.traceArr, len = traceArr.length, str = '', n, trace, method, args;
@@ -1669,8 +1673,8 @@
        * @method
        * @name Konva.Context#arcTo
        */
-      Context.prototype.arcTo = function (a0, a1, a2, a3, a4, a5) {
-          this._context.arc(a0, a1, a2, a3, a4, a5);
+      Context.prototype.arcTo = function (a0, a1, a2, a3, a4) {
+          this._context.arcTo(a0, a1, a2, a3, a4);
       };
       /**
        * beginPath function.
@@ -2166,8 +2170,13 @@
           shape._fillFuncHit(this);
           this.restore();
       };
+      HitContext.prototype.strokeShape = function (shape) {
+          if (shape.hasHitStroke()) {
+              this._stroke(shape);
+          }
+      };
       HitContext.prototype._stroke = function (shape) {
-          if (shape.hasStroke() && shape.hitStrokeWidth()) {
+          if (shape.hasHitStroke()) {
               // ignore strokeScaleEnabled for Text
               var strokeScaleEnabled = shape.getStrokeScaleEnabled();
               if (!strokeScaleEnabled) {
@@ -2415,13 +2424,16 @@
               var node = elem.node;
               // we need to find pointer relative to that node
               var stage = node.getStage();
-              stage.setPointersPositions(evt);
+              if (evt) {
+                  stage.setPointersPositions(evt);
+              }
               var pos = stage._changedPointerPositions.find(function (pos) { return pos.id === elem.pointerId; });
               // that pointer is not related
               if (!pos) {
                   return;
               }
-              if (elem.dragStatus === 'dragging') {
+              if (elem.dragStatus === 'dragging' || elem.dragStatus === 'stopped') {
+                  // if a node is stopped manully we still need to reset events:
                   DD.justDragged = true;
                   Konva.listenClickTap = false;
                   elem.dragStatus = 'stopped';
@@ -2612,7 +2624,8 @@
       Node.prototype._clearSelfAndDescendantCache = function (attr) {
           this._clearCache(attr);
           // skip clearing if node is cached with canvas
-          if (this._getCanvasCache()) {
+          // for performance reasons !!!
+          if (this.isCached()) {
               return;
           }
           if (this.children) {
@@ -2691,7 +2704,7 @@
                   relativeTo: this.getParent()
               });
           }
-          var width = conf.width || rect.width, height = conf.height || rect.height, pixelRatio = conf.pixelRatio, x = conf.x === undefined ? rect.x : conf.x, y = conf.y === undefined ? rect.y : conf.y, offset = conf.offset || 0, drawBorder = conf.drawBorder || false;
+          var width = Math.ceil(conf.width || rect.width), height = Math.ceil(conf.height || rect.height), pixelRatio = conf.pixelRatio, x = conf.x === undefined ? rect.x : conf.x, y = conf.y === undefined ? rect.y : conf.y, offset = conf.offset || 0, drawBorder = conf.drawBorder || false;
           if (!width || !height) {
               Util.error('Can not cache the node. Width or height of the node equals 0. Caching is skipped.');
               return;
@@ -2847,7 +2860,6 @@
       Node.prototype._drawCachedHitCanvas = function (context) {
           var canvasCache = this._getCanvasCache(), hitCanvas = canvasCache.hit;
           context.save();
-          context._applyGlobalCompositeOperation(this);
           context.translate(canvasCache.x, canvasCache.y);
           context.drawImage(hitCanvas._canvas, 0, 0);
           context.restore();
@@ -3070,14 +3082,18 @@
           this._remove();
           return this;
       };
+      Node.prototype._clearCaches = function () {
+          this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
+          this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
+          this._clearSelfAndDescendantCache(ABSOLUTE_SCALE);
+          this._clearSelfAndDescendantCache(STAGE);
+          this._clearSelfAndDescendantCache(VISIBLE);
+          this._clearSelfAndDescendantCache(LISTENING);
+      };
       Node.prototype._remove = function () {
           // every cached attr that is calculated via node tree
           // traversal must be cleared when removing a node
-          this._clearSelfAndDescendantCache(STAGE);
-          this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
-          this._clearSelfAndDescendantCache(VISIBLE);
-          this._clearSelfAndDescendantCache(LISTENING);
-          this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
+          this._clearCaches();
           var parent = this.getParent();
           if (parent && parent.children) {
               parent.children.splice(this.index, 1);
@@ -3254,6 +3270,9 @@
                   return true;
               }
           }
+          else if (relativeTo && relativeTo !== parent) {
+              return visible && parent._isVisible(relativeTo);
+          }
           else {
               return visible;
           }
@@ -3355,6 +3374,20 @@
           };
       };
       Node.prototype.getAbsolutePosition = function (top) {
+          var haveCachedParent = false;
+          var parent = this.parent;
+          while (parent) {
+              if (parent.isCached()) {
+                  haveCachedParent = true;
+                  break;
+              }
+              parent = parent.parent;
+          }
+          if (haveCachedParent && !top) {
+              // make fake top element
+              // "true" is not a node, but it will just allow skip all caching
+              top = true;
+          }
           var absoluteMatrix = this.getAbsoluteTransform(top).getMatrix(), absoluteTransform = new Transform(), offset = this.offset();
           // clone the matrix array
           absoluteTransform.m = absoluteMatrix.slice();
@@ -3653,7 +3686,7 @@
        * get all ancestors (parent then parent of the parent, etc) of the node
        * @method
        * @name Konva.Node#findAncestors
-       * @param {String} [selector] selector for search
+       * @param {String} selector selector for search
        * @param {Boolean} [includeSelf] show we think that node is ancestro itself?
        * @param {Konva.Node} [stopNode] optional node where we need to stop searching (one of ancestors)
        * @returns {Array} [ancestors]
@@ -3685,7 +3718,7 @@
        * get ancestor (parent or parent of the parent, etc) of the node that match passed selector
        * @method
        * @name Konva.Node#findAncestor
-       * @param {String} [selector] selector for search
+       * @param {String} selector selector for search
        * @param {Boolean} [includeSelf] show we think that node is ancestro itself?
        * @param {Konva.Node} [stopNode] optional node where we need to stop searching (one of ancestors)
        * @returns {Konva.Node} ancestor
@@ -3726,7 +3759,7 @@
                       return true;
                   }
               }
-              else if (this.className === selector || this.nodeType === selector) {
+              else if (this.className === sel || this.nodeType === sel) {
                   return true;
               }
           }
@@ -3815,25 +3848,50 @@
           }
       };
       Node.prototype._getAbsoluteTransform = function (top) {
-          var at = new Transform();
-          // start with stage and traverse downwards to self
-          this._eachAncestorReverse(function (node) {
-              var transformsEnabled = node.getTransformsEnabled();
+          var at;
+          // we we need position relative to an ancestor, we will iterate for all
+          if (top) {
+              at = new Transform();
+              // start with stage and traverse downwards to self
+              this._eachAncestorReverse(function (node) {
+                  var transformsEnabled = node.transformsEnabled();
+                  if (transformsEnabled === 'all') {
+                      at.multiply(node.getTransform());
+                  }
+                  else if (transformsEnabled === 'position') {
+                      at.translate(node.x() - node.offsetX(), node.y() - node.offsetY());
+                  }
+              }, top);
+              return at;
+          }
+          else {
+              // try to use a cached value
+              if (this.parent) {
+                  // transform will be cached
+                  at = this.parent.getAbsoluteTransform().copy();
+              }
+              else {
+                  at = new Transform();
+              }
+              var transformsEnabled = this.transformsEnabled();
               if (transformsEnabled === 'all') {
-                  at.multiply(node.getTransform());
+                  at.multiply(this.getTransform());
               }
               else if (transformsEnabled === 'position') {
-                  at.translate(node.getX() - node.getOffsetX(), node.getY() - node.getOffsetY());
+                  at.translate(this.x() - this.offsetX(), this.y() - this.offsetY());
               }
-          }, top);
-          return at;
+              return at;
+          }
       };
       /**
        * get absolute scale of the node which takes into
        *  account its ancestor scales
        * @method
        * @name Konva.Node#getAbsoluteScale
-       * @returns {Konva.Transform}
+       * @returns {Object}
+       * @example
+       * // get absolute scale x
+       * var scaleX = node.getAbsoluteScale().x;
        */
       Node.prototype.getAbsoluteScale = function (top) {
           // if using an argument, we can't cache the result.
@@ -3864,6 +3922,25 @@
               x: scaleX,
               y: scaleY
           };
+      };
+      /**
+       * get absolute rotation of the node which takes into
+       *  account its ancestor rotations
+       * @method
+       * @name Konva.Node#getAbsoluteRotation
+       * @returns {Number}
+       * @example
+       * // get absolute scale x
+       * var rotation = node.getAbsoluteRotation();
+       */
+      Node.prototype.getAbsoluteRotation = function () {
+          var parent = this;
+          var rotation = 0;
+          while (parent) {
+              rotation += parent.rotation();
+              parent = parent.getParent();
+          }
+          return rotation;
       };
       /**
        * get transform of the node
@@ -4347,7 +4424,6 @@
           // const pointers = this.getStage().getPointersPositions();
           // const pos = pointers.find(p => p.id === this._dragEventId);
           var pos = this.getStage()._getPointerById(elem.pointerId);
-          var dbf = this.dragBoundFunc();
           if (!pos) {
               return;
           }
@@ -4355,8 +4431,15 @@
               x: pos.x - elem.offset.x,
               y: pos.y - elem.offset.y
           };
+          var dbf = this.dragBoundFunc();
           if (dbf !== undefined) {
-              newNodePos = dbf.call(this, newNodePos, evt);
+              var bounded = dbf.call(this, newNodePos, evt);
+              if (!bounded) {
+                  Util.warn('dragBoundFunc did not return any value. That is unexpected behavior. You must return new absolute position from dragBoundFunc.');
+              }
+              else {
+                  newNodePos = bounded;
+              }
           }
           if (!this._lastPos ||
               this._lastPos.x !== newNodePos.x ||
@@ -4376,8 +4459,7 @@
        * @method
        * @name Konva.Node#stopDrag
        */
-      Node.prototype.stopDrag = function () {
-          var evt = {};
+      Node.prototype.stopDrag = function (evt) {
           var elem = DD._dragElements.get(this._id);
           if (elem) {
               elem.dragStatus = 'stopped';
@@ -5139,22 +5221,28 @@
        * // remember to redraw layer if you changed something
        * layer.draw();
        */
-      Container.prototype.add = function (child) {
+      Container.prototype.add = function () {
+          var children = [];
+          for (var _i = 0; _i < arguments.length; _i++) {
+              children[_i] = arguments[_i];
+          }
           if (arguments.length > 1) {
               for (var i = 0; i < arguments.length; i++) {
                   this.add(arguments[i]);
               }
               return this;
           }
+          var child = children[0];
           if (child.getParent()) {
               child.moveTo(this);
               return this;
           }
-          var children = this.children;
+          var _children = this.children;
           this._validateAdd(child);
-          child.index = children.length;
+          child._clearCaches();
+          child.index = _children.length;
           child.parent = this;
-          children.push(child);
+          _children.push(child);
           this._fire('add', {
               child: child
           });
@@ -5405,7 +5493,9 @@
                   .getMatrix();
               context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
           }
-          var hasComposition = this.globalCompositeOperation() !== 'source-over' && !skipComposition;
+          var hasComposition = this.globalCompositeOperation() !== 'source-over' &&
+              !skipComposition &&
+              drawMethod === 'drawScene';
           if (hasComposition && layer) {
               context.save();
               context._applyGlobalCompositeOperation(this);
@@ -5484,7 +5574,7 @@
                   break;
               }
           }
-          if (hasVisible) {
+          if (hasVisible && minX !== undefined) {
               selfRect = {
                   x: minX,
                   y: minY,
@@ -5818,7 +5908,9 @@
           return this;
       };
       /**
-       * get pointer position which can be a touch position or mouse position
+       * returns absolute pointer position which can be a touch position or mouse position
+       * pointer position doesn't include any transforms (such as scale) of the stage
+       * it is just a plain position of pointer relative to top-left corner of the stage container
        * @method
        * @name Konva.Stage#getPointerPosition
        * @returns {Vector2d|null}
@@ -5921,7 +6013,7 @@
           if (length > MAX_LAYERS_NUMBER) {
               Util.warn('The stage has ' +
                   length +
-                  ' layers. Recommended maximin number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group.');
+                  ' layers. Recommended maximum number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group.');
           }
           layer._setCanvasSize(this.width(), this.height());
           // draw layer and append canvas to container
@@ -5979,6 +6071,7 @@
           if (targetShape && eventsEnabled) {
               targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
               targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt });
+              this._fire(MOUSELEAVE$1, { evt: evt, target: this, currentTarget: this });
               this.targetShape = null;
           }
           else if (eventsEnabled) {
@@ -6064,6 +6157,7 @@
           this.setPointersPositions(evt);
           var pointerId = Util._getFirstPointerId(evt);
           var shape = this.getIntersection(this.getPointerPosition());
+          DD.justDragged = false;
           Konva.listenClickTap = true;
           if (shape && shape.isListening()) {
               this.clickStartShape = shape;
@@ -6103,9 +6197,6 @@
               // don't set inDblClickWindow after dragging
               Konva.inDblClickWindow = true;
               clearTimeout(this.dblTimeout);
-          }
-          else if (DD) {
-              DD.justDragged = false;
           }
           this.dblTimeout = setTimeout(function () {
               Konva.inDblClickWindow = false;
@@ -6184,6 +6275,7 @@
           this._changedPointerPositions.forEach(function (pos) {
               var shape = _this.getIntersection(pos);
               Konva.listenClickTap = true;
+              DD.justDragged = false;
               var hasShape = shape && shape.isListening();
               if (!hasShape) {
                   return;
@@ -6424,29 +6516,22 @@
               Collection.prototype.each.call(evt.touches, function (touch) {
                   _this._pointerPositions.push({
                       id: touch.identifier,
-                      x: touch.clientX - contentPosition.left,
-                      y: touch.clientY - contentPosition.top
+                      x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
+                      y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
                   });
               });
               Collection.prototype.each.call(evt.changedTouches || evt.touches, function (touch) {
                   _this._changedPointerPositions.push({
                       id: touch.identifier,
-                      x: touch.clientX - contentPosition.left,
-                      y: touch.clientY - contentPosition.top
+                      x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
+                      y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
                   });
               });
-              // currently, only handle one finger
-              if (evt.touches.length > 0) {
-                  var touch = evt.touches[0];
-                  // get the information for finger #1
-                  x = touch.clientX - contentPosition.left;
-                  y = touch.clientY - contentPosition.top;
-              }
           }
           else {
               // mouse events
-              x = evt.clientX - contentPosition.left;
-              y = evt.clientY - contentPosition.top;
+              x = (evt.clientX - contentPosition.left) / contentPosition.scaleX;
+              y = (evt.clientY - contentPosition.top) / contentPosition.scaleY;
               this.pointerPos = {
                   x: x,
                   y: y
@@ -6464,10 +6549,14 @@
       Stage.prototype._getContentPosition = function () {
           var rect = this.content.getBoundingClientRect
               ? this.content.getBoundingClientRect()
-              : { top: 0, left: 0 };
+              : { top: 0, left: 0, width: 1000, height: 1000 };
           return {
               top: rect.top,
-              left: rect.left
+              left: rect.left,
+              // sometimes clientWidth can be equals to 0
+              // i saw it in react-konva test, looks like it is because of hidden testing element
+              scaleX: rect.width / this.content.clientWidth || 1,
+              scaleY: rect.height / this.content.clientHeight || 1,
           };
       };
       Stage.prototype._buildDOM = function () {
@@ -6639,8 +6728,8 @@
           var stage = this.getStage();
           if (stage) {
               stage.content.removeChild(this.getCanvas()._canvas);
-              if (index < stage.getChildren().length - 1) {
-                  stage.content.insertBefore(this.getCanvas()._canvas, stage.getChildren()[index + 1].getCanvas()._canvas);
+              if (index < stage.children.length - 1) {
+                  stage.content.insertBefore(this.getCanvas()._canvas, stage.children[index + 1].getCanvas()._canvas);
               }
               else {
                   stage.content.appendChild(this.getCanvas()._canvas);
@@ -6667,8 +6756,8 @@
               return false;
           }
           stage.content.removeChild(this.getCanvas()._canvas);
-          if (this.index < stage.getChildren().length - 1) {
-              stage.content.insertBefore(this.getCanvas()._canvas, stage.getChildren()[this.index + 1].getCanvas()._canvas);
+          if (this.index < stage.children.length - 1) {
+              stage.content.insertBefore(this.getCanvas()._canvas, stage.children[this.index + 1].getCanvas()._canvas);
           }
           else {
               stage.content.appendChild(this.getCanvas()._canvas);
@@ -6680,7 +6769,7 @@
           if (Node.prototype.moveDown.call(this)) {
               var stage = this.getStage();
               if (stage) {
-                  var children = stage.getChildren();
+                  var children = stage.children;
                   stage.content.removeChild(this.getCanvas()._canvas);
                   stage.content.insertBefore(this.getCanvas()._canvas, children[this.index + 1].getCanvas()._canvas);
               }
@@ -6693,7 +6782,7 @@
           if (Node.prototype.moveToBottom.call(this)) {
               var stage = this.getStage();
               if (stage) {
-                  var children = stage.getChildren();
+                  var children = stage.children;
                   stage.content.removeChild(this.getCanvas()._canvas);
                   stage.content.insertBefore(this.getCanvas()._canvas, children[1].getCanvas()._canvas);
               }
@@ -6931,7 +7020,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -7127,7 +7216,7 @@
        * @returns {Boolean}
        */
       Shape.prototype.hasFill = function () {
-          return !!(this.fill() ||
+          return this.fillEnabled() && !!(this.fill() ||
               this.fillPatternImage() ||
               this.fillLinearGradientColorStops() ||
               this.fillRadialGradientColorStops());
@@ -7144,6 +7233,13 @@
               !!(this.stroke() || this.strokeLinearGradientColorStops())
           // this.getStrokeRadialGradientColorStops()
           );
+      };
+      Shape.prototype.hasHitStroke = function () {
+          var width = this.hitStrokeWidth();
+          // we should enable hit stroke we stroke is enabled
+          // and we have some value from width
+          return (this.strokeEnabled() &&
+              (width || this.strokeWidth() && width === 'auto'));
       };
       /**
        * determines if point is in the shape, regardless if other shapes are on top of it.  Note: because
@@ -8823,12 +8919,11 @@
    * Animation constructor.
    * @constructor
    * @memberof Konva
-   * @param {Function} func function executed on each animation frame.  The function is passed a frame object, which contains
+   * @param {AnimationFn} func function executed on each animation frame.  The function is passed a frame object, which contains
    *  timeDiff, lastTime, time, and frameRate properties.  The timeDiff property is the number of milliseconds that have passed
-   *  since the last animation frame.  The lastTime property is time in milliseconds that elapsed from the moment the animation started
-   *  to the last animation frame.  The time property is the time in milliseconds that elapsed from the moment the animation started
-   *  to the current animation frame.  The frameRate property is the current frame rate in frames / second. Return false from function,
-   *  if you don't need to redraw layer/layers on some frames.
+   *  since the last animation frame. The time property is the time in milliseconds that elapsed from the moment the animation started
+   *  to the current animation frame. The lastTime property is a `time` value from the previous frame.  The frameRate property is the current frame rate in frames / second.
+   *  Return false from function, if you don't need to redraw layer/layers on some frames.
    * @param {Konva.Layer|Array} [layers] layer(s) to be redrawn on each animation frame. Can be a layer, an array of layers, or null.
    *  Not specifying a node will result in no redraw.
    * @example
@@ -9726,6 +9821,7 @@
   var Konva$1 = Util._assign(Konva, {
       Collection: Collection,
       Util: Util,
+      Transform: Transform,
       Node: Node,
       ids: ids,
       names: names,
@@ -9787,7 +9883,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -9976,7 +10072,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -10115,9 +10211,23 @@
       };
       // overload size detection
       Line.prototype.getSelfRect = function () {
-          var points;
+          var points = this.points();
+          if (points.length < 4) {
+              return {
+                  x: points[0] || 0,
+                  y: points[1] || 0,
+                  width: 0,
+                  height: 0
+              };
+          }
           if (this.tension() !== 0) {
-              points = this._getTensionPoints();
+              points = __spreadArrays([
+                  points[0],
+                  points[1]
+              ], this._getTensionPoints(), [
+                  points[points.length - 2],
+                  points[points.length - 1]
+              ]);
           }
           else {
               points = this.points();
@@ -10138,8 +10248,8 @@
           return {
               x: Math.round(minX),
               y: Math.round(minY),
-              width: Math.round(maxX - minX),
-              height: Math.round(maxY - minY)
+              width: Math.max(this.strokeWidth(), Math.round(maxX - minX)),
+              height: Math.max(this.strokeWidth(), Math.round(maxY - minY))
           };
       };
       return Line;
@@ -10256,7 +10366,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -10375,6 +10485,16 @@
               this.attrs.dashEnabled = true;
           }
       };
+      Arrow.prototype.getSelfRect = function () {
+          var lineRect = _super.prototype.getSelfRect.call(this);
+          var offset = this.pointerWidth() / 2;
+          return {
+              x: lineRect.x - offset,
+              y: lineRect.y - offset,
+              width: lineRect.width + offset * 2,
+              height: lineRect.height + offset * 2,
+          };
+      };
       return Arrow;
   }(Line));
   Arrow.prototype.className = 'Arrow';
@@ -10463,7 +10583,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -10600,7 +10720,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -10774,7 +10894,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -10877,12 +10997,14 @@
           context.fillStrokeShape(this);
       };
       Image.prototype.getWidth = function () {
+          var _a;
           var image = this.image();
-          return this.attrs.width || (image ? image.width : 0);
+          return _a = this.attrs.width, (_a !== null && _a !== void 0 ? _a : (image ? image.width : 0));
       };
       Image.prototype.getHeight = function () {
+          var _a;
           var image = this.image();
-          return this.attrs.height || (image ? image.height : 0);
+          return _a = this.attrs.height, (_a !== null && _a !== void 0 ? _a : (image ? image.height : 0));
       };
       /**
        * load image from given url and create `Konva.Image` instance
@@ -11351,7 +11473,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -11464,7 +11586,18 @@
       Path.prototype.getSelfRect = function () {
           var points = [];
           this.dataArray.forEach(function (data) {
-              points = points.concat(data.points);
+              if (data.command === 'A') {
+                  points = points.concat([
+                      data.points[0] - data.points[2],
+                      data.points[1] - data.points[3],
+                      data.points[0] + data.points[2],
+                      data.points[1] + data.points[3]
+                  ]);
+              }
+              else {
+                  // TODO: how can we calculate bezier curves better?
+                  points = points.concat(data.points);
+              }
           });
           var minX = points[0];
           var maxX = points[0];
@@ -12124,7 +12257,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -12276,7 +12409,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -12434,7 +12567,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -12587,7 +12720,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -12954,7 +13087,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -13181,7 +13314,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -13353,7 +13486,7 @@
           context.fillStrokeShape(this);
       };
       Text.prototype.setText = function (text) {
-          var str = Util._isString(text) ? text : (text || '').toString();
+          var str = Util._isString(text) ? text : (text === null || text === undefined) ? '' : text + '';
           this._setAttr(TEXT, str);
           return this;
       };
@@ -13856,7 +13989,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -14190,11 +14323,13 @@
                   }
               }
           };
-          // fake search for offset, this is very bad approach
-          // find other way to add offset from start (for align)
+          // fake search for offset, this is the best approach
           var testChar = 'C';
           var glyphWidth = that._getTextSize(testChar).width + letterSpacing;
-          for (var k = 0; k < offset / glyphWidth; k++) {
+          var lettersInOffset = offset / glyphWidth - 1;
+          // the idea is simple
+          // try to draw testChar until we fill offset
+          for (var k = 0; k < lettersInOffset; k++) {
               findSegmentToFitCharacter(testChar);
               if (p0 === undefined || p1 === undefined) {
                   break;
@@ -14235,6 +14370,14 @@
           }
       };
       TextPath.prototype.getSelfRect = function () {
+          if (!this.glyphInfo.length) {
+              return {
+                  x: 0,
+                  y: 0,
+                  width: 0,
+                  height: 0
+              };
+          }
           var points = [];
           this.glyphInfo.forEach(function (info) {
               points.push(info.p0.x);
@@ -14242,10 +14385,10 @@
               points.push(info.p1.x);
               points.push(info.p1.y);
           });
-          var minX = points[0];
-          var maxX = points[0];
-          var minY = points[0];
-          var maxY = points[0];
+          var minX = points[0] || 0;
+          var maxX = points[0] || 0;
+          var minY = points[1] || 0;
+          var maxY = points[1] || 0;
           var x, y;
           for (var i = 0; i < points.length / 2; i++) {
               x = points[i * 2];
@@ -14481,6 +14624,7 @@
       'bottom-center': 180,
       'bottom-right': 135
   };
+  var TOUCH_DEVICE = 'ontouchstart' in Konva._global;
   function getCursor(anchorName, rad, isMirrored) {
       if (anchorName === 'rotater') {
           return 'crosshair';
@@ -14722,7 +14866,8 @@
               strokeWidth: 1,
               name: name + ' _anchor',
               dragDistance: 0,
-              draggable: true
+              draggable: true,
+              hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto'
           });
           var self = this;
           anchor.on('mousedown touchstart', function (e) {
@@ -14739,7 +14884,7 @@
           });
           // add hover styling
           anchor.on('mouseenter', function () {
-              var rad = Konva.getAngle(_this.rotation());
+              var rad = Konva.getAngle(_this.getAbsoluteRotation());
               var scale = _this.getNode().getAbsoluteScale();
               // If scale.y < 0 xor scale.x < 0 we need to flip (not rotate).
               var isMirrored = scale.y * scale.x < 0;
@@ -14769,7 +14914,7 @@
                   ctx.rect(-padding, -padding, this.width() + padding * 2, this.height() + padding * 2);
                   ctx.moveTo(this.width() / 2, -padding);
                   if (tr.rotateEnabled()) {
-                      ctx.lineTo(this.width() / 2, -tr.rotateAnchorOffset() * Util._sign(this.height()));
+                      ctx.lineTo(this.width() / 2, -tr.rotateAnchorOffset() * Util._sign(this.height()) - padding);
                   }
                   ctx.fillStrokeShape(this);
               }
@@ -14797,26 +14942,14 @@
           var x, y, newHypotenuse;
           var anchorNode = this.findOne('.' + this._movingAnchorName);
           var stage = anchorNode.getStage();
-          var box = stage.getContent().getBoundingClientRect();
-          var zeroPoint = {
-              x: box.left,
-              y: box.top
-          };
-          var pointerPos = {
-              left: e.clientX !== undefined ? e.clientX : e.touches[0].clientX,
-              top: e.clientX !== undefined ? e.clientY : e.touches[0].clientY
-          };
-          var newAbsPos = {
-              x: pointerPos.left - zeroPoint.x,
-              y: pointerPos.top - zeroPoint.y
-          };
-          anchorNode.setAbsolutePosition(newAbsPos);
+          stage.setPointersPositions(e);
+          anchorNode.setAbsolutePosition(stage.getPointerPosition());
           var keepProportion = this.keepRatio() || e.shiftKey;
-          // console.log(keepProportion);
+          var padding = this.padding();
           if (this._movingAnchorName === 'top-left') {
               if (keepProportion) {
-                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.bottom-right').x() - anchorNode.x(), 2) +
-                      Math.pow(this.findOne('.bottom-right').y() - anchorNode.y(), 2));
+                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.bottom-right').x() - anchorNode.x() - padding * 2, 2) +
+                      Math.pow(this.findOne('.bottom-right').y() - anchorNode.y() - padding * 2, 2));
                   var reverseX = this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
                       ? -1
                       : 1;
@@ -14825,8 +14958,8 @@
                       : 1;
                   x = newHypotenuse * this.cos * reverseX;
                   y = newHypotenuse * this.sin * reverseY;
-                  this.findOne('.top-left').x(this.findOne('.bottom-right').x() - x);
-                  this.findOne('.top-left').y(this.findOne('.bottom-right').y() - y);
+                  this.findOne('.top-left').x(this.findOne('.bottom-right').x() - x - padding * 2);
+                  this.findOne('.top-left').y(this.findOne('.bottom-right').y() - y - padding * 2);
               }
           }
           else if (this._movingAnchorName === 'top-center') {
@@ -14834,8 +14967,8 @@
           }
           else if (this._movingAnchorName === 'top-right') {
               if (keepProportion) {
-                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.bottom-left').x() - anchorNode.x(), 2) +
-                      Math.pow(this.findOne('.bottom-left').y() - anchorNode.y(), 2));
+                  newHypotenuse = Math.sqrt(Math.pow(anchorNode.x() - this.findOne('.bottom-left').x() - padding * 2, 2) +
+                      Math.pow(this.findOne('.bottom-left').y() - anchorNode.y() - padding * 2, 2));
                   var reverseX = this.findOne('.top-right').x() < this.findOne('.top-left').x()
                       ? -1
                       : 1;
@@ -14844,8 +14977,8 @@
                       : 1;
                   x = newHypotenuse * this.cos * reverseX;
                   y = newHypotenuse * this.sin * reverseY;
-                  this.findOne('.top-right').x(x);
-                  this.findOne('.top-right').y(this.findOne('.bottom-left').y() - y);
+                  this.findOne('.top-right').x(x + padding);
+                  this.findOne('.top-right').y(this.findOne('.bottom-left').y() - y - padding * 2);
               }
               var pos = anchorNode.position();
               this.findOne('.top-left').y(pos.y);
@@ -14859,8 +14992,8 @@
           }
           else if (this._movingAnchorName === 'bottom-left') {
               if (keepProportion) {
-                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.top-right').x() - anchorNode.x(), 2) +
-                      Math.pow(this.findOne('.top-right').y() - anchorNode.y(), 2));
+                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.top-right').x() - anchorNode.x() - padding * 2, 2) +
+                      Math.pow(anchorNode.y() - this.findOne('.top-right').y() - padding * 2, 2));
                   var reverseX = this.findOne('.top-right').x() < this.findOne('.bottom-left').x()
                       ? -1
                       : 1;
@@ -14869,8 +15002,8 @@
                       : 1;
                   x = newHypotenuse * this.cos * reverseX;
                   y = newHypotenuse * this.sin * reverseY;
-                  this.findOne('.bottom-left').x(this.findOne('.top-right').x() - x);
-                  this.findOne('.bottom-left').y(y);
+                  this.findOne('.bottom-left').x(this.findOne('.top-right').x() - x - padding * 2);
+                  this.findOne('.bottom-left').y(y + padding);
               }
               pos = anchorNode.position();
               this.findOne('.top-left').x(pos.x);
@@ -14881,8 +15014,8 @@
           }
           else if (this._movingAnchorName === 'bottom-right') {
               if (keepProportion) {
-                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.bottom-right').x(), 2) +
-                      Math.pow(this.findOne('.bottom-right').y(), 2));
+                  newHypotenuse = Math.sqrt(Math.pow(this.findOne('.bottom-right').x() - padding, 2) +
+                      Math.pow(this.findOne('.bottom-right').y() - padding, 2));
                   var reverseX = this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
                       ? -1
                       : 1;
@@ -14891,12 +15024,11 @@
                       : 1;
                   x = newHypotenuse * this.cos * reverseX;
                   y = newHypotenuse * this.sin * reverseY;
-                  this.findOne('.bottom-right').x(x);
-                  this.findOne('.bottom-right').y(y);
+                  this.findOne('.bottom-right').x(x + padding);
+                  this.findOne('.bottom-right').y(y + padding);
               }
           }
           else if (this._movingAnchorName === 'rotater') {
-              var padding = this.padding();
               var attrs = this._getNodeRect();
               x = anchorNode.x() - attrs.width / 2;
               y = -anchorNode.y() + attrs.height / 2;
@@ -14945,16 +15077,14 @@
           if (this._movingAnchorName === 'rotater') {
               return;
           }
-          var absPos = this.findOne('.top-left').getAbsolutePosition(this.getParent());
           var centeredScaling = this.centeredScaling() || e.altKey;
           if (centeredScaling) {
               var topLeft = this.findOne('.top-left');
               var bottomRight = this.findOne('.bottom-right');
-              var topOffsetX = topLeft.x();
-              var topOffsetY = topLeft.y();
-              var bottomOffsetX = this.getWidth() - bottomRight.x();
-              var bottomOffsetY = this.getHeight() - bottomRight.y();
-              // console.log(topOffsetX, topOffsetY, bottomOffsetX, bottomOffsetY);
+              var topOffsetX = topLeft.x() + padding;
+              var topOffsetY = topLeft.y() + padding;
+              var bottomOffsetX = this.getWidth() - bottomRight.x() + padding;
+              var bottomOffsetY = this.getHeight() - bottomRight.y() + padding;
               bottomRight.move({
                   x: -topOffsetX,
                   y: -topOffsetY
@@ -14963,13 +15093,12 @@
                   x: bottomOffsetX,
                   y: bottomOffsetY
               });
-              absPos = topLeft.getAbsolutePosition(this.getParent());
           }
+          var absPos = this.findOne('.top-left').getAbsolutePosition(this.getParent());
           x = absPos.x;
           y = absPos.y;
           var width = this.findOne('.bottom-right').x() - this.findOne('.top-left').x();
           var height = this.findOne('.bottom-right').y() - this.findOne('.top-left').y();
-          // console.log(x, y, width, height);
           this._fitNodeInto({
               x: x + this.offsetX(),
               y: y + this.offsetY(),
@@ -14995,7 +15124,7 @@
           }
       };
       Transformer.prototype._fitNodeInto = function (newAttrs, evt) {
-          // waring! in this attrs padding may be included
+          // waring! in this attrs padding is included
           var boundBoxFunc = this.boundBoxFunc();
           if (boundBoxFunc) {
               var oldAttrs = this._getNodeRect();
@@ -15011,8 +15140,10 @@
               skipStroke: this.ignoreStroke()
           });
           var padding = this.padding();
-          var scaleX = (newAttrs.width - padding * 2) / pure.width;
-          var scaleY = (newAttrs.height - padding * 2) / pure.height;
+          var scaleX = pure.width ? (newAttrs.width - padding * 2) / pure.width : 1;
+          var scaleY = pure.height
+              ? (newAttrs.height - padding * 2) / pure.height
+              : 1;
           var rotation = Konva.getAngle(node.rotation());
           var dx = pure.x * scaleX - padding - node.offsetX() * scaleX;
           var dy = pure.y * scaleY - padding - node.offsetY() * scaleY;
@@ -15118,7 +15249,7 @@
           var scaledRotateAnchorOffset = -this.rotateAnchorOffset() * Math.abs(invertedScale.y);
           this.findOne('.rotater').setAttrs({
               x: width / 2,
-              y: scaledRotateAnchorOffset * Util._sign(height),
+              y: scaledRotateAnchorOffset * Util._sign(height) - padding,
               scale: invertedScale,
               visible: this.rotateEnabled()
           });
@@ -15523,7 +15654,7 @@
      * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
      * @param {String} [config.stroke] stroke color
      * @param {Number} [config.strokeWidth] stroke width
-     * @param {Boolean} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
      * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
      * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
      * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
@@ -17756,4 +17887,4 @@
 
   return Konva$2;
 
-}));
+})));

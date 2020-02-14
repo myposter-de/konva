@@ -384,7 +384,7 @@ suite('Sprite', function() {
       stage.add(layer);
 
       var counter = 0;
-      sprite.on('frameIndexChange.konva', event => {
+      sprite.on('frameIndexChange.konva', function(event) {
         counter += 1;
       });
 
@@ -400,7 +400,7 @@ suite('Sprite', function() {
     imageObj.src = 'assets/scorpion-sprite.png';
   });
 
-  // need fix, but who is using sprites??
+  // need fix.
   test.skip('can change frame rate on fly', function(done) {
     var imageObj = new Image();
     imageObj.onload = function() {

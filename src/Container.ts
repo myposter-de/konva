@@ -116,22 +116,24 @@ export abstract class Container<ChildType extends Node> extends Node<
    * // remember to redraw layer if you changed something
    * layer.draw();
    */
-  add(child: ChildType) {
+  add(...children: ChildType[]) {
     if (arguments.length > 1) {
       for (var i = 0; i < arguments.length; i++) {
         this.add(arguments[i]);
       }
       return this;
     }
+    var child = children[0];
     if (child.getParent()) {
       child.moveTo(this);
       return this;
     }
-    var children = this.children;
+    var _children = this.children;
     this._validateAdd(child);
-    child.index = children.length;
+    child._clearCaches();
+    child.index = _children.length;
     child.parent = this;
-    children.push(child);
+    _children.push(child);
     this._fire('add', {
       child: child
     });
@@ -419,7 +421,9 @@ export abstract class Container<ChildType extends Node> extends Node<
     }
 
     var hasComposition =
-      this.globalCompositeOperation() !== 'source-over' && !skipComposition;
+      this.globalCompositeOperation() !== 'source-over' &&
+      !skipComposition &&
+      drawMethod === 'drawScene';
     if (hasComposition && layer) {
       context.save();
       context._applyGlobalCompositeOperation(this);
@@ -505,8 +509,7 @@ export abstract class Container<ChildType extends Node> extends Node<
         break;
       }
     }
-
-    if (hasVisible) {
+    if (hasVisible && minX !== undefined) {
       selfRect = {
         x: minX,
         y: minY,

@@ -185,9 +185,23 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
   }
   // overload size detection
   getSelfRect() {
-    var points;
+    var points = this.points();
+    if (points.length < 4) {
+      return {
+        x: points[0] || 0,
+        y: points[1] || 0,
+        width: 0,
+        height: 0
+      };
+    }
     if (this.tension() !== 0) {
-      points = this._getTensionPoints();
+      points = [
+        points[0],
+        points[1],
+        ...this._getTensionPoints(),
+        points[points.length - 2],
+        points[points.length - 1]
+      ];
     } else {
       points = this.points();
     }
@@ -207,8 +221,8 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
     return {
       x: Math.round(minX),
       y: Math.round(minY),
-      width: Math.round(maxX - minX),
-      height: Math.round(maxY - minY)
+      width: Math.max(this.strokeWidth(), Math.round(maxX - minX)),
+      height: Math.max(this.strokeWidth(), Math.round(maxY - minY))
     };
   }
 

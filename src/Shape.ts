@@ -52,7 +52,7 @@ export interface ShapeConfig extends NodeConfig {
   fillPriority?: string;
   stroke?: string;
   strokeWidth?: number;
-  hitStrokeWidth?: number;
+  hitStrokeWidth?: number | string;
   strokeScaleEnabled?: boolean;
   strokeHitEnabled?: boolean;
   strokeEnabled?: boolean;
@@ -349,7 +349,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
    * @returns {Boolean}
    */
   hasFill() {
-    return !!(
+    return this.fillEnabled() && !!(
       this.fill() ||
       this.fillPatternImage() ||
       this.fillLinearGradientColorStops() ||
@@ -368,6 +368,16 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       this.strokeWidth() &&
       !!(this.stroke() || this.strokeLinearGradientColorStops())
       // this.getStrokeRadialGradientColorStops()
+    );
+  }
+  hasHitStroke() {
+    const width = this.hitStrokeWidth();
+
+    // we should enable hit stroke we stroke is enabled
+    // and we have some value from width
+    return (
+      this.strokeEnabled() &&
+      (width || this.strokeWidth() && width === 'auto')
     );
   }
   /**

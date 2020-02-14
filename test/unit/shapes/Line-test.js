@@ -289,27 +289,61 @@ suite('Line', function() {
     });
   });
 
-  // should we calculate client rect for line differently?
-  test.skip('getClientRect rotated', function() {
+  test('getClientRect with tension', function() {
     var stage = addStage();
+    stage.draggable(true);
     var layer = new Konva.Layer();
 
     var line = new Konva.Line({
-      x: 20,
-      y: 20,
-      rotation: 45,
-      points: [0, 0, 50, 50],
-      closed: true,
+      x: 0,
+      y: 0,
+      points: [75, 75, 100, 200, 300, 140],
+      tension: 0.5,
       stroke: '#0f0'
     });
     layer.add(line);
+
+    var client = line.getClientRect();
+    var rect = new Konva.Rect(Konva.Util._assign({ stroke: 'red' }, client));
+    layer.add(rect);
+
     stage.add(layer);
 
-    var rect = line.getClientRect();
-    assert.equal(rect.x, 19, 'check x');
-    assert.equal(rect.y, 19, 'check y');
-    // assert.equal(rect.width, 2, 'check width');
-    assert.equal(rect.height, 52, 'check height');
+    assert.equal(client.x, 56, 'check x');
+    assert.equal(client.y, 74, 'check y');
+    assert.equal(client.width, 245, 'check width');
+    assert.equal(client.height, 147, 'check height');
+  });
+
+  test('getClientRect with low number of points', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var line = new Konva.Line({
+      x: 0,
+      y: 0,
+      points: [],
+      tension: 0.5,
+      stroke: '#0f0'
+    });
+    layer.add(line);
+    layer.draw();
+
+    var client = line.getClientRect();
+
+    assert.equal(client.x, -1, 'check x');
+    assert.equal(client.y, -1, 'check y');
+    assert.equal(client.width, 2, 'check width');
+    assert.equal(client.height, 2, 'check height');
+
+    line.points([10, 10]);
+    client = line.getClientRect();
+
+    assert.equal(client.x, 9, 'check x');
+    assert.equal(client.y, 9, 'check y');
+    assert.equal(client.width, 2, 'check width');
+    assert.equal(client.height, 2, 'check height');
   });
 
   test('line caching', function() {
@@ -366,5 +400,55 @@ suite('Line', function() {
       false,
       'calculated points should change'
     );
+  });
+
+  test('getSelfRect with horizontal line should return strokeWidth for height', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var blob = new Konva.Line({
+      x: 50,
+      y: 50,
+      points: [10, 10, 20, 10],
+      stroke: 'blue',
+      strokeWidth: 5,
+      draggable: true,
+      fill: '#aaf',
+      closed: true
+    });
+
+    layer.add(blob);
+    stage.add(layer);
+
+    assert.deepEqual(blob.getSelfRect(), {
+      x: 10,
+      y: 10,
+      width: 10,
+      height: 5
+    });
+  });
+
+  test('getSelfRect with vertical line should return strokeWidth for width', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var blob = new Konva.Line({
+      x: 50,
+      y: 50,
+      points: [10, 10, 10, 20],
+      stroke: 'blue',
+      strokeWidth: 5,
+      draggable: true,
+      fill: '#aaf',
+      closed: true
+    });
+
+    layer.add(blob);
+    stage.add(layer);
+
+    assert.deepEqual(blob.getSelfRect(), {
+      x: 10,
+      y: 10,
+      width: 5,
+      height: 10
+    });
   });
 });

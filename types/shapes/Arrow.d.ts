@@ -10,6 +10,12 @@ export interface ArrowConfig extends LineConfig {
 }
 export declare class Arrow extends Line<ArrowConfig> {
     _sceneFunc(ctx: any): void;
+    getSelfRect(): {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
     pointerLength: GetSet<number, this>;
     pointerWidth: GetSet<number, this>;
     pointerAtBeginning: GetSet<boolean, this>;

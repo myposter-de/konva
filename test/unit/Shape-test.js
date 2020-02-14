@@ -707,7 +707,7 @@ suite('Shape', function() {
 
   // ======================================================
   // hard to emulate the same drawing
-  test.skip('fill and stroke with shadow and opacity', function() {
+  test('fill and stroke with shadow and opacity', function() {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -769,17 +769,16 @@ suite('Shape', function() {
     context.fill();
     context.restore();
 
-    // don't test in PhantomJS as it use old chrome engine
-    // it it has opacity + shadow bug
-    if (!window.mochaPhantomJS) {
-      compareLayerAndCanvas(layer, canvas, 260);
-    }
+    // // don't test in PhantomJS as it use old chrome engine
+    // // it it has opacity + shadow bug
+    // if (!window.mochaPhantomJS) {
+    //   compareLayerAndCanvas(layer, canvas, 260);
+    // }
 
     var trace = layer.getContext().getTrace();
-    //console.log(trace);
     assert.equal(
       trace,
-      'clearRect(0,0,578,200);save();save();shadowColor=rgba(128,128,128,1);shadowBlur=1;shadowOffsetX=20;shadowOffsetY=20;globalAlpha=0.5;drawImage([object HTMLCanvasElement],0,0,578,200);restore();restore();'
+      'clearRect(0,0,578,200);save();save();shadowColor=rgba(128,128,128,1);shadowBlur=5;shadowOffsetX=20;shadowOffsetY=20;globalAlpha=0.5;drawImage([object HTMLCanvasElement],0,0,578,200);restore();restore();'
     );
   });
 
@@ -1050,7 +1049,8 @@ suite('Shape', function() {
       width: 100,
       height: 50,
       stroke: 'red',
-      strokeWidth: 20
+      strokeWidth: 20,
+      draggable: true
     });
     // default value
     assert.equal(rect.strokeHitEnabled(), true);
@@ -1121,6 +1121,30 @@ suite('Shape', function() {
     //   trace,
     //   'clearRect();save();transform();beginPath();rect();closePath();save();fillStyle;fill();restore();restore();'
     // );
+  });
+
+  test('enable hitStrokeWidth even if we have no stroke on scene', function() {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+
+    var rect = new Konva.Rect({
+      x: 10,
+      y: 10,
+      width: 100,
+      height: 100
+    });
+    // default value
+    layer.add(rect);
+    stage.add(layer);
+
+    // try to hit test near edge
+    assert.equal(stage.getIntersection({ x: 5, y: 5 }), null);
+
+    rect.hitStrokeWidth(20);
+    layer.draw();
+    // no we should hit the rect
+    assert.equal(stage.getIntersection({ x: 5, y: 5 }), rect);
   });
 
   test('cache shadow color rgba', function() {
@@ -1893,5 +1917,52 @@ suite('Shape', function() {
 
     assert.equal(callCount, 1);
     Konva.Util.warn = oldWarn;
+  });
+
+  test('hasFill getter', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var shape = new Konva.Shape({
+      stroke: 'black',
+      strokeWidth: 4,
+      sceneFunc: function(context) {
+        context.beginPath();
+        context.moveTo(20, 50);
+        context.quadraticCurveTo(550, 0, 500, 500);
+        context.fillStrokeShape(shape);
+      },
+      fill: 'red',
+      fillEnabled: false
+    });
+
+    layer.add(shape);
+    assert.equal(shape.hasFill(), false);
+  });
+
+  test('test hit of non filled shape', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var line = new Konva.Shape({
+      sceneFunc: function(context) {
+        context.beginPath();
+        context.moveTo(20, 50);
+        context.quadraticCurveTo(550, 0, 500, 500);
+
+        context.fillStrokeShape(line);
+      }
+    });
+
+    layer.add(line);
+    layer.draw();
+
+    // we still should register shape here
+    // like for a non filled rectangle (with just stroke),
+    // we need fill it for full events
+    var shape = layer.getIntersection({ x: 50, y: 70 });
+    assert.equal(shape, line);
   });
 });

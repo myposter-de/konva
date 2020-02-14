@@ -95,6 +95,11 @@ function checkDefaultFill(config) {
   return config;
 }
 
+// polyfill for IE11
+const trimRight = String.prototype.trimRight || function polyfill() {
+  return this.replace(/[\s\xa0]+$/, '');
+}
+
 /**
  * Text constructor
  * @constructor
@@ -292,7 +297,7 @@ export class Text extends Shape<TextConfig> {
     context.fillStrokeShape(this);
   }
   setText(text) {
-    var str = Util._isString(text) ? text : (text || '').toString();
+    var str = Util._isString(text) ? text : (text === null || text === undefined) ? '' : text + '';
     this._setAttr(TEXT, str);
     return this;
   }

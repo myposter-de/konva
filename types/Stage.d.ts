@@ -73,6 +73,8 @@ export declare class Stage extends Container<BaseLayer> {
     _getContentPosition(): {
         top: number;
         left: number;
+        scaleX: number;
+        scaleY: number;
     };
     _buildDOM(): void;
     cache(): this;

@@ -1,6 +1,7 @@
 import { Util } from './Util';
 import { Konva } from './Global';
 import { Canvas } from './Canvas';
+import { Shape } from './Shape';
 
 var COMMA = ',',
   OPEN_PAREN = '(',
@@ -110,8 +111,8 @@ export class Context {
    * @name Konva.Context#fillShape
    * @param {Konva.Shape} shape
    */
-  fillShape(shape) {
-    if (shape.getFillEnabled()) {
+  fillShape(shape: Shape) {
+    if (shape.fillEnabled()) {
       this._fill(shape);
     }
   }
@@ -125,8 +126,8 @@ export class Context {
    * @name Konva.Context#strokeShape
    * @param {Konva.Shape} shape
    */
-  strokeShape(shape) {
-    if (shape.getStrokeEnabled()) {
+  strokeShape(shape: Shape) {
+    if (shape.hasStroke()) {
       this._stroke(shape);
     }
   }
@@ -141,13 +142,9 @@ export class Context {
    * @name Konva.Context#fillStrokeShape
    * @param {Konva.Shape} shape
    */
-  fillStrokeShape(shape) {
-    if (shape.getFillEnabled()) {
-      this._fill(shape);
-    }
-    if (shape.getStrokeEnabled()) {
-      this._stroke(shape);
-    }
+  fillStrokeShape(shape: Shape) {
+    this.fillShape(shape);
+    this.strokeShape(shape);
   }
 
   getTrace(relaxed) {
@@ -287,8 +284,8 @@ export class Context {
    * @method
    * @name Konva.Context#arcTo
    */
-  arcTo(a0, a1, a2, a3, a4, a5) {
-    this._context.arc(a0, a1, a2, a3, a4, a5);
+  arcTo(a0, a1, a2, a3, a4) {
+    this._context.arcTo(a0, a1, a2, a3, a4);
   }
   /**
    * beginPath function.
@@ -825,8 +822,13 @@ export class HitContext extends Context {
     shape._fillFuncHit(this);
     this.restore();
   }
+  strokeShape(shape: Shape) {
+    if (shape.hasHitStroke()) {
+      this._stroke(shape);
+    }
+  }
   _stroke(shape) {
-    if (shape.hasStroke() && shape.hitStrokeWidth()) {
+    if (shape.hasHitStroke()) {
       // ignore strokeScaleEnabled for Text
       var strokeScaleEnabled = shape.getStrokeScaleEnabled();
       if (!strokeScaleEnabled) {

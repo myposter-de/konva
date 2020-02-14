@@ -16,7 +16,7 @@ export declare abstract class Container<ChildType extends Node> extends Node<Con
     removeChildren(): this;
     destroyChildren(): this;
     abstract _validateAdd(node: Node): void;
-    add(child: ChildType): this;
+    add(...children: ChildType[]): this;
     destroy(): this;
     find<ChildNode extends Node = Node>(selector: any): Collection<ChildNode>;
     get(selector: any): Collection<Node<NodeConfig>>;

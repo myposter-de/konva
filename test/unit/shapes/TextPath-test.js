@@ -49,13 +49,15 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Find Next Segment when Arc is in Path', function() {
+  test.skip('Find Next Segment when Arc is in Path', function() {
     var stage = addStage();
     var layer = new Konva.Layer();
 
-    var c = 'M 50 50 a 150 50 0 0 1 250 50 l 50 0';
+    var c = 'M10,10 C0,0 10,150 100,100 S300,150 40,130';
     var path = new Konva.Path({
-      stroke: 'red',
+      x: 0,
+      y: 50,
+      stroke: 'green',
       strokeWidth: 1,
       data: c
     });
@@ -63,15 +65,23 @@ suite('TextPath', function() {
     layer.add(path);
 
     var textpath = new Konva.TextPath({
-      fill: 'black',
-      fontSize: 10,
+      x: 0,
+      y: 50,
+      fill: '#333',
+      fontSize: 50,
+      fontFamily: 'Arial',
       text:
-        "All the world's a stage, and all the men and women merely players. They have their exits and their entrances; And one man in his time plays many parts.",
+        "All mhe world's a smage, and all mhe men and women merely players.",
       data: c
     });
 
     layer.add(textpath);
     stage.add(layer);
+
+    var trace = layer.getContext().getTrace();
+    console.log(trace);
+    assert.equal(trace.indexOf('NaN') === -1, true, 'No NaNs');
+    throw '';
   });
 
   // ======================================================
@@ -305,6 +315,37 @@ suite('TextPath', function() {
     assert.equal(layer.getContext().getTrace(true), trace);
   });
 
+  test('Text path with align right', function() {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+
+    var c = 'M10,10 300, 10';
+
+    var path = new Konva.Path({
+      stroke: 'red',
+      data: c
+    });
+
+    layer.add(path);
+
+    var textpath = new Konva.TextPath({
+      fill: 'black',
+      fontSize: 10,
+      fontFamily: 'Arial',
+      text: "All the world's a stage.",
+      align: 'right',
+      data: c
+    });
+
+    layer.add(textpath);
+    stage.add(layer);
+
+    var trace =
+      "restore();save();translate(228.335,10);rotate(0);fillStyle=black;fillText(w,0,0);restore();save();translate(235.557,10);rotate(0);fillStyle=black;fillText(o,0,0);restore();save();translate(241.118,10);rotate(0);fillStyle=black;fillText(r,0,0);restore();save();translate(244.448,10);rotate(0);fillStyle=black;fillText(l,0,0);restore();save();translate(246.67,10);rotate(0);fillStyle=black;fillText(d,0,0);restore();save();translate(252.231,10);rotate(0);fillStyle=black;fillText(',0,0);restore();save();translate(254.141,10);rotate(0);fillStyle=black;fillText(s,0,0);restore();save();translate(259.141,10);rotate(0);fillStyle=black;fillText( ,0,0);restore();save();translate(261.919,10);rotate(0);fillStyle=black;fillText(a,0,0);restore();save();translate(267.48,10);rotate(0);fillStyle=black;fillText( ,0,0);restore();save();translate(270.259,10);rotate(0);fillStyle=black;fillText(s,0,0);restore();save();translate(275.259,10);rotate(0);fillStyle=black;fillText(t,0,0);restore();save();translate(278.037,10);rotate(0);fillStyle=black;fillText(a,0,0);restore();save();translate(283.599,10);rotate(0);fillStyle=black;fillText(g,0,0);restore();save();translate(289.16,10);rotate(0);fillStyle=black;fillText(e,0,0);restore();save();translate(294.722,10);rotate(0);fillStyle=black;fillText(.,0,0);restore();restore();restore();";
+
+    assert.equal(layer.getContext().getTrace(), trace);
+  });
+
   test('Text path with justify align', function() {
     var stage = addStage();
     var layer = new Konva.Layer();
@@ -505,7 +546,7 @@ suite('TextPath', function() {
     layer.draw();
 
     var called = false;
-    kernedText.kerningFunc(() => {
+    kernedText.kerningFunc(function() {
       called = true;
       return 1;
     });
@@ -589,5 +630,33 @@ suite('TextPath', function() {
       })
     );
     layer.draw();
+  });
+
+  test('client rect calculations', function() {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var textpath = new Konva.TextPath({
+      x: 100,
+      y: 150,
+      fill: '#333',
+      fontSize: 16,
+      fontFamily: 'Arial',
+      align: 'right',
+      text: 'test_path',
+      data: 'M 0,10 L 300 10'
+    });
+    layer.add(textpath);
+    layer.draw();
+
+    var rect = textpath.getClientRect();
+
+    assert.equal(rect.height, 16, 'check height');
+
+    textpath.text('');
+    rect = textpath.getClientRect();
+    assert.equal(rect.height, 0, 'check height');
   });
 });

@@ -50,7 +50,7 @@ function _strokeFunc(context) {
  *     ' ': -0.05517578125,
  *     'T': -0.07421875,
  *     'V': -0.07421875
- *   } 
+ *   }
  *   'V': {
  *     ',': -0.091796875,
  *     ":": -0.037109375,
@@ -441,11 +441,13 @@ export class TextPath extends Shape<TextPathConfig> {
       }
     };
 
-    // fake search for offset, this is very bad approach
-    // find other way to add offset from start (for align)
+    // fake search for offset, this is the best approach
     var testChar = 'C';
     var glyphWidth = that._getTextSize(testChar).width + letterSpacing;
-    for (var k = 0; k < offset / glyphWidth; k++) {
+    var lettersInOffset = offset / glyphWidth - 1;
+    // the idea is simple
+    // try to draw testChar until we fill offset
+    for (var k = 0; k < lettersInOffset; k++) {
       findSegmentToFitCharacter(testChar);
       if (p0 === undefined || p1 === undefined) {
         break;
@@ -498,6 +500,14 @@ export class TextPath extends Shape<TextPathConfig> {
     }
   }
   getSelfRect() {
+    if (!this.glyphInfo.length) {
+      return {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0
+      };
+    }
     var points = [];
 
     this.glyphInfo.forEach(function(info) {
@@ -506,10 +516,10 @@ export class TextPath extends Shape<TextPathConfig> {
       points.push(info.p1.x);
       points.push(info.p1.y);
     });
-    var minX = points[0];
-    var maxX = points[0];
-    var minY = points[0];
-    var maxY = points[0];
+    var minX = points[0] || 0;
+    var maxX = points[0] || 0;
+    var minY = points[1] || 0;
+    var maxY = points[1] || 0;
     var x, y;
     for (var i = 0; i < points.length / 2; i++) {
       x = points[i * 2];

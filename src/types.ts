@@ -18,6 +18,15 @@ export interface IRect {
   height: number;
 }
 
+export interface IFrame {
+	time: number;
+	timeDiff: number;
+	lastTime: number;
+	frameRate: number;
+}
+
+export type AnimationFn = (frame?: IFrame) => boolean|void;
+
 export enum KonvaNodeEvent {
   mouseover = 'mouseover',
   mouseout = 'mouseout',
@@ -38,4 +47,14 @@ export enum KonvaNodeEvent {
   dragstart = 'dragstart',
   dragmove = 'dragmove',
   dragend = 'dragend'
+}
+
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+export interface RGBA extends RGB {
+  a: number;
 }

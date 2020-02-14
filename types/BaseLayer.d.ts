@@ -1,6 +1,7 @@
 import { Point } from './Util';
 import { Container, ContainerConfig } from './Container';
 import { SceneCanvas, HitCanvas } from './Canvas';
+import { Stage } from './Stage';
 import { GetSet } from './types';
 import { Group } from './Group';
 import { Shape } from './Shape';
@@ -27,7 +28,7 @@ export declare abstract class BaseLayer extends Container<Group | Shape> {
     getLayer(): this;
     hitGraphEnabled(): boolean;
     remove(): this;
-    getStage(): any;
+    getStage(): Stage;
     setSize({ width, height }: {
         width: any;
         height: any;

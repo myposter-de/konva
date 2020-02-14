@@ -1,14 +1,15 @@
 import { Canvas } from './Canvas';
+import { Shape } from './Shape';
 export declare class Context {
     canvas: Canvas;
     _context: CanvasRenderingContext2D;
     traceArr: Array<String>;
     constructor(canvas: Canvas);
-    fillShape(shape: any): void;
+    fillShape(shape: Shape): void;
     _fill(shape: any): void;
-    strokeShape(shape: any): void;
+    strokeShape(shape: Shape): void;
     _stroke(shape: any): void;
-    fillStrokeShape(shape: any): void;
+    fillStrokeShape(shape: Shape): void;
     getTrace(relaxed: any): string;
     clearTrace(): void;
     _trace(str: any): void;
@@ -20,7 +21,7 @@ export declare class Context {
     _applyLineJoin(shape: any): void;
     setAttr(attr: any, val: any): void;
     arc(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any): void;
-    arcTo(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any): void;
+    arcTo(a0: any, a1: any, a2: any, a3: any, a4: any): void;
     beginPath(): void;
     bezierCurveTo(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any): void;
     clearRect(a0: any, a1: any, a2: any, a3: any): void;
@@ -70,5 +71,6 @@ export declare class SceneContext extends Context {
 }
 export declare class HitContext extends Context {
     _fill(shape: any): void;
+    strokeShape(shape: Shape): void;
     _stroke(shape: any): void;
 }

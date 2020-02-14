@@ -12,6 +12,6 @@ export declare const DD: {
         dragStatus: "ready" | "dragging" | "stopped";
     }>;
     _drag(evt: any): void;
-    _endDragBefore(evt: any): void;
+    _endDragBefore(evt?: any): void;
     _endDragAfter(evt: any): void;
 };

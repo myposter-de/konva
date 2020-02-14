@@ -37,7 +37,7 @@ export interface ShapeConfig extends NodeConfig {
     fillPriority?: string;
     stroke?: string;
     strokeWidth?: number;
-    hitStrokeWidth?: number;
+    hitStrokeWidth?: number | string;
     strokeScaleEnabled?: boolean;
     strokeHitEnabled?: boolean;
     strokeEnabled?: boolean;
@@ -83,6 +83,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     _getShadowRGBA(): string;
     hasFill(): boolean;
     hasStroke(): boolean;
+    hasHitStroke(): number | boolean | "" | "auto";
     intersects(point: any): boolean;
     destroy(): this;
     _useBufferCanvas(caching: any): boolean;

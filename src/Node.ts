@@ -13,7 +13,6 @@ import {
 import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
-import { Layer } from './Layer';
 import { BaseLayer } from './BaseLayer';
 
 export const ids: any = {};
@@ -271,7 +270,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this._clearCache(attr);
 
     // skip clearing if node is cached with canvas
-    if (this._getCanvasCache()) {
+    // for performance reasons !!!
+    if (this.isCached()) {
       return;
     }
     if (this.children) {
@@ -362,8 +362,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         relativeTo: this.getParent()
       });
     }
-    var width = conf.width || rect.width,
-      height = conf.height || rect.height,
+    var width = Math.ceil(conf.width || rect.width),
+      height = Math.ceil(conf.height || rect.height),
       pixelRatio = conf.pixelRatio,
       x = conf.x === undefined ? rect.x : conf.x,
       y = conf.y === undefined ? rect.y : conf.y,
@@ -574,7 +574,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var canvasCache = this._getCanvasCache(),
       hitCanvas = canvasCache.hit;
     context.save();
-    context._applyGlobalCompositeOperation(this);
     context.translate(canvasCache.x, canvasCache.y);
     context.drawImage(hitCanvas._canvas, 0, 0);
     context.restore();
@@ -844,14 +843,19 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this._remove();
     return this;
   }
+  _clearCaches() {
+    this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
+    this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
+    this._clearSelfAndDescendantCache(ABSOLUTE_SCALE);
+    this._clearSelfAndDescendantCache(STAGE);
+    this._clearSelfAndDescendantCache(VISIBLE);
+    this._clearSelfAndDescendantCache(LISTENING);
+  }
   _remove() {
     // every cached attr that is calculated via node tree
     // traversal must be cleared when removing a node
-    this._clearSelfAndDescendantCache(STAGE);
-    this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
-    this._clearSelfAndDescendantCache(VISIBLE);
-    this._clearSelfAndDescendantCache(LISTENING);
-    this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
+    this._clearCaches();
+
     var parent = this.getParent();
 
     if (parent && parent.children) {
@@ -1034,6 +1038,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       } else {
         return true;
       }
+    } else if (relativeTo && relativeTo !== parent) {
+      return visible && parent._isVisible(relativeTo);
     } else {
       return visible;
     }
@@ -1151,6 +1157,20 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     };
   }
   getAbsolutePosition(top?) {
+    let haveCachedParent = false;
+    let parent = this.parent;
+    while (parent) {
+      if (parent.isCached()) {
+        haveCachedParent = true;
+        break;
+      }
+      parent = parent.parent;
+    }
+    if (haveCachedParent && !top) {
+      // make fake top element
+      // "true" is not a node, but it will just allow skip all caching
+      top = true;
+    }
     var absoluteMatrix = this.getAbsoluteTransform(top).getMatrix(),
       absoluteTransform = new Transform(),
       offset = this.offset();
@@ -1489,7 +1509,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * get all ancestors (parent then parent of the parent, etc) of the node
    * @method
    * @name Konva.Node#findAncestors
-   * @param {String} [selector] selector for search
+   * @param {String} selector selector for search
    * @param {Boolean} [includeSelf] show we think that node is ancestro itself?
    * @param {Konva.Node} [stopNode] optional node where we need to stop searching (one of ancestors)
    * @returns {Array} [ancestors]
@@ -1497,7 +1517,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var parentGroups = node.findAncestors('Group');
    */
-  findAncestors(selector, includeSelf, stopNode) {
+  findAncestors(selector, includeSelf?, stopNode?) {
     var res: Array<Node> = [];
 
     if (includeSelf && this._isMatch(selector)) {
@@ -1522,7 +1542,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * get ancestor (parent or parent of the parent, etc) of the node that match passed selector
    * @method
    * @name Konva.Node#findAncestor
-   * @param {String} [selector] selector for search
+   * @param {String} selector selector for search
    * @param {Boolean} [includeSelf] show we think that node is ancestro itself?
    * @param {Konva.Node} [stopNode] optional node where we need to stop searching (one of ancestors)
    * @returns {Konva.Node} ancestor
@@ -1530,7 +1550,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var group = node.findAncestors('.mygroup');
    */
-  findAncestor(selector, includeSelf, stopNode) {
+  findAncestor(selector, includeSelf?, stopNode?) {
     return this.findAncestors(selector, includeSelf, stopNode)[0];
   }
   // is current node match passed selector?
@@ -1569,7 +1589,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         if (this.hasName(sel.slice(1))) {
           return true;
         }
-      } else if (this.className === selector || this.nodeType === selector) {
+      } else if (this.className === sel || this.nodeType === sel) {
         return true;
       }
     }
@@ -1659,29 +1679,54 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
   }
   _getAbsoluteTransform(top?: Node) {
-    var at = new Transform();
+    
+    var at;
+    // we we need position relative to an ancestor, we will iterate for all
+    if (top) {
+      at = new Transform();
+      // start with stage and traverse downwards to self
+      this._eachAncestorReverse(function(node: Node) {
+        var transformsEnabled = node.transformsEnabled();
 
-    // start with stage and traverse downwards to self
-    this._eachAncestorReverse(function(node) {
-      var transformsEnabled = node.getTransformsEnabled();
-
+        if (transformsEnabled === 'all') {
+          at.multiply(node.getTransform());
+        } else if (transformsEnabled === 'position') {
+          at.translate(
+            node.x() - node.offsetX(),
+            node.y() - node.offsetY()
+          );
+        }
+      }, top);
+      return at;
+    } else {
+      // try to use a cached value
+      if (this.parent) {
+        // transform will be cached
+        at = this.parent.getAbsoluteTransform().copy();
+      } else {
+        at = new Transform();
+      }
+      var transformsEnabled = this.transformsEnabled();
       if (transformsEnabled === 'all') {
-        at.multiply(node.getTransform());
+        at.multiply(this.getTransform());
       } else if (transformsEnabled === 'position') {
         at.translate(
-          node.getX() - node.getOffsetX(),
-          node.getY() - node.getOffsetY()
+          this.x() - this.offsetX(),
+          this.y() - this.offsetY()
         );
       }
-    }, top);
-    return at;
+      return at;
+    }
   }
   /**
    * get absolute scale of the node which takes into
    *  account its ancestor scales
    * @method
    * @name Konva.Node#getAbsoluteScale
-   * @returns {Konva.Transform}
+   * @returns {Object}
+   * @example
+   * // get absolute scale x
+   * var scaleX = node.getAbsoluteScale().x;
    */
   getAbsoluteScale(top?) {
     // if using an argument, we can't cache the result.
@@ -1714,6 +1759,26 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       x: scaleX,
       y: scaleY
     };
+  }
+  /**
+   * get absolute rotation of the node which takes into
+   *  account its ancestor rotations
+   * @method
+   * @name Konva.Node#getAbsoluteRotation
+   * @returns {Number}
+   * @example
+   * // get absolute scale x
+   * var rotation = node.getAbsoluteRotation();
+   */
+  getAbsoluteRotation() {
+    var parent: Node = this;
+    var rotation = 0;
+
+    while (parent) {
+      rotation += parent.rotation();
+      parent = parent.getParent();
+    }
+    return rotation;
   }
   /**
    * get transform of the node
@@ -2277,7 +2342,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // const pos = pointers.find(p => p.id === this._dragEventId);
     const pos = this.getStage()._getPointerById(elem.pointerId);
 
-    var dbf = this.dragBoundFunc();
     if (!pos) {
       return;
     }
@@ -2286,8 +2350,16 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       y: pos.y - elem.offset.y
     };
 
+    var dbf = this.dragBoundFunc();
     if (dbf !== undefined) {
-      newNodePos = dbf.call(this, newNodePos, evt);
+      const bounded = dbf.call(this, newNodePos, evt);
+      if (!bounded) {
+        Util.warn(
+          'dragBoundFunc did not return any value. That is unexpected behavior. You must return new absolute position from dragBoundFunc.'
+        );
+      } else {
+        newNodePos = bounded;
+      }
     }
 
     if (
@@ -2311,8 +2383,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @method
    * @name Konva.Node#stopDrag
    */
-  stopDrag() {
-    var evt = {};
+  stopDrag(evt?) {
     const elem = DD._dragElements.get(this._id);
     if (elem) {
       elem.dragStatus = 'stopped';
