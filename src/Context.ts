@@ -44,7 +44,7 @@ var COMMA = ',',
     'stroke',
     'strokeText',
     'transform',
-    'translate'
+    'translate',
   ];
 
 var CONTEXT_PROPERTIES = [
@@ -64,7 +64,7 @@ var CONTEXT_PROPERTIES = [
   'textBaseline',
   'globalAlpha',
   'globalCompositeOperation',
-  'imageSmoothingEnabled'
+  'imageSmoothingEnabled',
 ];
 
 const traceArrMax = 100;
@@ -143,8 +143,13 @@ export class Context {
    * @param {Konva.Shape} shape
    */
   fillStrokeShape(shape: Shape) {
-    this.fillShape(shape);
-    this.strokeShape(shape);
+    if (shape.attrs.fillAfterStrokeEnabled) {
+      this.strokeShape(shape);
+      this.fillShape(shape);
+    } else {
+      this.fillShape(shape);
+      this.strokeShape(shape);
+    }
   }
 
   getTrace(relaxed) {
@@ -260,8 +265,8 @@ export class Context {
       this.setAttr('globalAlpha', absOpacity);
     }
   }
-  _applyLineJoin(shape) {
-    var lineJoin = shape.getLineJoin();
+  _applyLineJoin(shape: Shape) {
+    var lineJoin = shape.attrs.lineJoin;
     if (lineJoin) {
       this.setAttr('lineJoin', lineJoin);
     }
@@ -369,7 +374,17 @@ export class Context {
    * @method
    * @name Konva.Context#drawImage
    */
-  drawImage(a0, a1, a2, a3?, a4?, a5?, a6?, a7?, a8?) {
+  drawImage(
+    a0: CanvasImageSource,
+    a1: number,
+    a2: number,
+    a3?: number,
+    a4?: number,
+    a5?: number,
+    a6?: number,
+    a7?: number,
+    a8?: number
+  ) {
     var a = arguments,
       _context = this._context;
 
@@ -386,7 +401,16 @@ export class Context {
    * @method
    * @name Konva.Context#ellipse
    */
-  ellipse(a0, a1, a2, a3, a4, a5, a6, a7) {
+  ellipse(
+    a0: number,
+    a1: number,
+    a2: number,
+    a3: number,
+    a4: number,
+    a5: number,
+    a6: number,
+    a7?: boolean
+  ) {
     this._context.ellipse(a0, a1, a2, a3, a4, a5, a6, a7);
   }
   /**
@@ -593,17 +617,17 @@ export class Context {
       args;
 
     // to prevent creating scope function at each loop
-    var func = function(methodName) {
+    var func = function (methodName) {
       var origMethod = that[methodName],
         ret;
 
-      that[methodName] = function() {
+      that[methodName] = function () {
         args = _simplifyArray(Array.prototype.slice.call(arguments, 0));
         ret = origMethod.apply(that, arguments);
 
         that._trace({
           method: methodName,
-          args: args
+          args: args,
         });
 
         return ret;
@@ -615,7 +639,7 @@ export class Context {
     }
 
     // attrs
-    that.setAttr = function() {
+    that.setAttr = function () {
       origSetter.apply(that, arguments);
       var prop = arguments[0];
       var val = arguments[1];
@@ -628,7 +652,7 @@ export class Context {
       }
       that._trace({
         property: prop,
-        val: val
+        val: val,
       });
     };
   }
@@ -640,14 +664,14 @@ export class Context {
   }
 }
 
-CONTEXT_PROPERTIES.forEach(function(prop) {
+CONTEXT_PROPERTIES.forEach(function (prop) {
   Object.defineProperty(Context.prototype, prop, {
     get() {
       return this._context[prop];
     },
     set(val) {
       this._context[prop] = val;
-    }
+    },
   });
 });
 
@@ -676,7 +700,7 @@ export class SceneContext extends Context {
     }
 
     if (fillPatternScaleX || fillPatternScaleY) {
-      this.scale(fillPatternScaleX, fillPatternScaleY);
+      // this.scale(fillPatternScaleX, fillPatternScaleY);
     }
 
     if (fillPatternOffsetX || fillPatternOffsetY) {
@@ -798,7 +822,7 @@ export class SceneContext extends Context {
       blur = util.get(shape.getShadowBlur(), 5),
       offset = util.get(shape.getShadowOffset(), {
         x: 0,
-        y: 0
+        y: 0,
       }),
       scale = shape.getAbsoluteScale(),
       ratio = this.canvas.getPixelRatio(),

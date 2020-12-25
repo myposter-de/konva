@@ -1,6 +1,6 @@
 import { Util } from './Util';
 import { Animation } from './Animation';
-import { Node } from './Node';
+import { Node, NodeConfig } from './Node';
 import { Konva } from './Global';
 import { Line } from './shapes/Line';
 
@@ -9,7 +9,7 @@ var blacklist = {
     duration: 1,
     easing: 1,
     onFinish: 1,
-    yoyo: 1
+    yoyo: 1,
   },
   PAUSED = 1,
   PLAYING = 2,
@@ -38,6 +38,7 @@ class TweenEngine {
   onPause: Function;
   onReset: Function;
   onFinish: Function;
+  onUpdate: Function;
 
   constructor(prop, propFunc, func, begin, finish, duration, yoyo) {
     this.prop = prop;
@@ -129,6 +130,7 @@ class TweenEngine {
   }
   update() {
     this.setPosition(this.getPosition(this._time));
+    this.fire('onUpdate');
   }
   onEnterFrame() {
     var t = this.getTimer() - this._startTime;
@@ -147,6 +149,13 @@ class TweenEngine {
   }
 }
 
+export interface TweenConfig extends NodeConfig {
+  onFinish?: Function;
+  onUpdate?: Function;
+  duration?: number;
+  node: Node;
+}
+
 /**
  * Tween constructor.  Tweens enable you to animate a node between the current state and a new state.
  *  You can play, pause, reverse, seek, reset, and finish tweens.  By default, tweens are animated using
@@ -156,10 +165,15 @@ class TweenEngine {
  * @example
  * // instantiate new tween which fully rotates a node in 1 second
  * var tween = new Konva.Tween({
+ *   // list of tween specific properties
  *   node: node,
- *   rotationDeg: 360,
  *   duration: 1,
- *   easing: Konva.Easings.EaseInOut
+ *   easing: Konva.Easings.EaseInOut,
+ *   onUpdate: () => console.log('node attrs updated')
+ *   onFinish: () => console.log('finished'),
+ *   // set new values for any attributes of a passed node
+ *   rotation: 360,
+ *   fill: 'red'
  * });
  *
  * // play tween
@@ -178,10 +192,11 @@ export class Tween {
   _id: number;
   onFinish: Function;
   onReset: Function;
+  onUpdate: Function;
 
-  constructor(config) {
+  constructor(config: TweenConfig) {
     var that = this,
-      node = config.node,
+      node = config.node as any,
       nodeId = node._id,
       duration,
       easing = config.easing || Easings.Linear,
@@ -207,13 +222,13 @@ export class Tween {
         'Tween constructor have `node` that is not in a layer. Please add node into layer first.'
       );
     }
-    this.anim = new Animation(function() {
+    this.anim = new Animation(function () {
       that.tween.onEnterFrame();
     }, layers);
 
     this.tween = new TweenEngine(
       key,
-      function(i) {
+      function (i) {
         that._tweenFunc(i);
       },
       easing,
@@ -248,6 +263,7 @@ export class Tween {
     // callbacks
     this.onFinish = config.onFinish;
     this.onReset = config.onReset;
+    this.onUpdate = config.onUpdate;
   }
   _addAttr(key, end) {
     var node = this.node,
@@ -281,7 +297,11 @@ export class Tween {
         if (end.length > start.length) {
           // so in this case we will increase number of starting points
           trueStart = start;
-          start = Util._prepareArrayForTween(start, end, (node as Line).closed());
+          start = Util._prepareArrayForTween(
+            start,
+            end,
+            (node as Line).closed()
+          );
         } else {
           // in this case we will increase number of eding points
           trueEnd = end;
@@ -301,7 +321,7 @@ export class Tween {
               r: endRGBA.r - startRGBA.r,
               g: endRGBA.g - startRGBA.g,
               b: endRGBA.b - startRGBA.b,
-              a: endRGBA.a - startRGBA.a
+              a: endRGBA.a - startRGBA.a,
             });
           }
         }
@@ -317,7 +337,7 @@ export class Tween {
         r: endRGBA.r - start.r,
         g: endRGBA.g - start.g,
         b: endRGBA.b - start.b,
-        a: endRGBA.a - start.a
+        a: endRGBA.a - start.a,
       };
     } else {
       diff = end - start;
@@ -328,7 +348,7 @@ export class Tween {
       diff: diff,
       end: end,
       trueEnd: trueEnd,
-      trueStart: trueStart
+      trueStart: trueStart,
     };
     Tween.tweens[nodeId][key] = this._id;
   }
@@ -432,6 +452,11 @@ export class Tween {
         this.onReset();
       }
     };
+    this.tween.onUpdate = () => {
+      if (this.onUpdate) {
+        this.onUpdate.call(this);
+      }
+    };
   }
   /**
    * play
@@ -525,21 +550,20 @@ export class Tween {
  * circle.to({
  *   x : 50,
  *   duration : 0.5,
- *   onFinish: () => {
- *      console.log('finished');
- *   }
+ *   onUpdate: () => console.log('props updated'),
+ *   onFinish: () => console.log('finished'),
  * });
  */
-Node.prototype.to = function(params) {
+Node.prototype.to = function (params) {
   var onFinish = params.onFinish;
   params.node = this;
-  params.onFinish = function() {
+  params.onFinish = function () {
     this.destroy();
     if (onFinish) {
       onFinish();
     }
   };
-  var tween = new Tween(params);
+  var tween = new Tween(params as any);
   tween.play();
 };
 
@@ -781,5 +805,5 @@ export const Easings = {
    */
   Linear(t, b, c, d) {
     return (c * t) / d + b;
-  }
+  },
 };

@@ -1,6 +1,6 @@
-suite('TextPath', function() {
+suite('TextPath', function () {
   // ======================================================
-  test('Render Text Along Line', function() {
+  test('Render Text Along Line', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -9,7 +9,7 @@ suite('TextPath', function() {
     var path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -19,13 +19,13 @@ suite('TextPath', function() {
       fontSize: 24,
       fontFamily: 'Arial',
       text: "The quick brown fox jumped over the lazy dog's back",
-      data: c
+      data: c,
     });
-    textpath.on('mouseover', function() {
+    textpath.on('mouseover', function () {
       this.setFill('blue');
       layer.drawScene();
     });
-    textpath.on('mouseout', function() {
+    textpath.on('mouseout', function () {
       this.setFill('orange');
       layer.drawScene();
     });
@@ -49,7 +49,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test.skip('Find Next Segment when Arc is in Path', function() {
+  test.skip('Find Next Segment when Arc is in Path', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -59,7 +59,7 @@ suite('TextPath', function() {
       y: 50,
       stroke: 'green',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -72,7 +72,7 @@ suite('TextPath', function() {
       fontFamily: 'Arial',
       text:
         "All mhe world's a smage, and all mhe men and women merely players.",
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -85,7 +85,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Check getter and setter', function() {
+  test('Check getter and setter', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -93,7 +93,7 @@ suite('TextPath', function() {
     var path = new Konva.TextPath({
       text: 'some text',
       stroke: 'red',
-      strokeWidth: 1
+      strokeWidth: 1,
     });
 
     layer.add(path);
@@ -107,7 +107,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Render Text Along Vertical Line', function() {
+  test('Render Text Along Vertical Line', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -117,7 +117,7 @@ suite('TextPath', function() {
     var path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -129,7 +129,7 @@ suite('TextPath', function() {
       fontSize: 18,
       fontFamily: 'Arial',
       text: "The quick brown fox jumped over the lazy dog's back",
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -140,7 +140,7 @@ suite('TextPath', function() {
     path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -152,7 +152,7 @@ suite('TextPath', function() {
       fontSize: 18,
       fontFamily: 'Arial',
       text: "The quick brown fox jumped over the lazy dog's back",
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -160,7 +160,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Render Text Along two connected Bezier', function() {
+  test('Render Text Along two connected Bezier', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -168,7 +168,7 @@ suite('TextPath', function() {
     var path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -181,7 +181,7 @@ suite('TextPath', function() {
       fontFamily: 'Arial',
       text:
         "All the world's a stage, and all the men and women merely players. They have their exits and their entrances; And one man in his time plays many parts.",
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -189,7 +189,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Render Text Along Elliptical Arc', function() {
+  test('Render Text Along Elliptical Arc', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -197,7 +197,7 @@ suite('TextPath', function() {
     var path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -207,7 +207,7 @@ suite('TextPath', function() {
       fontSize: 10,
       text:
         "All the world's a stage, and all the men and women merely players. They have their exits and their entrances; And one man in his time plays many parts.",
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -215,7 +215,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Render Text Along complex path', function() {
+  test('Render Text Along complex path', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -229,7 +229,7 @@ suite('TextPath', function() {
       text: Array(4).join(
         "All the world's a stage, and all the men and women merely players. They have their exits and their entrances; And one man in his time plays many parts."
       ),
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -237,7 +237,7 @@ suite('TextPath', function() {
   });
 
   // ======================================================
-  test('Render Text Along complex path cached', function() {
+  test('Render Text Along complex path cached', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -252,7 +252,7 @@ suite('TextPath', function() {
       text:
         "All the world's a stage, and all the men and women merely players. They have their exits and their entrances; And one man in his time plays many parts.",
       data: c,
-      draggable: true
+      draggable: true,
     });
 
     textpath.cache();
@@ -260,11 +260,11 @@ suite('TextPath', function() {
     layer.add(textpath);
     stage.add(layer);
 
-    cloneAndCompareLayer(layer, 50);
+    cloneAndCompareLayer(layer, 200);
     showHit(layer);
   });
 
-  test('Text path with letter spacing', function() {
+  test('Text path with letter spacing', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -279,18 +279,18 @@ suite('TextPath', function() {
       letterSpacing: 5,
       text:
         "All the world's a stage, and all the men and women merely players.",
-      data: c
+      data: c,
     });
 
     textpath.cache();
 
     layer.add(textpath);
     stage.add(layer);
-    cloneAndCompareLayer(layer, 50);
+    cloneAndCompareLayer(layer, 200);
     showHit(layer);
   });
 
-  test('Text path with align', function() {
+  test('Text path with align', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -303,7 +303,7 @@ suite('TextPath', function() {
       letterSpacing: 5,
       text: "All the world's a stage.",
       align: 'center',
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -315,7 +315,58 @@ suite('TextPath', function() {
     assert.equal(layer.getContext().getTrace(true), trace);
   });
 
-  test('Text path with align right', function() {
+  test('Text path with emoji', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+
+    var c = 'M10,10 300, 10';
+
+    var textpath = new Konva.TextPath({
+      fill: 'black',
+      fontSize: 10,
+      fontFamily: 'Arial',
+      letterSpacing: 5,
+      text: '😬',
+      align: 'center',
+      data: c,
+    });
+
+    layer.add(textpath);
+    stage.add(layer);
+
+    var trace =
+      'clearRect(0,0,578,200);save();transform(1,0,0,1,0,0);font=normal normal 10px Arial;textBaseline=middle;textAlign=left;save();save();translate(144.438,10);rotate(0);fillStyle=black;fillText(😬,0,0);restore();restore();restore();';
+
+    assert.equal(layer.getContext().getTrace(), trace);
+  });
+
+  test.skip('Text path with center align - arc', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+
+    var textpath = new Konva.TextPath({
+      fill: '#333',
+      fontSize: 20,
+      text: 'Hello  World',
+      align: 'right',
+      data: 'M 50 200 a 100 100 0 0 1 200 0',
+    });
+    layer.add(textpath);
+
+    var path = new Konva.Path({
+      stroke: '#000',
+      data: 'M 50 200 a 100 100 0 0 1 200 0',
+    });
+    layer.add(path);
+    stage.add(layer);
+
+    var trace =
+      'restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();save();translate();rotate();fillStyle;fillText();restore();restore();restore();';
+
+    assert.equal(layer.getContext().getTrace(true), trace);
+  });
+
+  test('Text path with align right', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -323,7 +374,7 @@ suite('TextPath', function() {
 
     var path = new Konva.Path({
       stroke: 'red',
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -334,7 +385,7 @@ suite('TextPath', function() {
       fontFamily: 'Arial',
       text: "All the world's a stage.",
       align: 'right',
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -346,7 +397,7 @@ suite('TextPath', function() {
     assert.equal(layer.getContext().getTrace(), trace);
   });
 
-  test('Text path with justify align', function() {
+  test('Text path with justify align', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -361,7 +412,7 @@ suite('TextPath', function() {
       letterSpacing: 5,
       text: 'All the worlds a stage.',
       align: 'justify',
-      data: c
+      data: c,
     });
 
     layer.add(textpath);
@@ -373,7 +424,7 @@ suite('TextPath', function() {
     assert.equal(layer.getContext().getTrace(true), trace);
   });
 
-  test('Text path with underline', function() {
+  test('Text path with underline', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -387,7 +438,7 @@ suite('TextPath', function() {
       text: 'All the worlds a stage.',
       textDecoration: 'underline',
       data: c,
-      draggable: true
+      draggable: true,
     });
 
     layer.add(textpath);
@@ -399,7 +450,7 @@ suite('TextPath', function() {
     assert.equal(layer.getContext().getTrace(true), trace);
   });
 
-  test('Text with baseline', function() {
+  test('Text with baseline', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -408,7 +459,7 @@ suite('TextPath', function() {
     var path = new Konva.Path({
       stroke: 'red',
       strokeWidth: 1,
-      data: c
+      data: c,
     });
 
     layer.add(path);
@@ -419,13 +470,13 @@ suite('TextPath', function() {
       fontFamily: 'Arial',
       text: "The quick brown fox jumped over the lazy dog's back",
       data: c,
-      textBaseline: 'top'
+      textBaseline: 'top',
     });
-    textpath.on('mouseover', function() {
+    textpath.on('mouseover', function () {
       this.setFill('blue');
       layer.drawScene();
     });
-    textpath.on('mouseout', function() {
+    textpath.on('mouseout', function () {
       this.setFill('orange');
       layer.drawScene();
     });
@@ -435,7 +486,7 @@ suite('TextPath', function() {
     showHit(layer);
   });
 
-  test('Text with kerning', function() {
+  test('Text with kerning', function () {
     var stage = addStage();
 
     // simulate lack of kerning support
@@ -444,11 +495,11 @@ suite('TextPath', function() {
     var layer = new Konva.Layer();
     var pairs = {
       A: {
-        V: -0.07421875
+        V: -0.07421875,
       },
       V: {
-        A: -0.07421875
-      }
+        A: -0.07421875,
+      },
     };
 
     const kernedText = new Konva.TextPath({
@@ -458,11 +509,11 @@ suite('TextPath', function() {
       text: 'AV',
       fontSize: 60,
       data: 'M0,0 L200,0',
-      kerningFunc: function(leftChar, rightChar) {
+      kerningFunc: function (leftChar, rightChar) {
         return pairs.hasOwnProperty(leftChar)
           ? pairs[leftChar][rightChar] || 0
           : 0;
-      }
+      },
     });
 
     const unkernedText = new Konva.TextPath({
@@ -471,7 +522,7 @@ suite('TextPath', function() {
       fill: 'black',
       text: 'AV',
       fontSize: 60,
-      data: 'M0,0 L200,0'
+      data: 'M0,0 L200,0',
     });
 
     layer.add(kernedText);
@@ -484,7 +535,7 @@ suite('TextPath', function() {
     );
   });
 
-  test('Text with invalid kerning getter should not fail (fallback to unkerned)', function() {
+  test('Text with invalid kerning getter should not fail (fallback to unkerned)', function () {
     var stage = addStage();
 
     // simulate lack of kerning support
@@ -499,10 +550,10 @@ suite('TextPath', function() {
       text: 'AV',
       fontSize: 60,
       data: 'M0,0 L200,0',
-      kerningFunc: function(leftChar, rightChar) {
+      kerningFunc: function (leftChar, rightChar) {
         // getter that fails
         throw new Error('something went wrong');
-      }
+      },
     });
 
     const unkernedText = new Konva.TextPath({
@@ -511,7 +562,7 @@ suite('TextPath', function() {
       fill: 'black',
       text: 'AV',
       fontSize: 60,
-      data: 'M0,0 L200,0'
+      data: 'M0,0 L200,0',
     });
 
     layer.add(kernedText);
@@ -525,7 +576,7 @@ suite('TextPath', function() {
     );
   });
 
-  test('can set kerning after initialization', function() {
+  test('can set kerning after initialization', function () {
     var stage = addStage();
 
     // simulate lack of kerning support
@@ -540,13 +591,13 @@ suite('TextPath', function() {
       fill: 'black',
       text: 'AV',
       fontSize: 60,
-      data: 'M0,0 L200,0'
+      data: 'M0,0 L200,0',
     });
     layer.add(kernedText);
     layer.draw();
 
     var called = false;
-    kernedText.kerningFunc(function() {
+    kernedText.kerningFunc(function () {
       called = true;
       return 1;
     });
@@ -555,7 +606,7 @@ suite('TextPath', function() {
     assert.equal(called, true);
   });
 
-  test.skip('linear gradient for path', function() {
+  test.skip('linear gradient for path', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -570,16 +621,15 @@ suite('TextPath', function() {
       fillLinearGradientStartPoint: { x: 0, y: 0 },
       fillLinearGradientEndPoint: { x: 200, y: 0 },
       fillLinearGradientColorStops: [0, 'yellow', 1, 'red'],
-      text: 'Text with gradient!!'
+      text: 'Text with gradient!!',
     });
     layer.add(text);
     layer.draw();
 
     var trace = layer.getContext().getTrace();
-    console.log(trace);
   });
 
-  test('visual check for text path', function() {
+  test('visual check for text path', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -596,7 +646,7 @@ suite('TextPath', function() {
         align: 'center',
         textBaseline: 'bottom',
         data:
-          'M -80.34441853748636 -247.27469423673992 A 260 260 0 0 1 80.34441853748628 -247.27469423673995'
+          'M -80.34441853748636 -247.27469423673992 A 260 260 0 0 1 80.34441853748628 -247.27469423673995',
       })
     );
 
@@ -611,13 +661,13 @@ suite('TextPath', function() {
         align: 'center',
         // textBaseline: 'bottom',
         data:
-          'M -80.34441853748636 -247.27469423673992 A 260 260 0 0 1 80.34441853748628 -247.27469423673995'
+          'M -80.34441853748636 -247.27469423673992 A 260 260 0 0 1 80.34441853748628 -247.27469423673995',
       })
     );
 
     layer.add(
       new Konva.Text({
-        text: 'Hello world'
+        text: 'Hello world',
       })
     );
 
@@ -626,13 +676,13 @@ suite('TextPath', function() {
         fill: '#333',
         text: 'Hello world',
         y: 20,
-        data: 'M 0 0 L100 0'
+        data: 'M 0 0 L100 0',
       })
     );
     layer.draw();
   });
 
-  test('client rect calculations', function() {
+  test('client rect calculations', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -646,7 +696,7 @@ suite('TextPath', function() {
       fontFamily: 'Arial',
       align: 'right',
       text: 'test_path',
-      data: 'M 0,10 L 300 10'
+      data: 'M 0,10 L 300 10',
     });
     layer.add(textpath);
     layer.draw();
@@ -658,5 +708,88 @@ suite('TextPath', function() {
     textpath.text('');
     rect = textpath.getClientRect();
     assert.equal(rect.height, 0, 'check height');
+  });
+
+  test('check bad calculations', function () {
+    var stage = addStage();
+    stage.draggable(true);
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var textpath = new Konva.TextPath({
+      fill: '#333',
+      fontSize: 16,
+      scaleX: 0.8,
+      scaleY: 0.8,
+      text:
+        '__________________________________________________________________________________________________________________________________________________________________________________________________________________',
+      data:
+        'M 109.98618090452261 138.6656132223618 C 135.94577638190955 48.80547503140701 149.91187876884422 79.79800957914573 151.40954773869348 117.23973382537689 S 123.00811620603017 419.616741991206 122.84170854271358 460.0538041771357 S 134.33883542713568 469.8304329459799 149.98115577889448 464.33898005653265 S 245.4620163316583 411.5856081972362 257.1105527638191 412.91686950376885 S 239.31850251256282 474.434854428392 249.96859296482413 475.76611573492465 S 338.21036306532665 425.67526648869347 348.5276381909548 424.3440051821608 S 337.3640408291457 461.1772344535176 338.5288944723618 464.33898005653265 S 346.8778454773869 466.79295744346734 358.52638190954775 451.4834524183417',
+    });
+    layer.add(textpath);
+    var path = new Konva.Path({
+      stroke: 'red',
+      scaleX: 0.8,
+      scaleY: 0.8,
+      data:
+        'M 109.98618090452261 138.6656132223618 C 135.94577638190955 48.80547503140701 149.91187876884422 79.79800957914573 151.40954773869348 117.23973382537689 S 123.00811620603017 419.616741991206 122.84170854271358 460.0538041771357 S 134.33883542713568 469.8304329459799 149.98115577889448 464.33898005653265 S 245.4620163316583 411.5856081972362 257.1105527638191 412.91686950376885 S 239.31850251256282 474.434854428392 249.96859296482413 475.76611573492465 S 338.21036306532665 425.67526648869347 348.5276381909548 424.3440051821608 S 337.3640408291457 461.1772344535176 338.5288944723618 464.33898005653265 S 346.8778454773869 466.79295744346734 358.52638190954775 451.4834524183417',
+    });
+    layer.add(path);
+    layer.draw();
+
+    var rect = textpath.getClientRect();
+
+    assert.equal(rect.height, 328.9307620828596, 'check height');
+
+    textpath.text('');
+    rect = textpath.getClientRect();
+    assert.equal(rect.height, 0, 'check height');
+  });
+
+  test('check bad calculations 2', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var textpath = new Konva.TextPath({
+      x: 0,
+      y: 0,
+      fill: '#333',
+      fontSize: 10,
+      // strokeWidth: 100,
+      stroke: 'black',
+      scaleX: 0.4,
+      scaleY: 0.4,
+      text:
+        '....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................',
+      data:
+        'M 117.12814070351759 108.66938206658291 C 79.18719346733668 277.73956799623113 75.85761180904522 379.96743797110554 82.84673366834171 395.7761659861809 S 148.83130025125627 280.47708118718595 177.12060301507537 244.36661824748745 S 326.1725898241206 61.02036887562815 325.67336683417085 85.815110709799 S 174.998726758794 435.7304316896985 172.8354271356784 457.1970202575377 S 273.65633103015074 310.01551271984926 307.1042713567839 270.07767352386935 S 466.09929459798997 92.08432302135678 459.9422110552764 114.3829499057789 S 266.23512060301505 435.5226006595478 254.2537688442211 461.4821961369347 S 328.1430565326633 368.1639210113065 357.09798994974875 337.2120956344221 S 486.31961118090453 207.61623570979899 502.79396984924625 195.8012916143216 S 511.48859170854274 200.85065719221106 498.50879396984925 235.79626648869348 S 379.73086055276383 489.4401119660804 391.37939698492465 495.76360317211055 S 573.2022663316583 313.03941849874377 598.4962311557789 290.0751609610553 S 608.3285672110553 288.6610529208543 608.4949748743719 298.64551271984925 S 604.9168530150754 352.64801334799 599.9246231155779 375.778678548995 S 540.6820665829146 508.5077162374372 565.643216080402 497.19199513190955 S 690.3761155778894 408.77881799623117 814.1834170854271 278.6480252826633',
+    });
+    var path = new Konva.Path({
+      x: 0,
+      y: 0,
+      stroke: 'red',
+      scaleX: 0.4,
+      scaleY: 0.4,
+      data:
+        'M 117.12814070351759 108.66938206658291 C 79.18719346733668 277.73956799623113 75.85761180904522 379.96743797110554 82.84673366834171 395.7761659861809 S 148.83130025125627 280.47708118718595 177.12060301507537 244.36661824748745 S 326.1725898241206 61.02036887562815 325.67336683417085 85.815110709799 S 174.998726758794 435.7304316896985 172.8354271356784 457.1970202575377 S 273.65633103015074 310.01551271984926 307.1042713567839 270.07767352386935 S 466.09929459798997 92.08432302135678 459.9422110552764 114.3829499057789 S 266.23512060301505 435.5226006595478 254.2537688442211 461.4821961369347 S 328.1430565326633 368.1639210113065 357.09798994974875 337.2120956344221 S 486.31961118090453 207.61623570979899 502.79396984924625 195.8012916143216 S 511.48859170854274 200.85065719221106 498.50879396984925 235.79626648869348 S 379.73086055276383 489.4401119660804 391.37939698492465 495.76360317211055 S 573.2022663316583 313.03941849874377 598.4962311557789 290.0751609610553 S 608.3285672110553 288.6610529208543 608.4949748743719 298.64551271984925 S 604.9168530150754 352.64801334799 599.9246231155779 375.778678548995 S 540.6820665829146 508.5077162374372 565.643216080402 497.19199513190955 S 690.3761155778894 408.77881799623117 814.1834170854271 278.6480252826633',
+    });
+    layer.add(path);
+    // emulate different size function:
+    // I found the app with custom font
+    // we calculations were not correct
+    // so I just coppied text size from that app
+    textpath._getTextSize = () => {
+      return { height: 10, width: 5.9399871826171875 };
+    };
+    layer.add(textpath);
+
+    layer.draw();
+
+    var rect = textpath.getClientRect();
+    assert.equal(rect.width, 298.50662860798093);
+    assert.equal(rect.height, 170.7386880372827);
   });
 });

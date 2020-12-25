@@ -1,18 +1,6 @@
 import { glob, Konva } from './Global';
 import { Node } from './Node';
-import { IRect, RGB, RGBA } from './types';
-
-export type Point = {
-  x: number;
-  y: number;
-};
-
-export interface RectConf {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { IRect, RGB, RGBA, Vector2d } from './types';
 
 /**
  * Collection constructor. Collection extends Array.
@@ -30,6 +18,8 @@ export interface RectConf {
 export class Collection<Child extends Node> {
   [index: number]: Child;
 
+  // @ts-ignore
+  [Symbol.iterator](): Iterator<Child>;
   // @ts-ignore
   length: number;
   // @ts-ignore
@@ -61,7 +51,7 @@ export class Collection<Child extends Node> {
   }
 
   static _mapMethod(methodName: any) {
-    Collection.prototype[methodName] = function() {
+    Collection.prototype[methodName] = function () {
       var len = this.length,
         i;
 
@@ -74,7 +64,7 @@ export class Collection<Child extends Node> {
     };
   }
 
-  static mapMethods = function(constructor: Function) {
+  static mapMethods = function (constructor: Function) {
     var prot = constructor.prototype;
     for (var methodName in prot) {
       Collection._mapMethod(methodName);
@@ -95,7 +85,7 @@ Collection.prototype = [] as any;
  *   shape.setX(10);
  * });
  */
-Collection.prototype.each = function(func) {
+Collection.prototype.each = function (func) {
   for (var n = 0; n < this.length; n++) {
     func(this[n], n);
   }
@@ -105,7 +95,7 @@ Collection.prototype.each = function(func) {
  * @method
  * @name Konva.Collection#toArray
  */
-Collection.prototype.toArray = function() {
+Collection.prototype.toArray = function () {
   var arr = [],
     len = this.length,
     n;
@@ -142,8 +132,17 @@ Collection.prototype.toArray = function() {
  */
 export class Transform {
   m: Array<number>;
+  dirty = false;
   constructor(m = [1, 0, 0, 1, 0, 0]) {
     this.m = (m && m.slice()) || [1, 0, 0, 1, 0, 0];
+  }
+  reset() {
+    this.m[0] = 1;
+    this.m[1] = 0;
+    this.m[2] = 0;
+    this.m[3] = 1;
+    this.m[4] = 0;
+    this.m[5] = 0;
   }
   /**
    * Copy Konva.Transform object
@@ -156,6 +155,14 @@ export class Transform {
   copy() {
     return new Transform(this.m);
   }
+  copyInto(tr: Transform) {
+    tr.m[0] = this.m[0];
+    tr.m[1] = this.m[1];
+    tr.m[2] = this.m[2];
+    tr.m[3] = this.m[3];
+    tr.m[4] = this.m[4];
+    tr.m[5] = this.m[5];
+  }
   /**
    * Transform point
    * @method
@@ -163,11 +170,11 @@ export class Transform {
    * @param {Object} point 2D point(x, y)
    * @returns {Object} 2D point(x, y)
    */
-  point(point: Point) {
+  point(point: Vector2d) {
     var m = this.m;
     return {
       x: m[0] * point.x + m[2] * point.y + m[4],
-      y: m[1] * point.x + m[3] * point.y + m[5]
+      y: m[1] * point.x + m[3] * point.y + m[5],
     };
   }
   /**
@@ -227,7 +234,7 @@ export class Transform {
   getTranslation() {
     return {
       x: this.m[4],
-      y: this.m[5]
+      y: this.m[5],
     };
   }
   /**
@@ -322,6 +329,56 @@ export class Transform {
       xt = (x - m4 - m2 * yt) / m0;
 
     return this.translate(xt, yt);
+  }
+  /**
+   * convert transformation matrix back into node's attributes
+   * @method
+   * @name Konva.Transform#decompose
+   * @returns {Konva.Transform}
+   */
+  decompose() {
+    var a = this.m[0];
+    var b = this.m[1];
+    var c = this.m[2];
+    var d = this.m[3];
+    var e = this.m[4];
+    var f = this.m[5];
+
+    var delta = a * d - b * c;
+
+    let result = {
+      x: e,
+      y: f,
+      rotation: 0,
+      scaleX: 0,
+      scaleY: 0,
+      skewX: 0,
+      skewY: 0,
+    };
+
+    // Apply the QR-like decomposition.
+    if (a != 0 || b != 0) {
+      var r = Math.sqrt(a * a + b * b);
+      result.rotation = b > 0 ? Math.acos(a / r) : -Math.acos(a / r);
+      result.scaleX = r;
+      result.scaleY = delta / r;
+      result.skewX = (a * c + b * d) / delta;
+      result.skewY = 0;
+    } else if (c != 0 || d != 0) {
+      var s = Math.sqrt(c * c + d * d);
+      result.rotation =
+        Math.PI / 2 - (d > 0 ? Math.acos(-c / s) : -Math.acos(c / s));
+      result.scaleX = delta / s;
+      result.scaleY = s;
+      result.skewX = 0;
+      result.skewY = (a * c + b * d) / delta;
+    } else {
+      // a = b = c = d = 0
+    }
+
+    result.rotation = Util._getRotation(result.rotation);
+
+    return result;
   }
 }
 
@@ -487,7 +544,7 @@ var OBJECT_ARRAY = '[object Array]',
     white: [255, 255, 255],
     whitesmoke: [245, 245, 245],
     yellow: [255, 255, 0],
-    yellowgreen: [154, 205, 5]
+    yellowgreen: [154, 205, 5],
   },
   RGB_REGEX = /rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)/,
   animQueue: Array<Function> = [];
@@ -509,7 +566,7 @@ export const Util = {
   _isPlainObject(obj: any) {
     return !!obj && obj.constructor === Object;
   },
-  _isArray(obj: any) {
+  _isArray(obj: any): obj is Array<any> {
     return Object.prototype.toString.call(obj) === OBJECT_ARRAY;
   },
   _isNumber(obj: any): obj is number {
@@ -554,10 +611,10 @@ export const Util = {
   requestAnimFrame(callback: Function) {
     animQueue.push(callback);
     if (animQueue.length === 1) {
-      requestAnimationFrame(function() {
+      requestAnimationFrame(function () {
         const queue = animQueue;
         animQueue = [];
-        queue.forEach(function(cb) {
+        queue.forEach(function (cb) {
           cb();
         });
       });
@@ -608,7 +665,7 @@ export const Util = {
   _urlToImage(url: string, callback: Function) {
     // if arg is a string, then it's a data url
     var imageObj = new glob.Image();
-    imageObj.onload = function() {
+    imageObj.onload = function () {
       callback(imageObj);
     };
     imageObj.src = url;
@@ -622,7 +679,7 @@ export const Util = {
     return {
       r: (bigint >> 16) & 255,
       g: (bigint >> 8) & 255,
-      b: bigint & 255
+      b: bigint & 255,
     };
   },
   /**
@@ -666,7 +723,7 @@ export const Util = {
       return {
         r: rgb[0],
         g: rgb[1],
-        b: rgb[2]
+        b: rgb[2],
       };
     } else if (color[0] === HASH) {
       // hex
@@ -677,14 +734,14 @@ export const Util = {
       return {
         r: parseInt(rgb[1], 10),
         g: parseInt(rgb[2], 10),
-        b: parseInt(rgb[3], 10)
+        b: parseInt(rgb[3], 10),
       };
     } else {
       // default
       return {
         r: 0,
         g: 0,
-        b: 0
+        b: 0,
       };
     }
   },
@@ -711,7 +768,7 @@ export const Util = {
       r: c[0],
       g: c[1],
       b: c[2],
-      a: 1
+      a: 1,
     };
   },
   // Parse rgb(n, n, n)
@@ -723,7 +780,7 @@ export const Util = {
         r: parts[0],
         g: parts[1],
         b: parts[2],
-        a: 1
+        a: 1,
       };
     }
   },
@@ -736,7 +793,7 @@ export const Util = {
         r: parts[0],
         g: parts[1],
         b: parts[2],
-        a: parts[3]
+        a: parts[3],
       };
     }
   },
@@ -747,7 +804,7 @@ export const Util = {
         r: parseInt(str.slice(1, 3), 16),
         g: parseInt(str.slice(3, 5), 16),
         b: parseInt(str.slice(5, 7), 16),
-        a: 1
+        a: 1,
       };
     }
   },
@@ -758,7 +815,7 @@ export const Util = {
         r: parseInt(str[1] + str[1], 16),
         g: parseInt(str[2] + str[2], 16),
         b: parseInt(str[3] + str[3], 16),
-        a: 1
+        a: 1,
       };
     }
   },
@@ -783,7 +840,7 @@ export const Util = {
           r: Math.round(val),
           g: Math.round(val),
           b: Math.round(val),
-          a: 1
+          a: 1,
         };
       }
 
@@ -823,7 +880,7 @@ export const Util = {
         r: Math.round(rgb[0]),
         g: Math.round(rgb[1]),
         b: Math.round(rgb[2]),
-        a: 1
+        a: 1,
       };
     }
   },
@@ -865,6 +922,9 @@ export const Util = {
   },
   _radToDeg(rad: number) {
     return rad * DEG180_OVER_PI;
+  },
+  _getRotation(radians) {
+    return Konva.angleDeg ? Util._radToDeg(radians) : radians;
   },
   _capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -926,6 +986,9 @@ export const Util = {
         p[n + 3],
         tension
       );
+      if (isNaN(cp[0])) {
+        continue;
+      }
       allPoints.push(cp[0]);
       allPoints.push(cp[1]);
       allPoints.push(p[n]);
@@ -972,10 +1035,10 @@ export const Util = {
   },
   // line as array of points.
   // line might be closed
-  _getProjectionToLine(pt: Point, line, isClosed) {
+  _getProjectionToLine(pt: Vector2d, line, isClosed) {
     var pc = Util.cloneObject(pt);
     var dist = Number.MAX_VALUE;
-    line.forEach(function(p1, i) {
+    line.forEach(function (p1, i) {
       if (!isClosed && i === line.length - 1) {
         return;
       }
@@ -1011,18 +1074,18 @@ export const Util = {
     for (n = 0; n < startArray.length; n += 2) {
       start.push({
         x: startArray[n],
-        y: startArray[n + 1]
+        y: startArray[n + 1],
       });
     }
     for (n = 0; n < endArray.length; n += 2) {
       end.push({
         x: endArray[n],
-        y: endArray[n + 1]
+        y: endArray[n + 1],
       });
     }
 
     var newStart = [];
-    end.forEach(function(point) {
+    end.forEach(function (point) {
       var pr = Util._getProjectionToLine(point, start, isClosed);
       newStart.push(pr.x);
       newStart.push(pr.y);
@@ -1077,5 +1140,5 @@ export const Util = {
     } else {
       return evt.changedTouches[0].identifier;
     }
-  }
+  },
 };

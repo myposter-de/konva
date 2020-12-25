@@ -5,17 +5,28 @@ import { Konva } from '../Global';
 import {
   getNumberValidator,
   getStringValidator,
-  getNumberOrAutoValidator
+  getNumberOrAutoValidator,
+  getBooleanValidator,
 } from '../Validators';
 import { _registerNode } from '../Global';
 
 import { GetSet } from '../types';
+
+export function stringToArray(string: string) {
+  // we need to use `Array.from` because it can split unicode string correctly
+  // we also can use some regexp magic from lodash:
+  // https://github.com/lodash/lodash/blob/fb1f99d9d90ad177560d771bc5953a435b2dc119/lodash.toarray/index.js#L256
+  // but I decided it is too much code for that small fix
+  return Array.from(string);
+}
 
 export interface TextConfig extends ShapeConfig {
   text?: string;
   fontFamily?: string;
   fontSize?: number;
   fontStyle?: string;
+  fontVariant?: string;
+  textDecoration?: string;
   align?: string;
   verticalAlign?: string;
   padding?: number;
@@ -60,10 +71,26 @@ var AUTO = 'auto',
     'height',
     'wrap',
     'ellipsis',
-    'letterSpacing'
+    'letterSpacing',
   ],
   // cached variables
   attrChangeListLen = ATTR_CHANGE_LIST.length;
+
+function normalizeFontFamily(fontFamily: string) {
+  return fontFamily
+    .split(',')
+    .map((family) => {
+      family = family.trim();
+      const hasSpace = family.indexOf(' ') >= 0;
+      const hasQuotes = family.indexOf('"') >= 0 || family.indexOf("'") >= 0;
+      if (hasSpace && !hasQuotes) {
+        family = `"${family}"`;
+      }
+      return family;
+    })
+    .join(', ');
+}
+
 var dummyContext;
 function getDummyContext() {
   if (dummyContext) {
@@ -92,11 +119,6 @@ function checkDefaultFill(config) {
     config.fill = config.fill || 'black';
   }
   return config;
-}
-
-// polyfill for IE11
-const trimRight = String.prototype.trimRight || function polyfill() {
-  return this.replace(/[\s\xa0]+$/, '');
 }
 
 /**
@@ -147,11 +169,16 @@ export class Text extends Shape<TextConfig> {
   }
 
   _sceneFunc(context) {
+    var textArr = this.textArr,
+      textArrLen = textArr.length;
+
+    if (!this.text()) {
+      return;
+    }
+
     var padding = this.padding(),
       fontSize = this.fontSize(),
       lineHeightPx = this.lineHeight() * fontSize,
-      textArr = this.textArr,
-      textArrLen = textArr.length,
       verticalAlign = this.verticalAlign(),
       alignY = 0,
       align = this.align(),
@@ -252,13 +279,12 @@ export class Text extends Shape<TextConfig> {
       if (letterSpacing !== 0 || align === JUSTIFY) {
         //   var words = text.split(' ');
         spacesNumber = text.split(' ').length - 1;
-        for (var li = 0; li < text.length; li++) {
-          var letter = text[li];
+        var array = stringToArray(text);
+        for (var li = 0; li < array.length; li++) {
+          var letter = array[li];
           // skip justify for the last line
           if (letter === ' ' && n !== textArrLen - 1 && align === JUSTIFY) {
-            lineTranslateX += Math.floor(
-              (totalWidth - padding * 2 - width) / spacesNumber
-            );
+            lineTranslateX += (totalWidth - padding * 2 - width) / spacesNumber;
             // context.translate(
             //   Math.floor((totalWidth - padding * 2 - width) / spacesNumber),
             //   0
@@ -268,8 +294,7 @@ export class Text extends Shape<TextConfig> {
           this._partialTextY = translateY + lineTranslateY;
           this._partialText = letter;
           context.fillStrokeShape(this);
-          lineTranslateX +=
-            Math.round(this.measureSize(letter).width) + letterSpacing;
+          lineTranslateX += this.measureSize(letter).width + letterSpacing;
         }
       } else {
         this._partialTextX = lineTranslateX;
@@ -294,7 +319,11 @@ export class Text extends Shape<TextConfig> {
     context.fillStrokeShape(this);
   }
   setText(text) {
-    var str = Util._isString(text) ? text : (text === null || text === undefined) ? '' : text + '';
+    var str = Util._isString(text)
+      ? text
+      : text === null || text === undefined
+      ? ''
+      : text + '';
     this._setAttr(TEXT, str);
     return this;
   }
@@ -345,7 +374,7 @@ export class Text extends Shape<TextConfig> {
     _context.restore();
     return {
       width: metrics.width,
-      height: fontSize
+      height: fontSize,
     };
   }
   _getContextFont() {
@@ -362,14 +391,15 @@ export class Text extends Shape<TextConfig> {
         this.fontFamily()
       );
     }
+
     return (
       this.fontStyle() +
       SPACE +
       this.fontVariant() +
       SPACE +
-      this.fontSize() +
-      PX_SPACE +
-      this.fontFamily()
+      (this.fontSize() + PX_SPACE) +
+      // wrap font family into " so font families with spaces works ok
+      normalizeFontFamily(this.fontFamily())
     );
   }
   _addTextLine(line) {
@@ -404,7 +434,7 @@ export class Text extends Shape<TextConfig> {
       // align = this.align(),
       shouldWrap = wrap !== NONE,
       wrapAtWord = wrap !== CHAR && shouldWrap,
-      shouldAddEllipsis = this.ellipsis() && !shouldWrap;
+      shouldAddEllipsis = this.ellipsis();
 
     this.textArr = [];
     getDummyContext().font = this._getContextFont();
@@ -433,7 +463,7 @@ export class Text extends Shape<TextConfig> {
               substrWidth = this._getTextWidth(substr) + additionalWidth;
             if (substrWidth <= maxWidth) {
               low = mid + 1;
-              match = substr + (shouldAddEllipsis ? ELLIPSIS : '');
+              match = substr;
               matchWidth = substrWidth;
             } else {
               high = mid;
@@ -475,6 +505,23 @@ export class Text extends Shape<TextConfig> {
               !shouldWrap ||
               (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx)
             ) {
+              var lastLine = this.textArr[this.textArr.length - 1];
+              if (lastLine) {
+                if (shouldAddEllipsis) {
+                  var haveSpace =
+                    this._getTextWidth(lastLine.text + ELLIPSIS) < maxWidth;
+                  if (!haveSpace) {
+                    lastLine.text = lastLine.text.slice(
+                      0,
+                      lastLine.text.length - 3
+                    );
+                  }
+
+                  this.textArr.splice(this.textArr.length - 1, 1);
+                  this._addTextLine(lastLine.text + ELLIPSIS);
+                }
+              }
+
               /*
                * stop wrapping if wrapping is disabled or if adding
                * one more line would overflow the fixed height
@@ -547,7 +594,7 @@ Text.prototype._attrsAffectingSize = [
   'fontSize',
   'padding',
   'wrap',
-  'lineHeight'
+  'lineHeight',
 ];
 _registerNode(Text);
 
@@ -738,21 +785,22 @@ Factory.addGetterSetter(Text, 'lineHeight', 1, getNumberValidator());
 Factory.addGetterSetter(Text, 'wrap', WORD);
 
 /**
- * get/set ellipsis.  Can be true or false. Default is false.
- * if Konva.Text config is set to wrap="none" and ellipsis=true, then it will add "..." to the end
+ * get/set ellipsis. Can be true or false. Default is false. If ellipses is true,
+ * Konva will add "..." at the end of the text if it doesn't have enough space to write characters.
+ * That is possible only when you limit both width and height of the text
  * @name Konva.Text#ellipsis
  * @method
  * @param {Boolean} ellipsis
  * @returns {Boolean}
  * @example
- * // get ellipsis
+ * // get ellipsis param, returns true or false
  * var ellipsis = text.ellipsis();
  *
  * // set ellipsis
  * text.ellipsis(true);
  */
 
-Factory.addGetterSetter(Text, 'ellipsis', false);
+Factory.addGetterSetter(Text, 'ellipsis', false, getBooleanValidator());
 
 /**
  * set letter spacing property. Default value is 0.

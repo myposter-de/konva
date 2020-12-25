@@ -1,4 +1,4 @@
-import { Util, Collection } from '../Util';
+import { Util, Collection, Transform } from '../Util';
 import { Factory } from '../Factory';
 import { Node } from '../Node';
 import { Shape } from '../Shape';
@@ -9,9 +9,9 @@ import { Konva } from '../Global';
 import { getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
 
-import { GetSet, IRect } from '../types';
+import { GetSet, IRect, Vector2d } from '../types';
 
-interface Box extends IRect {
+export interface Box extends IRect {
   rotation: number;
 }
 
@@ -19,6 +19,7 @@ export interface TransformerConfig extends ContainerConfig {
   resizeEnabled?: boolean;
   rotateEnabled?: boolean;
   rotationSnaps?: Array<number>;
+  rotationSnapTolerance?: number;
   rotateAnchorOffset?: number;
   borderEnabled?: boolean;
   borderStroke?: string;
@@ -32,6 +33,7 @@ export interface TransformerConfig extends ContainerConfig {
   centeredScaling?: boolean;
   enabledAnchors?: Array<string>;
   node?: Rect;
+  ignoreStroke?: boolean;
   boundBoxFunc?: (oldBox: Box, newBox: Box) => Box;
 }
 
@@ -51,12 +53,12 @@ var ATTR_CHANGE_LIST = [
   'anchorStrokeWidthChange',
   'anchorFillChange',
   'anchorCornerRadiusChange',
-  'ignoreStrokeChange'
+  'ignoreStrokeChange',
 ]
-  .map(e => e + `.${EVENTS_NAME}`)
+  .map((e) => e + `.${EVENTS_NAME}`)
   .join(' ');
 
-var NODE_RECT = 'nodeRect';
+var NODES_RECT = 'nodesRect';
 
 var TRANSFORM_CHANGE_STR = [
   'widthChange',
@@ -69,9 +71,9 @@ var TRANSFORM_CHANGE_STR = [
   'offsetXChange',
   'offsetYChange',
   'transformsEnabledChange',
-  'strokeWidthChange'
+  'strokeWidthChange',
 ]
-  .map(e => e + `.${EVENTS_NAME}`)
+  .map((e) => e + `.${EVENTS_NAME}`)
   .join(' ');
 
 var ANGLES = {
@@ -82,22 +84,17 @@ var ANGLES = {
   'middle-left': 90,
   'bottom-left': -135,
   'bottom-center': 180,
-  'bottom-right': 135
+  'bottom-right': 135,
 };
 
 const TOUCH_DEVICE = 'ontouchstart' in Konva._global;
 
-function getCursor(anchorName, rad, isMirrored) {
+function getCursor(anchorName, rad) {
   if (anchorName === 'rotater') {
     return 'crosshair';
   }
 
   rad += Util._degToRad(ANGLES[anchorName] || 0);
-  // If we are mirrored, we need to mirror the angle (this is not the same as
-  // rotate).
-  if (isMirrored) {
-    rad *= -1;
-  }
   var angle = ((Util._radToDeg(rad) % 360) + 360) % 360;
 
   if (Util._inRange(angle, 315 + 22.5, 360) || Util._inRange(angle, 0, 22.5)) {
@@ -139,10 +136,60 @@ var ANCHORS_NAMES = [
   'middle-left',
   'bottom-left',
   'bottom-center',
-  'bottom-right'
+  'bottom-right',
 ];
 
 var MAX_SAFE_INTEGER = 100000000;
+
+function getCenter(shape: Box) {
+  return {
+    x:
+      shape.x +
+      (shape.width / 2) * Math.cos(shape.rotation) +
+      (shape.height / 2) * Math.sin(-shape.rotation),
+    y:
+      shape.y +
+      (shape.height / 2) * Math.cos(shape.rotation) +
+      (shape.width / 2) * Math.sin(shape.rotation),
+  };
+}
+
+function rotateAroundPoint(shape: Box, angleRad: number, point: Vector2d) {
+  const x =
+    point.x +
+    (shape.x - point.x) * Math.cos(angleRad) -
+    (shape.y - point.y) * Math.sin(angleRad);
+  const y =
+    point.y +
+    (shape.x - point.x) * Math.sin(angleRad) +
+    (shape.y - point.y) * Math.cos(angleRad);
+  return {
+    ...shape,
+    rotation: shape.rotation + angleRad,
+    x,
+    y,
+  };
+}
+
+function rotateAroundCenter(shape: Box, deltaRad: number) {
+  const center = getCenter(shape);
+  return rotateAroundPoint(shape, deltaRad, center);
+}
+
+function getSnap(snaps: Array<number>, newRotationRad: number, tol: number) {
+  let snapped = newRotationRad;
+  for (let i = 0; i < snaps.length; i++) {
+    const angle = Konva.getAngle(snaps[i]);
+
+    const absDiff = Math.abs(angle - newRotationRad) % (Math.PI * 2);
+    const dif = Math.min(absDiff, Math.PI * 2 - absDiff);
+
+    if (dif < tol) {
+      snapped = angle;
+    }
+  }
+  return snapped;
+}
 
 /**
  * Transformer constructor.  Transformer is a special type of group that allow you transform Konva
@@ -154,6 +201,7 @@ var MAX_SAFE_INTEGER = 100000000;
  * @param {Boolean} [config.resizeEnabled] Default is true
  * @param {Boolean} [config.rotateEnabled] Default is true
  * @param {Array} [config.rotationSnaps] Array of angles for rotation snaps. Default is []
+ * @param {Number} [config.rotationSnapTolerance] Snapping tolerance. If closer than this it will snap. Default is 5
  * @param {Number} [config.rotateAnchorOffset] Default is 50
  * @param {Number} [config.padding] Default is 0
  * @param {Boolean} [config.borderEnabled] Should we draw border? Default is true
@@ -173,7 +221,7 @@ var MAX_SAFE_INTEGER = 100000000;
  *
  * @example
  * var transformer = new Konva.Transformer({
- *   node: rectangle,
+ *   nodes: [rectangle],
  *   rotateAnchorOffset: 60,
  *   enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
  * });
@@ -181,9 +229,10 @@ var MAX_SAFE_INTEGER = 100000000;
  */
 
 export class Transformer extends Group {
-  _node: Node;
+  _nodes: Array<Node>;
   _movingAnchorName: string;
   _transforming = false;
+  _anchorDragOffset: Vector2d;
   sin: number;
   cos: number;
   _cursorChange: boolean;
@@ -206,7 +255,7 @@ export class Transformer extends Group {
     }
   }
   /**
-   * alias to `tr.node(shape)`
+   * alias to `tr.nodes([shape])`/ This method is deprecated and will be removed soon.
    * @method
    * @name Konva.Transformer#attachTo
    * @returns {Konva.Transformer}
@@ -218,27 +267,48 @@ export class Transformer extends Group {
     return this;
   }
   setNode(node) {
-    if (this._node) {
+    Util.warn(
+      'tr.setNode(shape), tr.node(shape) and tr.attachTo(shape) methods are deprecated. Please use tr.nodes(nodesArray) instead.'
+    );
+    return this.setNodes([node]);
+  }
+  getNode() {
+    return this._nodes && this._nodes[0];
+  }
+
+  setNodes(nodes: Array<Node> = []) {
+    if (this._nodes && this._nodes.length) {
       this.detach();
     }
-    this._node = node;
+    this._nodes = nodes;
+    if (nodes.length === 1) {
+      this.rotation(nodes[0].rotation());
+    } else {
+      this.rotation(0);
+    }
+    this._nodes.forEach((node) => {
+      const additionalEvents = node._attrsAffectingSize
+        .map((prop) => prop + 'Change.' + EVENTS_NAME)
+        .join(' ');
+
+      const onChange = () => {
+        //
+        if (this.nodes().length === 1) {
+          this.rotation(this.nodes()[0].rotation());
+        }
+
+        this._resetTransformCache();
+        if (!this._transforming && !this.isDragging()) {
+          this.update();
+        }
+      };
+      node.on(additionalEvents, onChange);
+      node.on(TRANSFORM_CHANGE_STR, onChange);
+      node.on(`_clearTransformCache.${EVENTS_NAME}`, onChange);
+      node.on(`xChange.${EVENTS_NAME} yChange.${EVENTS_NAME}`, onChange);
+      this._proxyDrag(node);
+    });
     this._resetTransformCache();
-
-    const additionalEvents = node._attrsAffectingSize
-      .map(prop => prop + 'Change.' + EVENTS_NAME)
-      .join(' ');
-
-    const onChange = () => {
-      this._resetTransformCache();
-      if (!this._transforming) {
-        this.update();
-      }
-    };
-    node.on(additionalEvents, onChange);
-    node.on(TRANSFORM_CHANGE_STR, onChange);
-    node.on(`xChange.${EVENTS_NAME} yChange.${EVENTS_NAME}`, () =>
-      this._resetTransformCache()
-    );
     // we may need it if we set node in initial props
     // so elements are not defined yet
     var elementsCreated = !!this.findOne('.top-left');
@@ -247,8 +317,55 @@ export class Transformer extends Group {
     }
     return this;
   }
-  getNode() {
-    return this._node;
+
+  _proxyDrag(node: Node) {
+    let lastPos;
+    node.on(`dragstart.${EVENTS_NAME}`, (e) => {
+      lastPos = node.getAbsolutePosition();
+      // actual dragging of Transformer doesn't make sense
+      // but we need to proxy drag events
+      if (!this.isDragging() && node !== this.findOne('.back')) {
+        this.startDrag(e, false);
+      }
+    });
+    node.on(`dragmove.${EVENTS_NAME}`, (e) => {
+      if (!lastPos) {
+        return;
+      }
+      const abs = node.getAbsolutePosition();
+      const dx = abs.x - lastPos.x;
+      const dy = abs.y - lastPos.y;
+      this.nodes().forEach((otherNode) => {
+        if (otherNode === node) {
+          return;
+        }
+        if (otherNode.isDragging()) {
+          return;
+        }
+        const otherAbs = otherNode.getAbsolutePosition();
+        otherNode.setAbsolutePosition({
+          x: otherAbs.x + dx,
+          y: otherAbs.y + dy,
+        });
+        otherNode.startDrag(e);
+      });
+      lastPos = null;
+    });
+  }
+
+  getNodes() {
+    return this._nodes || [];
+  }
+  /**
+   * return the name of current active anchor
+   * @method
+   * @name Konva.Transformer#getActiveAnchor
+   * @returns {String | Null}
+   * @example
+   * transformer.getActiveAnchor();
+   */
+  getActiveAnchor() {
+    return this._movingAnchorName;
   }
   /**
    * detach transformer from an attached node
@@ -259,20 +376,55 @@ export class Transformer extends Group {
    * transformer.detach();
    */
   detach() {
-    if (this.getNode()) {
-      this.getNode().off('.' + EVENTS_NAME);
-      this._node = undefined;
+    // remove events
+    if (this._nodes) {
+      this._nodes.forEach((node) => {
+        node.off('.' + EVENTS_NAME);
+      });
     }
+    this._nodes = [];
     this._resetTransformCache();
   }
   _resetTransformCache() {
-    this._clearCache(NODE_RECT);
+    this._clearCache(NODES_RECT);
     this._clearCache('transform');
     this._clearSelfAndDescendantCache('absoluteTransform');
   }
   _getNodeRect() {
-    return this._getCache(NODE_RECT, this.__getNodeRect);
+    return this._getCache(NODES_RECT, this.__getNodeRect);
   }
+
+  // return absolute rotated bounding rectangle
+  __getNodeShape(node: Node, rot = this.rotation(), relative?: Node) {
+    var rect = node.getClientRect({
+      skipTransform: true,
+      skipShadow: true,
+      skipStroke: this.ignoreStroke(),
+    });
+
+    var absScale = node.getAbsoluteScale(relative);
+    var absPos = node.getAbsolutePosition(relative);
+
+    var dx = rect.x * absScale.x - node.offsetX() * absScale.x;
+    var dy = rect.y * absScale.y - node.offsetY() * absScale.y;
+
+    const rotation =
+      (Konva.getAngle(node.getAbsoluteRotation()) + Math.PI * 2) %
+      (Math.PI * 2);
+
+    const box = {
+      x: absPos.x + dx * Math.cos(rotation) + dy * Math.sin(-rotation),
+      y: absPos.y + dy * Math.cos(rotation) + dx * Math.sin(rotation),
+      width: rect.width * absScale.x,
+      height: rect.height * absScale.y,
+      rotation: rotation,
+    };
+    return rotateAroundPoint(box, -Konva.getAngle(rot), {
+      x: 0,
+      y: 0,
+    });
+  }
+  // returns box + rotation of all shapes
   __getNodeRect() {
     var node = this.getNode();
     if (!node) {
@@ -281,41 +433,70 @@ export class Transformer extends Group {
         y: -MAX_SAFE_INTEGER,
         width: 0,
         height: 0,
-        rotation: 0
+        rotation: 0,
       };
     }
 
-    if (node.parent && this.parent && node.parent !== this.parent) {
-      Util.warn(
-        'Transformer and attached node have different parents. Konva does not support such case right now. Please move Transformer to the parent of attaching node.'
-      );
-    }
-    var rect = node.getClientRect({
-      skipTransform: true,
-      skipShadow: true,
-      skipStroke: this.ignoreStroke()
+    const totalPoints = [];
+    this.nodes().map((node) => {
+      const box = node.getClientRect({
+        skipTransform: true,
+        skipShadow: true,
+        skipStroke: this.ignoreStroke(),
+      });
+      var points = [
+        { x: box.x, y: box.y },
+        { x: box.x + box.width, y: box.y },
+        { x: box.x + box.width, y: box.y + box.height },
+        { x: box.x, y: box.y + box.height },
+      ];
+      var trans = node.getAbsoluteTransform();
+      points.forEach(function (point) {
+        var transformed = trans.point(point);
+        totalPoints.push(transformed);
+      });
     });
-    var rotation = Konva.getAngle(node.rotation());
 
-    var dx = rect.x * node.scaleX() - node.offsetX() * node.scaleX();
-    var dy = rect.y * node.scaleY() - node.offsetY() * node.scaleY();
+    const tr = new Transform();
+    tr.rotate(-Konva.getAngle(this.rotation()));
 
+    var minX: number, minY: number, maxX: number, maxY: number;
+    totalPoints.forEach(function (point) {
+      var transformed = tr.point(point);
+      if (minX === undefined) {
+        minX = maxX = transformed.x;
+        minY = maxY = transformed.y;
+      }
+      minX = Math.min(minX, transformed.x);
+      minY = Math.min(minY, transformed.y);
+      maxX = Math.max(maxX, transformed.x);
+      maxY = Math.max(maxY, transformed.y);
+    });
+
+    tr.invert();
+    const p = tr.point({ x: minX, y: minY });
     return {
-      x: node.x() + dx * Math.cos(rotation) + dy * Math.sin(-rotation),
-      y: node.y() + dy * Math.cos(rotation) + dx * Math.sin(rotation),
-      width: rect.width * node.scaleX(),
-      height: rect.height * node.scaleY(),
-      rotation: node.rotation()
+      x: p.x,
+      y: p.y,
+      width: maxX - minX,
+      height: maxY - minY,
+      rotation: Konva.getAngle(this.rotation()),
     };
+    // const shapes = this.nodes().map(node => {
+    //   return this.__getNodeShape(node);
+    // });
+
+    // const box = getShapesRect(shapes);
+    // return rotateAroundPoint(box, Konva.getAngle(this.rotation()), {
+    //   x: 0,
+    //   y: 0
+    // });
   }
   getX() {
     return this._getNodeRect().x;
   }
   getY() {
     return this._getNodeRect().y;
-  }
-  getRotation() {
-    return this._getNodeRect().rotation;
   }
   getWidth() {
     return this._getNodeRect().width;
@@ -327,7 +508,7 @@ export class Transformer extends Group {
     this._createBack();
 
     ANCHORS_NAMES.forEach(
-      function(name) {
+      function (name) {
         this._createAnchor(name);
       }.bind(this)
     );
@@ -341,38 +522,31 @@ export class Transformer extends Group {
       strokeWidth: 1,
       name: name + ' _anchor',
       dragDistance: 0,
+      // make it draggable,
+      // so activating the anchror will not start drag&drop of any parent
       draggable: true,
-      hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto'
+      hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto',
     });
     var self = this;
-    anchor.on('mousedown touchstart', function(e) {
+    anchor.on('mousedown touchstart', function (e) {
       self._handleMouseDown(e);
     });
-    anchor.on('dragstart', function(e) {
+    anchor.on('dragstart', (e) => {
+      anchor.stopDrag();
       e.cancelBubble = true;
     });
-    anchor.on('dragmove', function(e) {
-      e.cancelBubble = true;
-    });
-    anchor.on('dragend', function(e) {
+    anchor.on('dragend', (e) => {
       e.cancelBubble = true;
     });
 
     // add hover styling
     anchor.on('mouseenter', () => {
-      var rad = Konva.getAngle(this.getAbsoluteRotation());
-
-      var scale = this.getNode().getAbsoluteScale();
-      // If scale.y < 0 xor scale.x < 0 we need to flip (not rotate).
-      var isMirrored = scale.y * scale.x < 0;
-      var cursor = getCursor(name, rad, isMirrored);
+      var rad = Konva.getAngle(this.rotation());
+      var cursor = getCursor(name, rad);
       anchor.getStage().content.style.cursor = cursor;
       this._cursorChange = true;
     });
     anchor.on('mouseout', () => {
-      if (!anchor.getStage() || !anchor.getParent()) {
-        return;
-      }
       anchor.getStage().content.style.cursor = '';
       this._cursorChange = false;
     });
@@ -383,7 +557,7 @@ export class Transformer extends Group {
       name: 'back',
       width: 0,
       height: 0,
-      listening: false,
+      draggable: true,
       sceneFunc(ctx) {
         var tr = this.getParent();
         var padding = tr.padding();
@@ -403,14 +577,40 @@ export class Transformer extends Group {
         }
 
         ctx.fillStrokeShape(this);
-      }
+      },
+      hitFunc: (ctx, shape) => {
+        if (!this.shouldOverdrawWholeArea()) {
+          return;
+        }
+        var padding = this.padding();
+        ctx.beginPath();
+        ctx.rect(
+          -padding,
+          -padding,
+          shape.width() + padding * 2,
+          shape.height() + padding * 2
+        );
+        ctx.fillStrokeShape(shape);
+      },
     });
     this.add(back);
+    this._proxyDrag(back);
+    // do not bubble drag from the back shape
+    // because we already "drag" whole transformer
+    // so we don't want to trigger drag twice on transformer
+    back.on('dragstart', (e) => {
+      e.cancelBubble = true;
+    });
+    back.on('dragmove', (e) => {
+      e.cancelBubble = true;
+    });
+    back.on('dragend', (e) => {
+      e.cancelBubble = true;
+    });
   }
   _handleMouseDown(e) {
     this._movingAnchorName = e.target.name().split(' ')[0];
 
-    // var node = this.getNode();
     var attrs = this._getNodeRect();
     var width = attrs.width;
     var height = attrs.height;
@@ -425,9 +625,16 @@ export class Transformer extends Group {
     window.addEventListener('touchend', this._handleMouseUp, true);
 
     this._transforming = true;
-
-    this._fire('transformstart', { evt: e });
-    this.getNode()._fire('transformstart', { evt: e });
+    var ap = e.target.getAbsolutePosition();
+    var pos = e.target.getStage().getPointerPosition();
+    this._anchorDragOffset = {
+      x: pos.x - ap.x,
+      y: pos.y - ap.y,
+    };
+    this._fire('transformstart', { evt: e, target: this.getNode() });
+    this._nodes.forEach((target) => {
+      target._fire('transformstart', { evt: e, target });
+    });
   }
   _handleMouseMove(e) {
     var x, y, newHypotenuse;
@@ -436,80 +643,104 @@ export class Transformer extends Group {
 
     stage.setPointersPositions(e);
 
-    anchorNode.setAbsolutePosition(stage.getPointerPosition());
+    const pp = stage.getPointerPosition();
+    var newNodePos = {
+      x: pp.x - this._anchorDragOffset.x,
+      y: pp.y - this._anchorDragOffset.y,
+    };
+    const oldAbs = anchorNode.getAbsolutePosition();
+    anchorNode.setAbsolutePosition(newNodePos);
+    const newAbs = anchorNode.getAbsolutePosition();
+
+    if (oldAbs.x === newAbs.x && oldAbs.y === newAbs.y) {
+      return;
+    }
+
+    // rotater is working very differently, so do it first
+    if (this._movingAnchorName === 'rotater') {
+      var attrs = this._getNodeRect();
+      x = anchorNode.x() - attrs.width / 2;
+      y = -anchorNode.y() + attrs.height / 2;
+
+      // hor angle is changed?
+      let delta = Math.atan2(-y, x) + Math.PI / 2;
+
+      if (attrs.height < 0) {
+        delta -= Math.PI;
+      }
+
+      var oldRotation = Konva.getAngle(this.rotation());
+      const newRotation = oldRotation + delta;
+
+      const tol = Konva.getAngle(this.rotationSnapTolerance());
+      const snappedRot = getSnap(this.rotationSnaps(), newRotation, tol);
+
+      const diff = snappedRot - attrs.rotation;
+
+      const shape = rotateAroundCenter(attrs, diff);
+      this._fitNodesInto(shape, e);
+      return;
+    }
 
     var keepProportion = this.keepRatio() || e.shiftKey;
-
-    var padding = this.padding();
+    var centeredScaling = this.centeredScaling() || e.altKey;
 
     if (this._movingAnchorName === 'top-left') {
       if (keepProportion) {
+        var comparePoint = centeredScaling
+          ? {
+              x: this.width() / 2,
+              y: this.height() / 2,
+            }
+          : {
+              x: this.findOne('.bottom-right').x(),
+              y: this.findOne('.bottom-right').y(),
+            };
         newHypotenuse = Math.sqrt(
-          Math.pow(
-            this.findOne('.bottom-right').x() - anchorNode.x() - padding * 2,
-            2
-          ) +
-            Math.pow(
-              this.findOne('.bottom-right').y() - anchorNode.y() - padding * 2,
-              2
-            )
+          Math.pow(comparePoint.x - anchorNode.x(), 2) +
+            Math.pow(comparePoint.y - anchorNode.y(), 2)
         );
 
-        var reverseX =
-          this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
-            ? -1
-            : 1;
+        var reverseX = this.findOne('.top-left').x() > comparePoint.x ? -1 : 1;
 
-        var reverseY =
-          this.findOne('.top-left').y() > this.findOne('.bottom-right').y()
-            ? -1
-            : 1;
+        var reverseY = this.findOne('.top-left').y() > comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.top-left').x(
-          this.findOne('.bottom-right').x() - x - padding * 2
-        );
-        this.findOne('.top-left').y(
-          this.findOne('.bottom-right').y() - y - padding * 2
-        );
+        this.findOne('.top-left').x(comparePoint.x - x);
+        this.findOne('.top-left').y(comparePoint.y - y);
       }
     } else if (this._movingAnchorName === 'top-center') {
       this.findOne('.top-left').y(anchorNode.y());
     } else if (this._movingAnchorName === 'top-right') {
       if (keepProportion) {
+        var comparePoint = centeredScaling
+          ? {
+              x: this.width() / 2,
+              y: this.height() / 2,
+            }
+          : {
+              x: this.findOne('.bottom-left').x(),
+              y: this.findOne('.bottom-left').y(),
+            };
+
         newHypotenuse = Math.sqrt(
-          Math.pow(
-            anchorNode.x() - this.findOne('.bottom-left').x() - padding * 2,
-            2
-          ) +
-            Math.pow(
-              this.findOne('.bottom-left').y() - anchorNode.y() - padding * 2,
-              2
-            )
+          Math.pow(anchorNode.x() - comparePoint.x, 2) +
+            Math.pow(comparePoint.y - anchorNode.y(), 2)
         );
 
-        var reverseX =
-          this.findOne('.top-right').x() < this.findOne('.top-left').x()
-            ? -1
-            : 1;
+        var reverseX = this.findOne('.top-right').x() < comparePoint.x ? -1 : 1;
 
-        var reverseY =
-          this.findOne('.top-right').y() > this.findOne('.bottom-left').y()
-            ? -1
-            : 1;
+        var reverseY = this.findOne('.top-right').y() > comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.top-right').x(x + padding);
-        this.findOne('.top-right').y(
-          this.findOne('.bottom-left').y() - y - padding * 2
-        );
+        this.findOne('.top-right').x(comparePoint.x + x);
+        this.findOne('.top-right').y(comparePoint.y - y);
       }
       var pos = anchorNode.position();
-
       this.findOne('.top-left').y(pos.y);
       this.findOne('.bottom-right').x(pos.x);
     } else if (this._movingAnchorName === 'middle-left') {
@@ -518,34 +749,30 @@ export class Transformer extends Group {
       this.findOne('.bottom-right').x(anchorNode.x());
     } else if (this._movingAnchorName === 'bottom-left') {
       if (keepProportion) {
+        var comparePoint = centeredScaling
+          ? {
+              x: this.width() / 2,
+              y: this.height() / 2,
+            }
+          : {
+              x: this.findOne('.top-right').x(),
+              y: this.findOne('.top-right').y(),
+            };
+
         newHypotenuse = Math.sqrt(
-          Math.pow(
-            this.findOne('.top-right').x() - anchorNode.x() - padding * 2,
-            2
-          ) +
-            Math.pow(
-              anchorNode.y() - this.findOne('.top-right').y() - padding * 2,
-              2
-            )
+          Math.pow(comparePoint.x - anchorNode.x(), 2) +
+            Math.pow(anchorNode.y() - comparePoint.y, 2)
         );
 
-        var reverseX =
-          this.findOne('.top-right').x() < this.findOne('.bottom-left').x()
-            ? -1
-            : 1;
+        var reverseX = comparePoint.x < anchorNode.x() ? -1 : 1;
 
-        var reverseY =
-          this.findOne('.bottom-right').y() < this.findOne('.top-left').y()
-            ? -1
-            : 1;
+        var reverseY = anchorNode.y() < comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.bottom-left').x(
-          this.findOne('.top-right').x() - x - padding * 2
-        );
-        this.findOne('.bottom-left').y(y + padding);
+        anchorNode.x(comparePoint.x - x);
+        anchorNode.y(comparePoint.y + y);
       }
 
       pos = anchorNode.position();
@@ -556,83 +783,33 @@ export class Transformer extends Group {
       this.findOne('.bottom-right').y(anchorNode.y());
     } else if (this._movingAnchorName === 'bottom-right') {
       if (keepProportion) {
+        var comparePoint = centeredScaling
+          ? {
+              x: this.width() / 2,
+              y: this.height() / 2,
+            }
+          : {
+              x: this.findOne('.top-left').x(),
+              y: this.findOne('.top-left').y(),
+            };
+
         newHypotenuse = Math.sqrt(
-          Math.pow(this.findOne('.bottom-right').x() - padding, 2) +
-            Math.pow(this.findOne('.bottom-right').y() - padding, 2)
+          Math.pow(anchorNode.x() - comparePoint.x, 2) +
+            Math.pow(anchorNode.y() - comparePoint.y, 2)
         );
 
         var reverseX =
-          this.findOne('.top-left').x() > this.findOne('.bottom-right').x()
-            ? -1
-            : 1;
+          this.findOne('.bottom-right').x() < comparePoint.x ? -1 : 1;
 
         var reverseY =
-          this.findOne('.top-left').y() > this.findOne('.bottom-right').y()
-            ? -1
-            : 1;
+          this.findOne('.bottom-right').y() < comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.bottom-right').x(x + padding);
-        this.findOne('.bottom-right').y(y + padding);
+        this.findOne('.bottom-right').x(comparePoint.x + x);
+        this.findOne('.bottom-right').y(comparePoint.y + y);
       }
-    } else if (this._movingAnchorName === 'rotater') {
-      var attrs = this._getNodeRect();
-      x = anchorNode.x() - attrs.width / 2;
-      y = -anchorNode.y() + attrs.height / 2;
-
-      var dAlpha = Math.atan2(-y, x) + Math.PI / 2;
-
-      if (attrs.height < 0) {
-        dAlpha -= Math.PI;
-      }
-
-      var rot = Konva.getAngle(this.rotation());
-
-      var newRotation = Util._radToDeg(rot) + Util._radToDeg(dAlpha);
-
-      var alpha = Konva.getAngle(this.getNode().rotation());
-      var newAlpha = Util._degToRad(newRotation);
-
-      var snaps = this.rotationSnaps();
-      var offset = 0.1;
-      for (var i = 0; i < snaps.length; i++) {
-        var angle = Konva.getAngle(snaps[i]);
-
-        var dif = Math.abs(angle - Util._degToRad(newRotation)) % (Math.PI * 2);
-
-        if (dif < offset) {
-          newRotation = Util._radToDeg(angle);
-          newAlpha = Util._degToRad(newRotation);
-        }
-      }
-
-      var dx = padding;
-      var dy = padding;
-
-      this._fitNodeInto(
-        {
-          rotation: Konva.angleDeg ? newRotation : Util._degToRad(newRotation),
-          x:
-            attrs.x +
-            (attrs.width / 2 + padding) *
-              (Math.cos(alpha) - Math.cos(newAlpha)) +
-            (attrs.height / 2 + padding) *
-              (Math.sin(-alpha) - Math.sin(-newAlpha)) -
-            (dx * Math.cos(rot) + dy * Math.sin(-rot)),
-          y:
-            attrs.y +
-            (attrs.height / 2 + padding) *
-              (Math.cos(alpha) - Math.cos(newAlpha)) +
-            (attrs.width / 2 + padding) *
-              (Math.sin(alpha) - Math.sin(newAlpha)) -
-            (dy * Math.cos(rot) + dx * Math.sin(rot)),
-          width: attrs.width + padding * 2,
-          height: attrs.height + padding * 2
-        },
-        e
-      );
     } else {
       console.error(
         new Error(
@@ -642,55 +819,54 @@ export class Transformer extends Group {
       );
     }
 
-    if (this._movingAnchorName === 'rotater') {
-      return;
-    }
-
     var centeredScaling = this.centeredScaling() || e.altKey;
     if (centeredScaling) {
       var topLeft = this.findOne('.top-left');
       var bottomRight = this.findOne('.bottom-right');
-      var topOffsetX = topLeft.x() + padding;
-      var topOffsetY = topLeft.y() + padding;
+      var topOffsetX = topLeft.x();
+      var topOffsetY = topLeft.y();
 
-      var bottomOffsetX = this.getWidth() - bottomRight.x() + padding;
-      var bottomOffsetY = this.getHeight() - bottomRight.y() + padding;
+      var bottomOffsetX = this.getWidth() - bottomRight.x();
+      var bottomOffsetY = this.getHeight() - bottomRight.y();
 
       bottomRight.move({
         x: -topOffsetX,
-        y: -topOffsetY
+        y: -topOffsetY,
       });
 
       topLeft.move({
         x: bottomOffsetX,
-        y: bottomOffsetY
+        y: bottomOffsetY,
       });
     }
 
-    var absPos = this.findOne('.top-left').getAbsolutePosition(
-      this.getParent()
-    );
+    var absPos = this.findOne('.top-left').getAbsolutePosition();
 
     x = absPos.x;
     y = absPos.y;
+
     var width =
       this.findOne('.bottom-right').x() - this.findOne('.top-left').x();
 
     var height =
       this.findOne('.bottom-right').y() - this.findOne('.top-left').y();
 
-    this._fitNodeInto(
+    this._fitNodesInto(
       {
-        x: x + this.offsetX(),
-        y: y + this.offsetY(),
+        x: x,
+        y: y,
         width: width,
-        height: height
+        height: height,
+        rotation: Konva.getAngle(this.rotation()),
       },
       e
     );
   }
   _handleMouseUp(e) {
     this._removeEvents(e);
+  }
+  getAbsoluteTransform() {
+    return this.getTransform();
   }
   _removeEvents(e?) {
     if (this._transforming) {
@@ -699,49 +875,171 @@ export class Transformer extends Group {
       window.removeEventListener('touchmove', this._handleMouseMove);
       window.removeEventListener('mouseup', this._handleMouseUp, true);
       window.removeEventListener('touchend', this._handleMouseUp, true);
-      this._fire('transformend', { evt: e });
       var node = this.getNode();
+      this._fire('transformend', { evt: e, target: node });
+
       if (node) {
-        node.fire('transformend', { evt: e });
+        this._nodes.forEach((target) => {
+          target._fire('transformend', { evt: e, target });
+        });
       }
+      this._movingAnchorName = null;
     }
   }
-  _fitNodeInto(newAttrs, evt) {
-    // waring! in this attrs padding is included
-    var boundBoxFunc = this.boundBoxFunc();
-    if (boundBoxFunc) {
-      var oldAttrs = this._getNodeRect();
-      newAttrs = boundBoxFunc.call(this, oldAttrs, newAttrs);
+  _fitNodesInto(newAttrs, evt) {
+    var oldAttrs = this._getNodeRect();
+
+    const minSize = 1;
+
+    if (Util._inRange(newAttrs.width, -this.padding() * 2 - minSize, minSize)) {
+      this.update();
+      return;
     }
-    var node = this.getNode();
-    if (newAttrs.rotation !== undefined) {
-      this.getNode().rotation(newAttrs.rotation);
+    if (
+      Util._inRange(newAttrs.height, -this.padding() * 2 - minSize, minSize)
+    ) {
+      this.update();
+      return;
     }
-    var pure = node.getClientRect({
-      skipTransform: true,
-      skipShadow: true,
-      skipStroke: this.ignoreStroke()
+
+    const allowNegativeScale = true;
+    var t = new Transform();
+    t.rotate(Konva.getAngle(this.rotation()));
+    if (
+      this._movingAnchorName &&
+      newAttrs.width < 0 &&
+      this._movingAnchorName.indexOf('left') >= 0
+    ) {
+      const offset = t.point({
+        x: -this.padding() * 2,
+        y: 0,
+      });
+      newAttrs.x += offset.x;
+      newAttrs.y += offset.y;
+      newAttrs.width += this.padding() * 2;
+      this._movingAnchorName = this._movingAnchorName.replace('left', 'right');
+      this._anchorDragOffset.x -= offset.x;
+      this._anchorDragOffset.y -= offset.y;
+      if (!allowNegativeScale) {
+        this.update();
+        return;
+      }
+    } else if (
+      this._movingAnchorName &&
+      newAttrs.width < 0 &&
+      this._movingAnchorName.indexOf('right') >= 0
+    ) {
+      const offset = t.point({
+        x: this.padding() * 2,
+        y: 0,
+      });
+      this._movingAnchorName = this._movingAnchorName.replace('right', 'left');
+      this._anchorDragOffset.x -= offset.x;
+      this._anchorDragOffset.y -= offset.y;
+      newAttrs.width += this.padding() * 2;
+      if (!allowNegativeScale) {
+        this.update();
+        return;
+      }
+    }
+    if (
+      this._movingAnchorName &&
+      newAttrs.height < 0 &&
+      this._movingAnchorName.indexOf('top') >= 0
+    ) {
+      const offset = t.point({
+        x: 0,
+        y: -this.padding() * 2,
+      });
+      newAttrs.x += offset.x;
+      newAttrs.y += offset.y;
+      this._movingAnchorName = this._movingAnchorName.replace('top', 'bottom');
+      this._anchorDragOffset.x -= offset.x;
+      this._anchorDragOffset.y -= offset.y;
+      newAttrs.height += this.padding() * 2;
+      if (!allowNegativeScale) {
+        this.update();
+        return;
+      }
+    } else if (
+      this._movingAnchorName &&
+      newAttrs.height < 0 &&
+      this._movingAnchorName.indexOf('bottom') >= 0
+    ) {
+      const offset = t.point({
+        x: 0,
+        y: this.padding() * 2,
+      });
+      this._movingAnchorName = this._movingAnchorName.replace('bottom', 'top');
+      this._anchorDragOffset.x -= offset.x;
+      this._anchorDragOffset.y -= offset.y;
+      newAttrs.height += this.padding() * 2;
+      if (!allowNegativeScale) {
+        this.update();
+        return;
+      }
+    }
+
+    if (this.boundBoxFunc()) {
+      const bounded = this.boundBoxFunc()(oldAttrs, newAttrs);
+      if (bounded) {
+        newAttrs = bounded;
+      } else {
+        Util.warn(
+          'boundBoxFunc returned falsy. You should return new bound rect from it!'
+        );
+      }
+    }
+
+    // base size value doesn't really matter
+    // we just need to think about bounding boxes as transforms
+    // but how?
+    // the idea is that we have a transformed rectangle with the size of "baseSize"
+    const baseSize = 10000000;
+    const oldTr = new Transform();
+    oldTr.translate(oldAttrs.x, oldAttrs.y);
+    oldTr.rotate(oldAttrs.rotation);
+    oldTr.scale(oldAttrs.width / baseSize, oldAttrs.height / baseSize);
+
+    const newTr = new Transform();
+    newTr.translate(newAttrs.x, newAttrs.y);
+    newTr.rotate(newAttrs.rotation);
+    newTr.scale(newAttrs.width / baseSize, newAttrs.height / baseSize);
+
+    // now lets think we had [old transform] and n ow we have [new transform]
+    // Now, the questions is: how can we transform "parent" to go from [old transform] into [new transform]
+    // in equation it will be:
+    // [delta transform] * [old transform] = [new transform]
+    // that means that
+    // [delta transform] = [new transform] * [old transform inverted]
+    const delta = newTr.multiply(oldTr.invert());
+
+    this._nodes.forEach((node) => {
+      // for each node we have the same [delta transform]
+      // the equations is
+      // [delta transform] * [parent transform] * [old local transform] = [parent transform] * [new local transform]
+      // and we need to find [new local transform]
+      // [new local] = [parent inverted] * [delta] * [parent] * [old local]
+      const parentTransform = node.getParent().getAbsoluteTransform();
+      const localTransform = node.getTransform().copy();
+      // skip offset:
+      localTransform.translate(node.offsetX(), node.offsetY());
+
+      const newLocalTransform = new Transform();
+      newLocalTransform
+        .multiply(parentTransform.copy().invert())
+        .multiply(delta)
+        .multiply(parentTransform)
+        .multiply(localTransform);
+
+      const attrs = newLocalTransform.decompose();
+      node.setAttrs(attrs);
+      this._fire('transform', { evt: evt, target: node });
+      node._fire('transform', { evt: evt, target: node });
+      node.getLayer()?.batchDraw();
     });
-
-    var padding = this.padding();
-    var scaleX = pure.width ? (newAttrs.width - padding * 2) / pure.width : 1;
-    var scaleY = pure.height
-      ? (newAttrs.height - padding * 2) / pure.height
-      : 1;
-
-    var rotation = Konva.getAngle(node.rotation());
-    var dx = pure.x * scaleX - padding - node.offsetX() * scaleX;
-    var dy = pure.y * scaleY - padding - node.offsetY() * scaleY;
-
-    this.getNode().setAttrs({
-      scaleX: scaleX,
-      scaleY: scaleY,
-      x: newAttrs.x - (dx * Math.cos(rotation) + dy * Math.sin(-rotation)),
-      y: newAttrs.y - (dy * Math.cos(rotation) + dx * Math.sin(rotation))
-    });
-
-    this._fire('transform', { evt: evt });
-    this.getNode()._fire('transform', { evt: evt });
+    this.rotation(Util._getRotation(newAttrs.rotation));
+    this._resetTransformCache();
     this.update();
     this.getLayer().batchDraw();
   }
@@ -755,17 +1053,15 @@ export class Transformer extends Group {
     this._resetTransformCache();
     this.update();
   }
+
+  _batchChangeChild(selector: string, attrs: any) {
+    const anchor = this.findOne(selector);
+    anchor.setAttrs(attrs);
+  }
+
   update() {
     var attrs = this._getNodeRect();
-    var node = this.getNode();
-    var scale = { x: 1, y: 1 };
-    if (node && node.getParent()) {
-      scale = node.getParent().getAbsoluteScale();
-    }
-    var invertedScale = {
-      x: 1 / scale.x,
-      y: 1 / scale.y
-    };
+    this.rotation(Util._getRotation(attrs.rotation));
     var width = attrs.width;
     var height = attrs.height;
 
@@ -774,7 +1070,7 @@ export class Transformer extends Group {
     var padding = this.padding();
 
     var anchorSize = this.anchorSize();
-    this.find('._anchor').each(node =>
+    this.find('._anchor').each((node) => {
       node.setAttrs({
         width: anchorSize,
         height: anchorSize,
@@ -783,77 +1079,80 @@ export class Transformer extends Group {
         stroke: this.anchorStroke(),
         strokeWidth: this.anchorStrokeWidth(),
         fill: this.anchorFill(),
-        cornerRadius: this.anchorCornerRadius()
-      })
-    );
+        cornerRadius: this.anchorCornerRadius(),
+      });
+    });
 
-    this.findOne('.top-left').setAttrs({
-      x: -padding,
-      y: -padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('top-left') >= 0
+    this._batchChangeChild('.top-left', {
+      x: 0,
+      y: 0,
+      offsetX: anchorSize / 2 + padding,
+      offsetY: anchorSize / 2 + padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('top-left') >= 0,
     });
-    this.findOne('.top-center').setAttrs({
+    this._batchChangeChild('.top-center', {
       x: width / 2,
-      y: -padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('top-center') >= 0
+      y: 0,
+      offsetY: anchorSize / 2 + padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('top-center') >= 0,
     });
-    this.findOne('.top-right').setAttrs({
-      x: width + padding,
-      y: -padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('top-right') >= 0
+    this._batchChangeChild('.top-right', {
+      x: width,
+      y: 0,
+      offsetX: anchorSize / 2 - padding,
+      offsetY: anchorSize / 2 + padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('top-right') >= 0,
     });
-    this.findOne('.middle-left').setAttrs({
-      x: -padding,
+    this._batchChangeChild('.middle-left', {
+      x: 0,
       y: height / 2,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('middle-left') >= 0
+      offsetX: anchorSize / 2 + padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('middle-left') >= 0,
     });
-    this.findOne('.middle-right').setAttrs({
-      x: width + padding,
+    this._batchChangeChild('.middle-right', {
+      x: width,
       y: height / 2,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('middle-right') >= 0
+      offsetX: anchorSize / 2 - padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('middle-right') >= 0,
     });
-    this.findOne('.bottom-left').setAttrs({
-      x: -padding,
-      y: height + padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('bottom-left') >= 0
+    this._batchChangeChild('.bottom-left', {
+      x: 0,
+      y: height,
+      offsetX: anchorSize / 2 + padding,
+      offsetY: anchorSize / 2 - padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('bottom-left') >= 0,
     });
-    this.findOne('.bottom-center').setAttrs({
+    this._batchChangeChild('.bottom-center', {
       x: width / 2,
-      y: height + padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('bottom-center') >= 0
+      y: height,
+      offsetY: anchorSize / 2 - padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('bottom-center') >= 0,
     });
-    this.findOne('.bottom-right').setAttrs({
-      x: width + padding,
-      y: height + padding,
-      scale: invertedScale,
-      visible: resizeEnabled && enabledAnchors.indexOf('bottom-right') >= 0
+    this._batchChangeChild('.bottom-right', {
+      x: width,
+      y: height,
+      offsetX: anchorSize / 2 - padding,
+      offsetY: anchorSize / 2 - padding,
+      visible: resizeEnabled && enabledAnchors.indexOf('bottom-right') >= 0,
     });
 
-    var scaledRotateAnchorOffset =
-      -this.rotateAnchorOffset() * Math.abs(invertedScale.y);
-    this.findOne('.rotater').setAttrs({
+    this._batchChangeChild('.rotater', {
       x: width / 2,
-      y: scaledRotateAnchorOffset * Util._sign(height) - padding,
-      scale: invertedScale,
-      visible: this.rotateEnabled()
+      y: -this.rotateAnchorOffset() * Util._sign(height) - padding,
+      visible: this.rotateEnabled(),
     });
 
-    this.findOne('.back').setAttrs({
-      width: width * scale.x,
-      height: height * scale.y,
-      scale: invertedScale,
+    this._batchChangeChild('.back', {
+      width: width,
+      height: height,
       visible: this.borderEnabled(),
       stroke: this.borderStroke(),
       strokeWidth: this.borderStrokeWidth(),
-      dash: this.borderDash()
+      dash: this.borderDash(),
+      x: 0,
+      y: 0,
     });
+    this.getLayer()?.batchDraw();
   }
   /**
    * determine if transformer is in active transform
@@ -894,12 +1193,14 @@ export class Transformer extends Group {
     return Node.prototype.toObject.call(this);
   }
 
+  nodes: GetSet<Node[], this>;
   enabledAnchors: GetSet<string[], this>;
   rotationSnaps: GetSet<number[], this>;
   anchorSize: GetSet<number, this>;
   resizeEnabled: GetSet<boolean, this>;
   rotateEnabled: GetSet<boolean, this>;
   rotateAnchorOffset: GetSet<number, this>;
+  rotationSnapTolerance: GetSet<number, this>;
   padding: GetSet<number, this>;
   borderEnabled: GetSet<boolean, this>;
   borderStroke: GetSet<string, this>;
@@ -912,7 +1213,8 @@ export class Transformer extends Group {
   keepRatio: GetSet<boolean, this>;
   centeredScaling: GetSet<boolean, this>;
   ignoreStroke: GetSet<boolean, this>;
-  boundBoxFunc: GetSet<(oldBox: IRect, newBox: IRect) => IRect, this>;
+  boundBoxFunc: GetSet<(oldBox: Box, newBox: Box) => Box, this>;
+  shouldOverdrawWholeArea: GetSet<boolean, this>;
 }
 
 function validateAnchors(val) {
@@ -920,7 +1222,7 @@ function validateAnchors(val) {
     Util.warn('enabledAnchors value should be an array');
   }
   if (val instanceof Array) {
-    val.forEach(function(name) {
+    val.forEach(function (name) {
       if (ANCHORS_NAMES.indexOf(name) === -1) {
         Util.warn(
           'Unknown anchor name: ' +
@@ -1033,6 +1335,26 @@ Factory.addGetterSetter(
   Transformer,
   'rotateAnchorOffset',
   50,
+  getNumberValidator()
+);
+
+/**
+ * get/set distance for rotation tolerance
+ * @name Konva.Transformer#rotationSnapTolerance
+ * @method
+ * @param {Number} tolerance
+ * @returns {Number}
+ * @example
+ * // get
+ * var rotationSnapTolerance = transformer.rotationSnapTolerance();
+ *
+ * // set
+ * transformer.rotationSnapTolerance(100);
+ */
+Factory.addGetterSetter(
+  Transformer,
+  'rotationSnapTolerance',
+  5,
   getNumberValidator()
 );
 
@@ -1232,23 +1554,31 @@ Factory.addGetterSetter(Transformer, 'ignoreStroke', false);
  */
 Factory.addGetterSetter(Transformer, 'padding', 0, getNumberValidator());
 
-/**
- * get/set attached node of the Transformer. Transformer will adapt to its size and listen to its events
- * @method
- * @name Konva.Transformer#Konva.Transformer#node
- * @returns {Konva.Node}
- * @example
- * // get
- * const node = transformer.node();
- *
- * // set
- * transformer.node(shape);
- */
-
 Factory.addGetterSetter(Transformer, 'node');
 
 /**
- * get/set bounding box function
+ * get/set attached nodes of the Transformer. Transformer will adapt to their size and listen to their events
+ * @method
+ * @name Konva.Transformer#nodes
+ * @returns {Konva.Node}
+ * @example
+ * // get
+ * const nodes = transformer.nodes();
+ *
+ * // set
+ * transformer.nodes([rect, circle]);
+ *
+ * // push new item:
+ * const oldNodes = transformer.nodes();
+ * const newNodes = oldNodes.concat([newShape]);
+ * // it is important to set new array instance (and concat method above will create it)
+ * transformer.nodes(newNodes);
+ */
+
+Factory.addGetterSetter(Transformer, 'nodes');
+
+/**
+ * get/set bounding box function. **IMPORTANT!** boundBondFunc operates in absolute coordinates.
  * @name Konva.Transformer#boundBoxFunc
  * @method
  * @param {Function} func
@@ -1259,6 +1589,8 @@ Factory.addGetterSetter(Transformer, 'node');
  *
  * // set
  * transformer.boundBoxFunc(function(oldBox, newBox) {
+ *   // width and height of the boxes are corresponding to total absolute width and height of all nodes combined
+ *   // so it includes scale of the node.
  *   if (newBox.width > 200) {
  *     return oldBox;
  *   }
@@ -1267,10 +1599,12 @@ Factory.addGetterSetter(Transformer, 'node');
  */
 Factory.addGetterSetter(Transformer, 'boundBoxFunc');
 
+Factory.addGetterSetter(Transformer, 'shouldOverdrawWholeArea', false);
+
 Factory.backCompat(Transformer, {
   lineEnabled: 'borderEnabled',
   rotateHandlerOffset: 'rotateAnchorOffset',
-  enabledHandlers: 'enabledAnchors'
+  enabledHandlers: 'enabledAnchors',
 });
 
 Collection.mapMethods(Transformer);

@@ -10,16 +10,14 @@
   </head>
   <body>
     <div id="container"></div>
-    <!-- <script src="../../konva.js"></script> -->
-    <script src="https://unpkg.com/konva@7.0.3/konva.min.js"></script>
+    <script src="../../konva.js"></script>
+    <!-- <script src="https://unpkg.com/konva@^7/konva.min.js"></script> -->
     <script src="http://www.html5canvastutorials.com/lib/stats/stats.js"></script>
     <script defer="defer">
       var lastTime = 0;
 
       var width = window.innerWidth;
       var height = window.innerHeight;
-
-      var wabbitTexture;
 
       var bunnys = [];
       var gravity = 0.75;
@@ -49,12 +47,6 @@
       stage.add(layer);
       stats = new Stats();
 
-      wabbitTexture = new Image();
-      wabbitTexture.onload = function () {
-        _handleTextureLoaded();
-      };
-      wabbitTexture.src = '../assets/bunny.png';
-
       document.body.appendChild(stats.domElement);
       stats.domElement.style.position = 'absolute';
       stats.domElement.style.top = '0px';
@@ -69,7 +61,7 @@
       document.body.appendChild(counter);
 
       count = startBunnyCount;
-      counter.innerHTML = startBunnyCount + ' BUNNIES';
+      counter.innerHTML = startBunnyCount + ' ELEMENTS';
 
       container = stage;
       // stage.addChild(container);
@@ -85,40 +77,27 @@
       document.addEventListener('touchstart', onTouchStart, true);
       document.addEventListener('touchend', onTouchEnd, true);
 
-      function _handleTextureLoaded(event) {
-        for (var i = 0; i < startBunnyCount; i++) {
-          var bunny = new Konva.Image({
-            image: wabbitTexture,
-            transformsEnabled: 'position',
-            x: 10,
-            y: 10,
-            perfectDrawEnabled: false,
-            width: wabbitTexture.width,
-            height: wabbitTexture.height,
-          });
+      function createShape() {
+        return new Konva.Rect({
+          transformsEnabled: 'position',
+          x: 10,
+          y: 10,
+          perfectDrawEnabled: false,
+          // radius: 10,
+          width: 10,
+          height: 10,
+          fill: Konva.Util.getRandomColor(),
+        });
+      }
 
-          bunny.speedX = Math.random() * 10;
-          bunny.speedY = Math.random() * 10 - 5;
+      for (var i = 0; i < startBunnyCount; i++) {
+        var bunny = createShape();
 
-          bunnys.push(bunny);
-          layer.add(bunny);
-        }
-        // layer.draw();
-        // console.clear();
-        // bunnys.forEach((b) => {
-        //   b.position({
-        //     x: Math.random() * window.innerWidth,
-        //     y: Math.random() * window.innerHeight,
-        //   });
-        // });
-        // layer.draw();
-        // bunnys.forEach((b) => {
-        //   b.position({
-        //     x: Math.random() * window.innerWidth,
-        //     y: Math.random() * window.innerHeight,
-        //   });
-        // });
-        // layer.draw();
+        bunny.speedX = Math.random() * 10;
+        bunny.speedY = Math.random() * 10 - 5;
+
+        bunnys.push(bunny);
+        layer.add(bunny);
       }
 
       function onTouchStart(event) {
@@ -135,15 +114,7 @@
           // add 10 at a time :)
 
           for (var i = 0; i < amount; i++) {
-            var bunny = new Konva.Image({
-              image: wabbitTexture,
-              transformsEnabled: 'position',
-              x: 0,
-              y: 0,
-              perfectDrawEnabled: false,
-              width: wabbitTexture.width,
-              height: wabbitTexture.height,
-            });
+            var bunny = createShape();
             bunny.speedX = Math.random() * 10;
             bunny.speedY = Math.random() * 10 - 5;
             bunnys.push(bunny);
@@ -163,17 +134,17 @@
           pos.x = pos.x + bunny.speedX;
           pos.y = pos.y + bunny.speedY;
           bunny.speedY += gravity;
-          if (pos.x > maxX - wabbitTexture.width) {
+          if (pos.x > maxX - 20) {
             bunny.speedX *= -1;
-            pos.x = maxX - wabbitTexture.width;
+            pos.x = maxX - 20;
           } else if (pos.x < minX) {
             bunny.speedX *= -1;
             pos.x = minX;
           }
 
-          if (pos.y > maxY - wabbitTexture.height) {
+          if (pos.y > maxY - 20) {
             bunny.speedY *= -0.85;
-            pos.y = maxY - wabbitTexture.height;
+            pos.y = maxY - 20;
             if (Math.random() > 0.5) {
               bunny.speedY -= Math.random() * 6;
             }

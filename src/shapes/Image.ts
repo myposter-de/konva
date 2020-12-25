@@ -5,6 +5,7 @@ import { getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
 
 import { GetSet, IRect } from '../types';
+import { Context } from '../Context';
 
 export interface ImageConfig extends ShapeConfig {
   image: CanvasImageSource | undefined;
@@ -36,23 +37,17 @@ export interface ImageConfig extends ShapeConfig {
  */
 export class Image extends Shape<ImageConfig> {
   _useBufferCanvas() {
-    return !!(
-      (this.hasShadow() || this.getAbsoluteOpacity() !== 1) &&
-      this.hasStroke() &&
-      this.getStage()
-    );
+    return super._useBufferCanvas(true);
   }
-  _sceneFunc(context) {
-    var width = this.width(),
-      height = this.height(),
-      image = this.image(),
-      cropWidth,
-      cropHeight,
-      params;
+  _sceneFunc(context: Context) {
+    const width = this.getWidth();
+    const height = this.getHeight();
+    const image = this.attrs.image;
+    let params;
 
     if (image) {
-      cropWidth = this.cropWidth();
-      cropHeight = this.cropHeight();
+      const cropWidth = this.attrs.cropWidth;
+      const cropHeight = this.attrs.cropHeight;
       if (cropWidth && cropHeight) {
         params = [
           image,
@@ -63,7 +58,7 @@ export class Image extends Shape<ImageConfig> {
           0,
           0,
           width,
-          height
+          height,
         ];
       } else {
         params = [image, 0, 0, width, height];
@@ -91,12 +86,10 @@ export class Image extends Shape<ImageConfig> {
     context.fillStrokeShape(this);
   }
   getWidth() {
-    var image = this.image();
-    return this.attrs.width ?? (image ? image.width : 0);
+    return this.attrs.width ?? (this.image()?.width || 0);
   }
   getHeight() {
-    var image = this.image();
-    return this.attrs.height ?? (image ? image.height : 0);
+    return this.attrs.height ?? (this.image()?.height || 0);
   }
 
   /**
@@ -114,9 +107,9 @@ export class Image extends Shape<ImageConfig> {
    */
   static fromURL(url, callback) {
     var img = Util.createImageElement();
-    img.onload = function() {
+    img.onload = function () {
       var image = new Image({
-        image: img
+        image: img,
       });
       callback(image);
     };

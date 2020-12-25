@@ -1,6 +1,6 @@
-suite('Arrow', function() {
+suite('Arrow', function () {
   // ======================================================
-  test('add arrow', function() {
+  test('add arrow', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -10,7 +10,7 @@ suite('Arrow', function() {
       fill: 'blue',
       strokeWidth: 1,
       draggable: true,
-      tension: 0
+      tension: 0,
     });
 
     layer.add(arrow);
@@ -36,7 +36,7 @@ suite('Arrow', function() {
     showHit(layer);
   });
 
-  test('do not draw dash for head', function() {
+  test('do not draw dash for head', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -47,7 +47,7 @@ suite('Arrow', function() {
       strokeWidth: 5,
       pointerWidth: 20,
       pointerLength: 20,
-      dash: [5, 5]
+      dash: [5, 5],
     });
 
     layer.add(arrow);
@@ -63,7 +63,7 @@ suite('Arrow', function() {
     );
   });
 
-  test('direction with tension', function() {
+  test('direction with tension', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -72,7 +72,7 @@ suite('Arrow', function() {
       stroke: 'red',
       fill: 'red',
       tension: 1,
-      pointerAtBeginning: true
+      pointerAtBeginning: true,
     });
 
     layer.add(arrow);
@@ -86,7 +86,7 @@ suite('Arrow', function() {
     );
   });
 
-  test('direction with tension 2', function() {
+  test('direction with tension 2', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -96,7 +96,7 @@ suite('Arrow', function() {
       fill: 'red',
       tension: 1,
       pointerWidth: 10,
-      pointerAtBeginning: true
+      pointerAtBeginning: true,
     });
 
     layer.add(arrow);
@@ -110,7 +110,7 @@ suite('Arrow', function() {
     );
   });
 
-  test('test cache', function() {
+  test('test cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -118,33 +118,17 @@ suite('Arrow', function() {
       points: [50, 50, 150, 50],
       stroke: 'blue',
       fill: 'blue',
+      // large stroke width will not work :(
       strokeWidth: 1,
       draggable: true,
       tension: 0,
     });
     layer.add(arrow);
-    
+
     stage.add(layer);
-    
+    arrow.cache();
+    layer.draw();
 
     cloneAndCompareLayer(layer, 200);
-
-    // visual debug
-    // var back = new Konva.Rect({
-    //   stroke: 'black'
-    // });
-    // layer.add(back);
-    // stage.on('mousemove',() => {
-    //   const pos = stage.getPointerPosition();
-
-    //   const points = [arrow.points()[0], arrow.points()[1], pos.x, pos.y];
-    //   arrow.points(points);
-    //   arrow.cache();
-
-    //   console.log(arrow.points());
-    //   back.setAttrs(arrow.getClientRect());
-    //   layer.batchDraw();
-    // })
-
   });
 });

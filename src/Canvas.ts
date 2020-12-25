@@ -115,8 +115,8 @@ export class Canvas {
     return this.height;
   }
   setSize(width, height) {
-    this.setWidth(width);
-    this.setHeight(height);
+    this.setWidth(width || 0);
+    this.setHeight(height || 0);
   }
   /**
    * to data url
@@ -135,7 +135,11 @@ export class Canvas {
       try {
         return this._canvas.toDataURL();
       } catch (err) {
-        Util.error('Unable to get data URL. ' + err.message);
+        Util.error(
+          'Unable to get data URL. ' +
+            err.message +
+            ' For more info read https://konvajs.org/docs/posts/Tainted_Canvas.html.'
+        );
         return '';
       }
     }
@@ -157,10 +161,10 @@ export class Canvas {
  * @returns {Number}
  * @example
  * // get
- * var pixelRatio = canvas.pixelRatio();
+ * var pixelRatio = layer.getCanvas.pixelRatio();
  *
  * // set
- * canvas.pixelRatio(100);
+ * layer.getCanvas().pixelRatio(3);
  */
 Factory.addGetterSetter(Canvas, 'pixelRatio', undefined, getNumberValidator());
 
