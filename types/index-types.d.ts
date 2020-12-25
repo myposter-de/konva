@@ -33,6 +33,7 @@ declare namespace Konva {
   export let angleDeg: boolean;
   export let showWarnings: boolean;
   export let dragButtons: Array<number>;
+  export let hitOnDragEnabled: boolean;
   export const isDragging: () => boolean;
   export const isDragReady: () => boolean;
 
@@ -59,8 +60,11 @@ declare namespace Konva {
 
   export const Collection: typeof import('./Util').Collection;
   export type Collection<Node> = import('./Util').Collection<Node>;
+  export const Transform: typeof import('./Util').Transform;
+  export type Transform = import('./Util').Transform;
+
   export const Util: typeof import('./Util').Util;
-  
+
   export const Context: typeof import('./Context').Context;
   export type Context = import('./Context').Context;
 
@@ -70,7 +74,7 @@ declare namespace Konva {
 
   export const Layer: typeof import('./Layer').Layer;
   export type Layer = import('./Layer').Layer;
-  export type LayerConfig = import('./BaseLayer').LayerConfig;
+  export type LayerConfig = import('./Layer').LayerConfig;
 
   export const FastLayer: typeof import('./FastLayer').FastLayer;
   export type FastLayer = import('./FastLayer').FastLayer;
@@ -90,6 +94,7 @@ declare namespace Konva {
 
   export const Tween: typeof import('./Tween').Tween;
   export type Tween = import('./Tween').Tween;
+  export type TweenConfig = import('./Tween').TweenConfig;
   export const Easings: typeof import('./Tween').Easings;
 
   export const Arc: typeof import('./shapes/Arc').Arc;

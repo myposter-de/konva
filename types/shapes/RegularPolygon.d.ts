@@ -6,6 +6,13 @@ export interface RegularPolygonConfig extends ShapeConfig {
 }
 export declare class RegularPolygon extends Shape<RegularPolygonConfig> {
     _sceneFunc(context: any): void;
+    _getPoints(): any[];
+    getSelfRect(): {
+        x: any;
+        y: any;
+        width: number;
+        height: number;
+    };
     getWidth(): number;
     getHeight(): number;
     setWidth(width: any): void;

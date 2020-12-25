@@ -1,8 +1,8 @@
-suite('Caching', function() {
+suite('Caching', function () {
   // this.timeout(5000);
   // CACHING SHAPE
 
-  test('cache simple rectangle', function() {
+  test('cache simple rectangle', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -13,7 +13,7 @@ suite('Caching', function() {
       width: 100,
       height: 50,
       fill: 'green',
-      draggable: true
+      draggable: true,
     });
     rect.cache();
 
@@ -30,9 +30,10 @@ suite('Caching', function() {
 
     compareLayerAndCanvas(layer, canvas, 10);
     cloneAndCompareLayer(layer);
+    showHit(layer);
   });
 
-  test('cache simple rectangle with transform', function() {
+  test('cache simple rectangle with transform', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -44,7 +45,7 @@ suite('Caching', function() {
       height: 50,
       rotation: 45,
       scaleY: 2,
-      fill: 'green'
+      fill: 'green',
     });
     rect.cache();
 
@@ -65,7 +66,7 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 150);
   });
 
-  test('cache rectangle with fill and stroke', function() {
+  test('cache rectangle with fill and stroke', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -77,7 +78,7 @@ suite('Caching', function() {
       height: 50,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 20
+      strokeWidth: 20,
     });
     rect.cache();
 
@@ -97,7 +98,7 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 50);
   });
 
-  test('cache rectangle with fill and opacity', function() {
+  test('cache rectangle with fill and opacity', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -108,7 +109,7 @@ suite('Caching', function() {
       width: 100,
       height: 50,
       fill: 'green',
-      opacity: 0.5
+      opacity: 0.5,
     });
     rect.cache();
     rect.opacity(0.3);
@@ -127,7 +128,7 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 5);
   });
 
-  test('cache rectangle with fill, stroke opacity', function() {
+  test('cache rectangle with fill, stroke opacity', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -140,7 +141,7 @@ suite('Caching', function() {
       fill: 'green',
       opacity: 0.5,
       stroke: 'black',
-      strokeWidth: 10
+      strokeWidth: 10,
     });
     rect.cache();
     rect.opacity(0.3);
@@ -153,7 +154,7 @@ suite('Caching', function() {
 
   // skip, because opacity rendering of cached shape is different
   // nothing we can do here
-  test('cache rectangle with fill, shadow and opacity', function() {
+  test('cache rectangle with fill, shadow and opacity', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -167,7 +168,7 @@ suite('Caching', function() {
       opacity: 0.5,
       shadowBlur: 10,
       shadowColor: 'black',
-      draggable: true
+      draggable: true,
     });
     // rect.cache();
     // rect.opacity(0.3);
@@ -179,7 +180,7 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 10);
   });
 
-  test('cache rectangle with fill and simple shadow', function() {
+  test('cache rectangle with fill and simple shadow', function () {
     Konva.pixelRatio = 1;
     var stage = addStage();
 
@@ -193,7 +194,7 @@ suite('Caching', function() {
       fill: 'green',
       shadowColor: 'black',
       shadowBlur: 10,
-      draggable: true
+      draggable: true,
     });
     rect.cache();
 
@@ -217,7 +218,7 @@ suite('Caching', function() {
     Konva.pixelRatio = undefined;
   });
 
-  test('cache rectangle with fill and shadow with offset', function() {
+  test('cache rectangle with fill and shadow with offset', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -231,7 +232,7 @@ suite('Caching', function() {
       shadowOffsetX: 10,
       shadowOffsetY: 10,
       shadowColor: 'black',
-      shadowBlur: 10
+      shadowBlur: 10,
     });
     rect.cache();
 
@@ -254,7 +255,7 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 50);
   });
 
-  test('cache rectangle with fill and shadow with negative offset', function() {
+  test('cache rectangle with fill and shadow with negative offset', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -268,7 +269,7 @@ suite('Caching', function() {
       shadowOffsetX: -10,
       shadowOffsetY: -10,
       shadowColor: 'black',
-      shadowBlur: 10
+      shadowBlur: 10,
     });
     rect.cache();
 
@@ -291,7 +292,33 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 50);
   });
 
-  test('cache rectangle with fill and shadow and some transform', function() {
+  test('cache rectangle with fill and shadow with negative offset and scale', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+
+    var rect = new Konva.Rect({
+      x: 100,
+      y: 50,
+      width: 50,
+      height: 25,
+      fill: 'green',
+      shadowOffsetX: -10,
+      shadowOffsetY: -10,
+      shadowColor: 'black',
+      shadowBlur: 10,
+      scaleX: 2,
+      scaleY: 2,
+    });
+    rect.cache();
+
+    layer.add(rect);
+    stage.add(layer);
+
+    cloneAndCompareLayer(layer, 200);
+  });
+
+  test('cache rectangle with fill and shadow and some transform', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -307,7 +334,7 @@ suite('Caching', function() {
       shadowColor: 'black',
       shadowBlur: 10,
       offsetX: 50,
-      offsetY: 25
+      offsetY: 25,
     });
     rect.cache();
 
@@ -331,20 +358,20 @@ suite('Caching', function() {
   });
 
   // CACHING CONTAINERS
-  test('cache group with simple rectangle', function() {
+  test('cache group with simple rectangle', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
 
     var group = new Konva.Group({
       x: 100,
-      y: 50
+      y: 50,
     });
 
     var rect = new Konva.Rect({
       width: 100,
       height: 50,
-      fill: 'green'
+      fill: 'green',
     });
     group.add(rect);
     group.cache();
@@ -363,14 +390,14 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer);
   });
 
-  test('cache group with simple rectangle with transform', function() {
+  test('cache group with simple rectangle with transform', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
 
     var group = new Konva.Group({
       x: 50,
-      y: 25
+      y: 25,
     });
 
     var rect = new Konva.Rect({
@@ -379,7 +406,7 @@ suite('Caching', function() {
       width: 100,
       height: 50,
       fill: 'green',
-      rotation: 45
+      rotation: 45,
     });
     group.add(rect);
     group.cache();
@@ -389,14 +416,14 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 200);
   });
 
-  test('cache group with several shape with transform', function() {
+  test('cache group with several shape with transform', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
 
     var group = new Konva.Group({
       x: 50,
-      y: 25
+      y: 25,
     });
 
     var rect = new Konva.Rect({
@@ -407,7 +434,7 @@ suite('Caching', function() {
       fill: 'green',
       shadowOffsetX: 10,
       shadowOffsetY: 10,
-      shadowBlur: 10
+      shadowBlur: 10,
     });
     group.add(rect);
 
@@ -420,7 +447,7 @@ suite('Caching', function() {
       stroke: 'black',
       rotation: 45,
       scaleX: 2,
-      scaleY: 2
+      scaleY: 2,
     });
     group.add(circle);
 
@@ -464,7 +491,7 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 150);
   });
 
-  test('cache group with rectangle and text', function() {
+  test('cache group with rectangle and text', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -472,7 +499,7 @@ suite('Caching', function() {
     var button = new Konva.Group({
       width: 100,
       height: 50,
-      draggable: true
+      draggable: true,
     });
 
     var face = new Konva.Rect({
@@ -480,13 +507,13 @@ suite('Caching', function() {
       x: 0,
       y: 0,
       width: 100,
-      height: 50
+      height: 50,
     });
 
     var text = new Konva.Text({
       text: 'Wrong button',
       x: 15,
-      y: 20
+      y: 20,
     });
 
     button.add(face);
@@ -500,16 +527,16 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 100);
   });
 
-  test('cache layer with several shape with transform', function() {
+  test('cache layer with several shape with transform', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({
-      draggable: true
+      draggable: true,
     });
 
     var group = new Konva.Group({
       x: 50,
-      y: 25
+      y: 25,
     });
 
     var rect = new Konva.Rect({
@@ -520,7 +547,7 @@ suite('Caching', function() {
       fill: 'green',
       shadowOffsetX: 10,
       shadowOffsetY: 10,
-      shadowBlur: 10
+      shadowBlur: 10,
     });
     group.add(rect);
 
@@ -533,7 +560,7 @@ suite('Caching', function() {
       rotation: 45,
       stroke: 'black',
       scaleX: 2,
-      scaleY: 2
+      scaleY: 2,
     });
     group.add(circle);
 
@@ -577,7 +604,7 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 150);
   });
 
-  test('cache shape that is larger than stage', function() {
+  test('cache shape that is larger than stage', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -589,7 +616,7 @@ suite('Caching', function() {
       stroke: 'black',
       strokeWidth: 4,
       scaleX: 1 / 2,
-      scaleY: 1 / 2
+      scaleY: 1 / 2,
     });
 
     group.add(circle);
@@ -614,7 +641,7 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 150);
   });
 
-  test('cache shape that is larger than stage but need buffer canvas', function() {
+  test('cache shape that is larger than stage but need buffer canvas', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -627,7 +654,7 @@ suite('Caching', function() {
       strokeWidth: 50,
       opacity: 0.5,
       scaleX: 1 / 5,
-      scaleY: 1 / 5
+      scaleY: 1 / 5,
     });
 
     group.add(circle);
@@ -639,26 +666,26 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 200);
   });
 
-  test('cache nested groups', function() {
+  test('cache nested groups', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
     var groupOuter = new Konva.Group({
       x: 50,
-      y: 10
+      y: 10,
     });
 
     var groupInner = new Konva.Group({
       x: 10,
       y: 10,
-      draggable: true
+      draggable: true,
     });
     var rect = new Konva.Rect({
       width: 50,
       height: 50,
       stroke: 'grey',
       strokeWidth: 3,
-      fill: 'yellow'
+      fill: 'yellow',
     });
 
     var text = new Konva.Text({
@@ -666,7 +693,7 @@ suite('Caching', function() {
       y: 15,
       text: 'A',
       fill: 'black',
-      fontSize: 24
+      fontSize: 24,
     });
 
     groupInner.add(rect);
@@ -694,7 +721,7 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 150);
   });
 
-  test('test group with circle + buffer canvas usage', function() {
+  test('test group with circle + buffer canvas usage', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -702,7 +729,7 @@ suite('Caching', function() {
     var group = new Konva.Group({
       x: 100,
       y: 100,
-      draggable: true
+      draggable: true,
     });
     layer.add(group);
 
@@ -713,8 +740,8 @@ suite('Caching', function() {
       fillRadialGradientEndRadius: 10,
       fillRadialGradientColorStops: [0, 'red', 0.5, 'yellow', 1, 'black'],
       opacity: 0.4,
-      strokeHitEnabled: false,
-      stroke: 'rgba(0,0,0,0)'
+      hitStrokeWidth: 0,
+      stroke: 'rgba(0,0,0,0)',
     });
     group.add(circle);
     group.cache();
@@ -723,7 +750,7 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 200);
   });
 
-  test('test group with opacity', function() {
+  test('test group with opacity', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -731,7 +758,7 @@ suite('Caching', function() {
     var group = new Konva.Group({
       x: 100,
       y: 100,
-      draggable: true
+      draggable: true,
     });
     layer.add(group);
 
@@ -741,8 +768,8 @@ suite('Caching', function() {
       fillRadialGradientEndRadius: 10,
       fillRadialGradientColorStops: [0, 'red', 0.5, 'yellow', 1, 'black'],
       opacity: 0.4,
-      strokeHitEnabled: false,
-      stroke: 'rgba(0,0,0,0)'
+      hitStrokeWidth: 0,
+      stroke: 'rgba(0,0,0,0)',
     });
     group.add(circle);
     group.cache();
@@ -751,7 +778,35 @@ suite('Caching', function() {
     cloneAndCompareLayer(layer, 210);
   });
 
-  test('test rect with float dimensions', function() {
+  test('test group with opacity', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var group = new Konva.Group({
+      x: 100,
+      y: 100,
+      draggable: true,
+    });
+    layer.add(group);
+
+    var circle = new Konva.Circle({
+      radius: 10,
+      fillRadialGradientStartRadius: 0,
+      fillRadialGradientEndRadius: 10,
+      fillRadialGradientColorStops: [0, 'red', 0.5, 'yellow', 1, 'black'],
+      opacity: 0.4,
+      hitStrokeWidth: 0,
+      stroke: 'rgba(0,0,0,0)',
+    });
+    group.add(circle);
+    group.cache();
+    stage.draw();
+
+    cloneAndCompareLayer(layer, 100);
+  });
+
+  test('test rect with float dimensions', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -759,7 +814,7 @@ suite('Caching', function() {
     var group = new Konva.Group({
       x: 10,
       y: 10,
-      draggable: true
+      draggable: true,
     });
     layer.add(group);
 
@@ -771,16 +826,16 @@ suite('Caching', function() {
     group.cache();
 
     const canvas = group._cache.get('canvas').scene;
-    assert.equal(canvas.width, 105 * canvas.pixelRatio)
+    assert.equal(canvas.width, 105 * canvas.pixelRatio);
   });
 
-  test('cache group with rectangle with fill and opacity', function() {
+  test('cache group with rectangle with fill and opacity', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
 
     var group = new Konva.Group({
-      opacity: 0.5
+      opacity: 0.5,
     });
 
     var rect = new Konva.Rect({
@@ -788,7 +843,7 @@ suite('Caching', function() {
       y: 50,
       width: 100,
       height: 50,
-      fill: 'green'
+      fill: 'green',
     });
 
     group.add(rect);
@@ -809,11 +864,11 @@ suite('Caching', function() {
     compareLayerAndCanvas(layer, canvas, 5);
   });
 
-  test('even if parent is not visible cache should be created', function() {
+  test('even if parent is not visible cache should be created', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({
-      visible: false
+      visible: false,
     });
 
     var rect = new Konva.Rect({
@@ -821,7 +876,7 @@ suite('Caching', function() {
       y: 50,
       width: 100,
       height: 100,
-      fill: 'green'
+      fill: 'green',
     });
 
     layer.add(rect);
@@ -843,16 +898,11 @@ suite('Caching', function() {
     assert.equal(stage.getIntersection({ x: 150, y: 100 }), rect);
   });
 
-  // hard to fix
-  test.skip('even if parent is not visible cache should be created - test for group', function() {
+  test('even if parent is not listening cache and hit should be created', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({
-      visible: false
-    });
-
-    var group = new Konva.Group({
-      opacity: 0.5
+      listening: false,
     });
 
     var rect = new Konva.Rect({
@@ -860,7 +910,46 @@ suite('Caching', function() {
       y: 50,
       width: 100,
       height: 100,
-      fill: 'green'
+      fill: 'green',
+    });
+
+    layer.add(rect);
+    stage.add(layer);
+
+    rect.cache();
+    layer.listening(true);
+    layer.draw();
+
+    var canvas = createCanvas();
+    var context = canvas.getContext('2d');
+    context.beginPath();
+    context.rect(100, 50, 100, 100);
+    context.closePath();
+    context.fillStyle = 'green';
+    context.fill();
+    showHit(layer);
+    compareLayerAndCanvas(layer, canvas, 5);
+    assert.equal(stage.getIntersection({ x: 150, y: 100 }), rect);
+  });
+
+  // hard to fix
+  test.skip('even if parent is not visible cache should be created - test for group', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer({
+      visible: false,
+    });
+
+    var group = new Konva.Group({
+      opacity: 0.5,
+    });
+
+    var rect = new Konva.Rect({
+      x: 100,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'green',
     });
 
     group.add(rect);
@@ -883,7 +972,7 @@ suite('Caching', function() {
     assert.equal(stage.getIntersection({ x: 150, y: 100 }), rect);
   });
 
-  it('listening false on a shape should not create hit area', function() {
+  it('listening false on a shape should not create hit area', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -893,7 +982,7 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 100,
-      fill: 'green'
+      fill: 'green',
     });
 
     layer.add(bigCircle);
@@ -903,7 +992,7 @@ suite('Caching', function() {
       y: 100,
       radius: 50,
       fill: 'red',
-      listening: false
+      listening: false,
     });
 
     layer.add(smallCircle);
@@ -914,7 +1003,7 @@ suite('Caching', function() {
     assert.equal(shape, bigCircle);
   });
 
-  it('listening false on a shape inside group should not create hit area', function() {
+  it('listening false on a shape inside group should not create hit area', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -927,7 +1016,7 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 100,
-      fill: 'green'
+      fill: 'green',
     });
 
     group.add(bigCircle);
@@ -937,7 +1026,7 @@ suite('Caching', function() {
       y: 100,
       radius: 50,
       fill: 'red',
-      listening: false
+      listening: false,
     });
 
     group.add(smallCircle);
@@ -947,7 +1036,7 @@ suite('Caching', function() {
     var shape = stage.getIntersection({ x: 100, y: 100 });
     assert.equal(shape, bigCircle);
   });
-  it('listening false on a group inside a group should not create hit area', function() {
+  it('listening false on a group inside a group should not create hit area', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -960,12 +1049,12 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 100,
-      fill: 'green'
+      fill: 'green',
     });
     group.add(bigCircle);
 
     var innerGroup = new Konva.Group({
-      listening: false
+      listening: false,
     });
     group.add(innerGroup);
 
@@ -973,7 +1062,7 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     innerGroup.add(smallCircle);
@@ -985,7 +1074,7 @@ suite('Caching', function() {
   });
 
   // for performance reasons
-  it('do no call client rect calculation, if we do not need it', function() {
+  it('do no call client rect calculation, if we do not need it', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -998,28 +1087,28 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 100,
-      fill: 'green'
+      fill: 'green',
     });
     group.add(bigCircle);
 
     layer.draw();
 
     var called = false;
-    group.getClientRect = function() {
+    group.getClientRect = function () {
       called = true;
     };
     group.cache({
       x: 0,
       y: 0,
       width: 100,
-      height: 100
+      height: 100,
     });
 
     assert.equal(called, false);
   });
 
   // for performance reasons
-  it('caching should skip clearing internal caching for perf boos', function() {
+  it('caching should skip clearing internal caching for perf boos', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -1029,14 +1118,14 @@ suite('Caching', function() {
       x: 100,
       y: 100,
       radius: 100,
-      fill: 'green'
+      fill: 'green',
     });
     layer.add(bigCircle);
 
     layer.cache();
 
     var callCount = 0;
-    bigCircle._clearSelfAndDescendantCache = function() {
+    bigCircle._clearSelfAndDescendantCache = function () {
       callCount += 1;
     };
 
@@ -1047,7 +1136,75 @@ suite('Caching', function() {
     assert.equal(callCount, 1);
   });
 
-  it('check caching with global composite operation', function() {
+  it('caching group with clip', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var width = 100;
+    var height = 100;
+    var verts = [
+      { x: width * 0.2, y: 0 },
+      { x: width, y: 0 },
+      { x: width * 0.8, y: height },
+      { x: 0, y: height },
+    ];
+
+    var clipFunc = (ctx) => {
+      for (let i = 0; i < verts.length; i++) {
+        const vertex = verts[i];
+        if (i === 0) {
+          ctx.moveTo(vertex.x, vertex.y);
+        } else {
+          ctx.lineTo(vertex.x, vertex.y);
+        }
+      }
+      ctx.closePath();
+    };
+
+    var group1 = new Konva.Group({
+      clipFunc: clipFunc,
+      x: 50,
+      y: 50,
+      listening: false,
+    });
+    layer.add(group1);
+    var rect1 = new Konva.Rect({
+      fill: 'green',
+      width: 100,
+      height: 100,
+    });
+    group1.add(rect1);
+
+    layer.draw();
+    group1.cache();
+
+    layer.draw();
+
+    // var group2 = group1.clone({
+    //   x: height - 20,
+    //   y: 50,
+    // });
+    // group2.findOne('Rect').fill('red');
+    // layer.add(group2);
+    // group2.cache();
+
+    // var group3 = group1.clone({
+    //   x: width + 20,
+    // });
+    // layer.add(group3);
+    // group3.findOne('Rect').x(150);
+    // group2.cache();
+
+    layer.draw();
+
+    cloneAndCompareLayer(layer, 10);
+
+    // throw 1;
+  });
+
+  it('check caching with global composite operation', function () {
     var stage = addStage();
 
     const layer = new Konva.Layer();
@@ -1069,7 +1226,7 @@ suite('Caching', function() {
       y: 0,
       width: stage.width(),
       height: stage.height(),
-      fill: 'lightgray'
+      fill: 'lightgray',
     });
     layer.add(bg);
 
@@ -1082,7 +1239,7 @@ suite('Caching', function() {
       width: 200,
       height: 100,
       fill: 'blue',
-      draggable: true
+      draggable: true,
     });
     group.add(rect);
 
@@ -1094,7 +1251,7 @@ suite('Caching', function() {
       y: 0,
       width: 100,
       height: 100,
-      fill: 'black'
+      fill: 'black',
     });
     maskgroup.add(mask);
 
@@ -1131,7 +1288,7 @@ suite('Caching', function() {
     assert.equal(getColor({ x: 55, y: 20 }), '0000ff');
   });
 
-  it('recache should update internal caching', function() {
+  it('recache should update internal caching', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -1142,7 +1299,7 @@ suite('Caching', function() {
       y: 100,
       radius: 100,
       fill: 'red',
-      draggable: true
+      draggable: true,
     });
     layer.add(bigCircle);
 
@@ -1162,7 +1319,7 @@ suite('Caching', function() {
     assert.equal(d[2], 255, 'see blue');
   });
 
-  it('recache with filters', function() {
+  it('recache with filters', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -1173,7 +1330,7 @@ suite('Caching', function() {
       y: 100,
       radius: 100,
       fill: 'red',
-      draggable: true
+      draggable: true,
     });
     layer.add(bigCircle);
 
@@ -1190,11 +1347,11 @@ suite('Caching', function() {
     assert.equal(d[0], 255, 'see red');
   });
 
-  test('check image smooth', function() {
+  test('check image smooth', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({
-      imageSmoothingEnabled: false
+      imageSmoothingEnabled: false,
     });
     stage.add(layer);
 
@@ -1205,12 +1362,12 @@ suite('Caching', function() {
       fill: 'red',
       draggable: true,
       scaleX: 10,
-      scaleY: 10
+      scaleY: 10,
     });
     layer.add(bigCircle);
 
     bigCircle.cache({
-      imageSmoothingEnabled: false
+      imageSmoothingEnabled: false,
     });
 
     layer.draw();
@@ -1221,7 +1378,7 @@ suite('Caching', function() {
     );
   });
 
-  test('getAbsolutePosition for cached container', function() {
+  test('getAbsolutePosition for cached container', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({});
@@ -1234,7 +1391,7 @@ suite('Caching', function() {
       fill: 'red',
       draggable: true,
       scaleX: 10,
-      scaleY: 10
+      scaleY: 10,
     });
     layer.add(circle);
     // initial calculations
@@ -1245,29 +1402,59 @@ suite('Caching', function() {
     layer.draw();
     layer.position({
       x: 10,
-      y: 10
+      y: 10,
     });
     assert.equal(circle.getAbsolutePosition().x, 110);
     assert.equal(circle.getAbsolutePosition().y, 110);
   });
 
-  test('hit from cache + global composite', function(done) {
+  test('cached node should not have filter canvas until we have a filter', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer({});
+    stage.add(layer);
+
+    var circle = new Konva.Circle({
+      x: 100,
+      y: 100,
+      radius: 10,
+      fill: 'red',
+      draggable: true,
+      scaleX: 10,
+      scaleY: 10,
+    });
+    layer.add(circle);
+    circle.cache();
+
+    assert.equal(circle._cache.get('canvas').filter.width, 0);
+    circle.filters([Konva.Filters.Blur]);
+    layer.draw();
+    assert.equal(
+      circle._cache.get('canvas').filter.width,
+      20 * circle._cache.get('canvas').filter.pixelRatio
+    );
+    circle.filters([]);
+    // TODO: should we clear cache canvas?
+    // assert.equal(circle._cache.get('canvas').filter.width, 0);
+  });
+
+  test('hit from cache + global composite', function (done) {
     // blend mode should NOT effect hit detection.
     var stage = addStage();
 
     var layer = new Konva.Layer({});
     stage.add(layer);
 
-    Konva.Image.fromURL('./assets/lion.png', function(lion) {
+    Konva.Image.fromURL('./assets/lion.png', function (lion) {
       lion.name('lion');
       lion.cache();
       lion.drawHitFromCache();
       layer.add(lion);
 
-      Konva.Image.fromURL('./assets/lion.png', function(lion2) {
+      Konva.Image.fromURL('./assets/lion.png', function (lion2) {
         lion2.position({
           x: 50,
-          y: 50
+          y: 50,
         });
         lion2.name('lion2');
         lion2.globalCompositeOperation('overlay');

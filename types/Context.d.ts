@@ -18,7 +18,7 @@ export declare class Context {
     clear(bounds?: any): void;
     _applyLineCap(shape: any): void;
     _applyOpacity(shape: any): void;
-    _applyLineJoin(shape: any): void;
+    _applyLineJoin(shape: Shape): void;
     setAttr(attr: any, val: any): void;
     arc(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any): void;
     arcTo(a0: any, a1: any, a2: any, a3: any, a4: any): void;
@@ -31,8 +31,8 @@ export declare class Context {
     createLinearGradient(a0: any, a1: any, a2: any, a3: any): CanvasGradient;
     createPattern(a0: any, a1: any): CanvasPattern;
     createRadialGradient(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any): CanvasGradient;
-    drawImage(a0: any, a1: any, a2: any, a3?: any, a4?: any, a5?: any, a6?: any, a7?: any, a8?: any): void;
-    ellipse(a0: any, a1: any, a2: any, a3: any, a4: any, a5: any, a6: any, a7: any): void;
+    drawImage(a0: CanvasImageSource, a1: number, a2: number, a3?: number, a4?: number, a5?: number, a6?: number, a7?: number, a8?: number): void;
+    ellipse(a0: number, a1: number, a2: number, a3: number, a4: number, a5: number, a6: number, a7?: boolean): void;
     isPointInPath(x: any, y: any): boolean;
     fill(): void;
     fillRect(x: any, y: any, width: any, height: any): void;

@@ -4,7 +4,7 @@
 
 <h1 align="center">Konva</h1>
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/konvajs/konva?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Financial Contributors on Open Collective](https://opencollective.com/konva/all/badge.svg?label=financial+contributors)](https://opencollective.com/konva) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/konvajs/konva?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![npm version](https://badge.fury.io/js/konva.svg)](http://badge.fury.io/js/konva) [![bower version](https://badge.fury.io/bo/konva.svg)](http://badge.fury.io/bo/konva)
 [![Build Status](https://travis-ci.org/konvajs/konva.png)](https://travis-ci.org/konvajs/konva)  [![Code Climate](https://codeclimate.com/github/konvajs/konva/badges/gpa.svg)](https://codeclimate.com/github/konvajs/konva) [![CDNJS version](https://img.shields.io/cdnjs/v/konva.svg)](https://cdnjs.com/libraries/konva)
 
@@ -65,7 +65,7 @@ This repository began as a GitHub fork of [ericdrowell/KineticJS](https://github
 
 Konva works in all modern mobile and desktop browsers. A browser need to be capable to run javascript code from ES2015 spec. For older browsers you may need polyfills for missing functions.
 
-At the current moment `Konva` doesn't work in IE11 directly. To make it work you just need to provide some polyfills such as `Array.prototype.find`, `String.prototype.trimLeft` and `String.prototype.trimRight`.
+At the current moment `Konva` doesn't work in IE11 directly. To make it work you just need to provide some polyfills such as `Array.prototype.find`, `String.prototype.trimLeft`, `String.prototype.trimRight`, `Array.from`.
 
 # Loading and installing Konva
 
@@ -79,15 +79,7 @@ Konva supports UMD loading. So you can use all possible variants to load the fra
 
 You can also use a CDN: [https://unpkg.com/konva@^4.0.3/konva.js](https://unpkg.com/konva@^4.0.3/konva.js)
 
-### 2 Load via AMD (requirejs):
-
-```javascript
-define(['./konva'], function(Konva) {
-  // your code
-});
-```
-
-### 3 Load with npm:
+### 2 Install with npm:
 
 ```bash
 npm install konva --save
@@ -97,18 +89,33 @@ npm install konva --save
 // The old way (e.g. a CommonJS-style import)
 var Konva = require('konva');
 
-// The modern way (e.g. an ES6-style import)
+// The modern way (e.g. an ES6-style import for webpack, parcel)
 import Konva from 'konva';
-
-// TypeScript
-import Konva from 'konva'; // Allows e.g. "Konva.Stage"
-// Or:
-import * as Konva from 'konva'; // Allows e.g. "Konva.default.Stage"
-// Note that for both TypeScript options, you must supply the TypeScript compiler with the
-// "dom" library flag and the "es2015" library flag (or greater)
 ```
 
-### 4 Minimal bundle
+#### Typescript usage
+
+Add DOM definitions into your `tsconfig.json` and set `esModuleInterop` to `true`:
+
+```
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "lib": [
+        "es6",
+        "dom"
+    ]
+  }
+}
+```
+
+Then use it:
+
+```javascript
+import Konva from 'konva';
+```
+
+### 3 Minimal bundle
 
 ```javascript
 import Konva from 'konva/lib/Core';
@@ -128,9 +135,7 @@ var shape = new Konva.Rect();
 import { Blur } from 'konva/lib/filters/Blur';
 ```
 
-
-
-### 5 NodeJS
+### 4 NodeJS env
 
 We are using [node-canvas](https://github.com/Automattic/node-canvas) to create canvas element.
 Please check installation instructions for it. Then just run
@@ -149,7 +154,8 @@ See file `konva-node/demo.js` file in this repo as a sample.
 
 # Backers
 
-[myposter GmbH](https://www.myposter.de/)
+- [myposter GmbH](https://www.myposter.de/)
+- [queue.gg](https://queue.gg/)
 
 
 # Change log
@@ -179,3 +185,29 @@ Run `npx gulp api` which will build the documentation files and place them in th
 
 I'd be happy to review any pull requests that may better the Konva project,
 in particular if you have a bug fix, enhancement, or a new shape (see `src/shapes` for examples). Before doing so, please first make sure that all of the tests pass (`gulp lint test`).
+
+## Contributors
+
+
+### Financial Contributors
+
+Become a financial contributor and help us sustain our community. [[Contribute](https://opencollective.com/konva/contribute)]
+
+#### Individuals
+
+<a href="https://opencollective.com/konva"><img src="https://opencollective.com/konva/individuals.svg?width=890"></a>
+
+#### Organizations
+
+Support this project with your organization. Your logo will show up here with a link to your website. [[Contribute](https://opencollective.com/konva/contribute)]
+
+<a href="https://opencollective.com/konva/organization/0/website"><img src="https://opencollective.com/konva/organization/0/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/1/website"><img src="https://opencollective.com/konva/organization/1/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/2/website"><img src="https://opencollective.com/konva/organization/2/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/3/website"><img src="https://opencollective.com/konva/organization/3/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/4/website"><img src="https://opencollective.com/konva/organization/4/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/5/website"><img src="https://opencollective.com/konva/organization/5/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/6/website"><img src="https://opencollective.com/konva/organization/6/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/7/website"><img src="https://opencollective.com/konva/organization/7/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/8/website"><img src="https://opencollective.com/konva/organization/8/avatar.svg"></a>
+<a href="https://opencollective.com/konva/organization/9/website"><img src="https://opencollective.com/konva/organization/9/avatar.svg"></a>

@@ -1,27 +1,27 @@
-suite('Group', function() {
+suite('Group', function () {
   // ======================================================
-  test('cache group with text', function() {
+  test('cache group with text', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
     var group = new Konva.Group({
       draggable: true,
-      x: 100,
-      y: 40
+      x: 50,
+      y: 40,
     });
     var text = new Konva.Text({
       text: 'some text',
       fontSize: 20,
       fill: 'black',
-      y: 50
+      y: 50,
     });
 
     var rect = new Konva.Rect({
       height: 100,
       width: 100,
-      stroke: '#00B80C',
+      stroke: 'black',
       strokeWidth: 10,
-      cornerRadius: 1
+      // cornerRadius: 1,
     });
     group.add(text);
     group.add(rect);
@@ -31,15 +31,16 @@ suite('Group', function() {
 
     group
       .cache({
-        x: -5,
-        y: -5,
-        width: 110,
-        height: 110,
-        drawBorder: true
+        x: -15,
+        y: -15,
+        width: 150,
+        height: 150,
       })
       .offsetX(5)
       .offsetY(5);
 
-    stage.draw();
+    layer.draw();
+
+    cloneAndCompareLayer(layer, 200);
   });
 });

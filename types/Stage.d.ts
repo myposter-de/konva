@@ -3,12 +3,12 @@ import { Container, ContainerConfig } from './Container';
 import { SceneCanvas, HitCanvas } from './Canvas';
 import { GetSet, Vector2d } from './types';
 import { Shape } from './Shape';
-import { BaseLayer } from './BaseLayer';
+import { Layer } from './Layer';
 export interface StageConfig extends ContainerConfig {
     container: HTMLDivElement | string;
 }
 export declare const stages: Stage[];
-export declare class Stage extends Container<BaseLayer> {
+export declare class Stage extends Container<Layer> {
     content: HTMLDivElement;
     pointerPos: Vector2d | null;
     _pointerPositions: (Vector2d & {
@@ -22,8 +22,9 @@ export declare class Stage extends Container<BaseLayer> {
     targetShape: Shape;
     clickStartShape: Shape;
     clickEndShape: Shape;
-    dblTimeout: any;
     tapStartShape: Shape;
+    tapEndShape: Shape;
+    dblTimeout: any;
     constructor(config: StageConfig);
     _validateAdd(child: any): void;
     _checkVisibility(): void;
@@ -44,7 +45,7 @@ export declare class Stage extends Container<BaseLayer> {
     _toKonvaCanvas(config: any): SceneCanvas;
     getIntersection(pos: Vector2d | null, selector?: string): Shape | null;
     _resizeDOM(): void;
-    add(layer: any): this;
+    add(layer: Layer): this;
     getParent(): any;
     getLayer(): any;
     hasPointerCapture(pointerId: number): boolean;

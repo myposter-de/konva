@@ -128,12 +128,13 @@ export const Konva = {
 
   /**
    * Global pixel ratio configuration. KonvaJS automatically detect pixel ratio of current device.
-   * But you may override such property, if you want to use your value.
+   * But you may override such property, if you want to use your value. Set this value before any components initializations.
    * @property pixelRatio
    * @default undefined
    * @name pixelRatio
    * @memberof Konva
    * @example
+   * // before any Konva code:
    * Konva.pixelRatio = 1;
    */
   pixelRatio: undefined,
@@ -149,7 +150,7 @@ export const Konva = {
    */
   dragDistance: 3,
   /**
-   * Use degree values for angle properties. You may set this property to false if you want to use radiant values.
+   * Use degree values for angle properties. You may set this property to false if you want to use radian values.
    * @property angleDeg
    * @default true
    * @memberof Konva

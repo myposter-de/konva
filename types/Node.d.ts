@@ -1,11 +1,11 @@
-import { Collection, Transform, Point } from './Util';
+import { Collection, Transform } from './Util';
 import { SceneCanvas, Canvas } from './Canvas';
 import { Container } from './Container';
 import { GetSet, Vector2d, IRect } from './types';
 import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
-import { BaseLayer } from './BaseLayer';
+import { Layer } from './Layer';
 export declare const ids: any;
 export declare const names: any;
 export declare const _removeId: (id: string, node: any) => void;
@@ -34,7 +34,7 @@ export interface NodeConfig {
     offsetY?: number;
     draggable?: boolean;
     dragDistance?: number;
-    dragBoundFunc?: (pos: Vector2d) => Vector2d;
+    dragBoundFunc?: (this: Node, pos: Vector2d) => Vector2d;
     preventDefault?: boolean;
     globalCompositeOperation?: globalCompositeOperationType;
     filters?: Array<Filter>;
@@ -60,23 +60,29 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     };
     attrs: any;
     index: number;
+    _allEventListeners: null | Array<Function>;
     parent: Container<Node> | null;
     _cache: Map<string, any>;
-    _lastPos: Point;
+    _attachedDepsListeners: Map<string, boolean>;
+    _lastPos: Vector2d;
     _attrsAffectingSize: string[];
+    _batchingTransformChange: boolean;
+    _needClearTransformCache: boolean;
     _filterUpToDate: boolean;
     _isUnderCache: boolean;
     children: Collection<any>;
     nodeType: string;
     className: string;
     _dragEventId: number | null;
+    _shouldFireChangeEvents: boolean;
     constructor(config?: Config);
     hasChildren(): boolean;
     getChildren(): Collection<any>;
     _clearCache(attr?: string): void;
     _getCache(attr: string, privateGetter: Function): any;
+    _calculate(name: any, deps: any, getter: any): any;
     _getCanvasCache(): any;
-    _clearSelfAndDescendantCache(attr?: string): void;
+    _clearSelfAndDescendantCache(attr?: string, forceEvent?: boolean): void;
     clearCache(): this;
     cache(config?: {
         x?: number;
@@ -89,8 +95,8 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
         imageSmoothingEnabled?: boolean;
     }): this;
     isCached(): boolean;
-    abstract drawScene(canvas?: Canvas, top?: Node, caching?: boolean, skipBuffer?: boolean): void;
-    abstract drawHit(canvas?: Canvas, top?: Node, caching?: boolean, skipBuffer?: boolean): void;
+    abstract drawScene(canvas?: Canvas, top?: Node): void;
+    abstract drawHit(canvas?: Canvas, top?: Node): void;
     getClientRect(config?: {
         skipTransform?: boolean;
         skipShadow?: boolean;
@@ -126,15 +132,16 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     getAttrs(): any;
     setAttrs(config: any): this;
     isListening(): any;
-    _isListening(): any;
+    _isListening(relativeTo?: Node): any;
     isVisible(): any;
     _isVisible(relativeTo: any): any;
-    shouldDrawHit(): any;
+    shouldDrawHit(top?: Node, skipDragCheck?: boolean): any;
     show(): this;
     hide(): this;
     getZIndex(): number;
     getAbsoluteZIndex(): number;
     getDepth(): number;
+    _batchTransformChanges(func: any): void;
     setPosition(pos: any): this;
     getPosition(): {
         x: number;
@@ -175,14 +182,13 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     isAncestorOf(node: any): boolean;
     findAncestor(selector: any, includeSelf?: any, stopNode?: any): Node<NodeConfig>;
     _isMatch(selector: any): any;
-    getLayer(): BaseLayer | null;
+    getLayer(): Layer | null;
     getStage(): Stage | null;
     _getStage(): Stage | undefined;
-    fire(eventType: any, evt: any, bubble?: any): this;
-    getAbsoluteTransform(top?: Node): any;
-    _getAbsoluteTransform(top?: Node): any;
-    getAbsoluteScale(top?: any): any;
-    _getAbsoluteScale(top: any): {
+    fire(eventType: any, evt?: any, bubble?: any): this;
+    getAbsoluteTransform(top?: Node): Transform;
+    _getAbsoluteTransform(top?: Node): Transform;
+    getAbsoluteScale(top?: any): {
         x: number;
         y: number;
     };
@@ -228,13 +234,14 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     hasName(name: any): boolean;
     removeName(name: any): this;
     setAttr(attr: any, val: any): this;
-    _setAttr(key: any, val: any): void;
+    _setAttr(key: any, val: any, skipFire?: boolean): void;
     _setComponentAttr(key: any, component: any, val: any): void;
     _fireAndBubble(eventType: any, evt: any, compareShape?: any): void;
+    _getProtoListeners(eventType: any): any;
     _fire(eventType: any, evt: any): void;
     draw(): this;
     _createDragElement(evt: any): void;
-    startDrag(evt?: any): void;
+    startDrag(evt?: any, bubbleEvent?: boolean): void;
     _setDragPosition(evt: any, elem: any): void;
     stopDrag(evt?: any): void;
     setDraggable(draggable: any): void;
@@ -260,7 +267,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     saturation: GetSet<number, this>;
     threshold: GetSet<number, this>;
     value: GetSet<number, this>;
-    dragBoundFunc: GetSet<(pos: Vector2d) => Vector2d, this>;
+    dragBoundFunc: GetSet<(this: Node, pos: Vector2d) => Vector2d, this>;
     draggable: GetSet<boolean, this>;
     dragDistance: GetSet<number, this>;
     embossBlend: GetSet<boolean, this>;
@@ -270,12 +277,13 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     enhance: GetSet<number, this>;
     filters: GetSet<Filter[], this>;
     position: GetSet<Vector2d, this>;
+    absolutePosition: GetSet<Vector2d, this>;
     size: GetSet<{
         width: number;
         height: number;
     }, this>;
     id: GetSet<string, this>;
-    listening: GetSet<boolean | 'inherit', this>;
+    listening: GetSet<boolean, this>;
     name: GetSet<string, this>;
     offset: GetSet<Vector2d, this>;
     offsetX: GetSet<number, this>;
@@ -289,9 +297,9 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     skew: GetSet<Vector2d, this>;
     skewX: GetSet<number, this>;
     skewY: GetSet<number, this>;
-    to: (params: any) => void;
+    to: (params: AnimTo) => void;
     transformsEnabled: GetSet<string, this>;
-    visible: GetSet<boolean | 'inherit', this>;
+    visible: GetSet<boolean, this>;
     width: GetSet<number, this>;
     height: GetSet<number, this>;
     x: GetSet<number, this>;
@@ -299,5 +307,10 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     globalCompositeOperation: GetSet<globalCompositeOperationType, this>;
     static create(data: any, container?: any): any;
     static _createNode(obj: any, container?: any): any;
+}
+interface AnimTo extends NodeConfig {
+    onFinish?: Function;
+    onUpdate?: Function;
+    duration?: number;
 }
 export {};

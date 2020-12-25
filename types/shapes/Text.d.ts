@@ -1,10 +1,13 @@
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet } from '../types';
+export declare function stringToArray(string: string): string[];
 export interface TextConfig extends ShapeConfig {
     text?: string;
     fontFamily?: string;
     fontSize?: number;
     fontStyle?: string;
+    fontVariant?: string;
+    textDecoration?: string;
     align?: string;
     verticalAlign?: string;
     padding?: number;

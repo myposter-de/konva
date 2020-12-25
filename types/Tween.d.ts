@@ -1,5 +1,5 @@
 import { Animation } from './Animation';
-import { Node } from './Node';
+import { Node, NodeConfig } from './Node';
 declare class TweenEngine {
     prop: string;
     propFunc: Function;
@@ -20,6 +20,7 @@ declare class TweenEngine {
     onPause: Function;
     onReset: Function;
     onFinish: Function;
+    onUpdate: Function;
     constructor(prop: any, propFunc: any, func: any, begin: any, finish: any, duration: any, yoyo: any);
     fire(str: any): void;
     setTime(t: any): void;
@@ -36,6 +37,12 @@ declare class TweenEngine {
     pause(): void;
     getTimer(): number;
 }
+export interface TweenConfig extends NodeConfig {
+    onFinish?: Function;
+    onUpdate?: Function;
+    duration?: number;
+    node: Node;
+}
 export declare class Tween {
     static attrs: {};
     static tweens: {};
@@ -45,7 +52,8 @@ export declare class Tween {
     _id: number;
     onFinish: Function;
     onReset: Function;
-    constructor(config: any);
+    onUpdate: Function;
+    constructor(config: TweenConfig);
     _addAttr(key: any, end: any): void;
     _tweenFunc(i: any): void;
     _addListeners(): void;

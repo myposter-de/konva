@@ -1,6 +1,7 @@
 import { Collection } from './Util';
 import { Node, NodeConfig } from './Node';
 import { GetSet, IRect } from './types';
+import { HitCanvas, SceneCanvas } from './Canvas';
 export interface ContainerConfig extends NodeConfig {
     clearBeforeDraw?: boolean;
     clipFunc?: (ctx: CanvasRenderingContext2D) => void;
@@ -20,20 +21,23 @@ export declare abstract class Container<ChildType extends Node> extends Node<Con
     destroy(): this;
     find<ChildNode extends Node = Node>(selector: any): Collection<ChildNode>;
     get(selector: any): Collection<Node<NodeConfig>>;
-    findOne<ChildNode extends Node = Node>(selector: any): ChildNode;
-    _generalFind<ChildNode extends Node = Node>(selector: any, findOne: any): Collection<ChildNode>;
+    findOne<ChildNode extends Node = Node>(selector: string | Function): ChildNode;
+    _generalFind<ChildNode extends Node = Node>(selector: string | Function, findOne: boolean): Collection<ChildNode>;
     private _descendants;
     toObject(): any;
-    _getDescendants(arr: any): any[];
-    isAncestorOf(node: any): boolean;
+    isAncestorOf(node: Node): boolean;
     clone(obj?: any): any;
     getAllIntersections(pos: any): any[];
     _setChildrenIndices(): void;
-    drawScene(can: any, top: any, caching: any): this;
-    drawHit(can: any, top: any, caching: any): this;
-    _drawChildren(canvas: any, drawMethod: any, top: any, caching?: any, skipBuffer?: any, skipComposition?: any): void;
-    shouldDrawHit(canvas?: any): boolean;
-    getClientRect(attrs: any): IRect;
+    drawScene(can?: SceneCanvas, top?: Node): this;
+    drawHit(can?: HitCanvas, top?: Node): this;
+    _drawChildren(drawMethod: any, canvas: any, top: any): void;
+    getClientRect(config?: {
+        skipTransform?: boolean;
+        skipShadow?: boolean;
+        skipStroke?: boolean;
+        relativeTo?: Container<Node>;
+    }): IRect;
     clip: GetSet<IRect, this>;
     clipX: GetSet<number, this>;
     clipY: GetSet<number, this>;

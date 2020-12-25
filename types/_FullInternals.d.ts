@@ -57,7 +57,7 @@ export declare const Konva: {
         _isElement(obj: any): obj is Element;
         _isFunction(obj: any): boolean;
         _isPlainObject(obj: any): boolean;
-        _isArray(obj: any): boolean;
+        _isArray(obj: any): obj is any[];
         _isNumber(obj: any): obj is number;
         _isString(obj: any): obj is string;
         _isBoolean(obj: any): obj is boolean;
@@ -92,6 +92,7 @@ export declare const Konva: {
         cloneArray(arr: any[]): any[];
         _degToRad(deg: number): number;
         _radToDeg(rad: number): number;
+        _getRotation(radians: any): any;
         _capitalize(str: string): string;
         throw(str: string): never;
         error(str: string): void;
@@ -102,7 +103,7 @@ export declare const Konva: {
         each(obj: any, func: any): void;
         _inRange(val: any, left: any, right: any): boolean;
         _getProjectionToSegment(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any): any[];
-        _getProjectionToLine(pt: import("./Util").Point, line: any, isClosed: any): import("./Util").Point;
+        _getProjectionToLine(pt: import("./types").Vector2d, line: any, isClosed: any): import("./types").Vector2d;
         _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): any[];
         _prepareToStringify(obj: any): any;
         _assign<T, U>(target: T, source: U): T & U;
@@ -127,14 +128,16 @@ export declare const Konva: {
             startPointerPos: import("./types").Vector2d;
             offset: import("./types").Vector2d;
             pointerId?: number;
-            dragStatus: "ready" | "dragging" | "stopped";
+            dragStatus: "stopped" | "ready" | "dragging";
         }>;
         _drag(evt: any): void;
         _endDragBefore(evt?: any): void;
         _endDragAfter(evt: any): void;
     };
     Shape: typeof import("./Shape").Shape;
-    shapes: {};
+    shapes: {
+        [key: string]: import("./Shape").Shape<import("./Shape").ShapeConfig>;
+    };
     Animation: typeof import("./Animation").Animation;
     Tween: typeof import("./Tween").Tween;
     Easings: {

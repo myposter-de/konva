@@ -9,7 +9,7 @@ export declare const DD: {
         startPointerPos: Vector2d;
         offset: Vector2d;
         pointerId?: number;
-        dragStatus: "ready" | "dragging" | "stopped";
+        dragStatus: "stopped" | "ready" | "dragging";
     }>;
     _drag(evt: any): void;
     _endDragBefore(evt?: any): void;

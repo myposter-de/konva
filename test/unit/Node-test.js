@@ -1,6 +1,6 @@
-suite('Node', function() {
+suite('Node', function () {
   // ======================================================
-  test('getType and getClassName', function() {
+  test('getType and getClassName', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -10,7 +10,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     stage.add(layer.add(group.add(circle)));
@@ -28,7 +28,7 @@ suite('Node', function() {
     assert.equal(circle.getClassName(), 'Circle');
   });
   // ======================================================
-  test('get layer', function() {
+  test('get layer', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -37,7 +37,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     assert.equal(circle.getLayer(), null);
 
@@ -45,7 +45,7 @@ suite('Node', function() {
     assert.equal(circle.getLayer(), layer);
   });
   // ======================================================
-  test('setAttr', function() {
+  test('setAttr', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -54,7 +54,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     stage.add(layer.add(circle));
@@ -75,7 +75,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('unset attr', function() {
+  test('unset attr', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -84,7 +84,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     stage.add(layer.add(circle));
@@ -97,7 +97,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('set shape and layer opacity to 0.5', function() {
+  test('set shape and layer opacity to 0.5', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -106,7 +106,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     circle.setOpacity(0.5);
@@ -118,7 +118,7 @@ suite('Node', function() {
     assert.equal(layer.getAbsoluteOpacity(), 0.5);
   });
   // ======================================================
-  test('transform cache', function() {
+  test('transform cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -127,7 +127,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     assert.equal(circle._cache.get('transform'), undefined);
@@ -138,13 +138,13 @@ suite('Node', function() {
     // transform cache
     assert.notEqual(circle._cache.get('transform'), undefined);
     circle.setX(100);
-    assert.equal(circle._cache.get('transform'), undefined);
+    assert.equal(circle._cache.get('transform').dirty, true);
     layer.draw();
-    assert.notEqual(circle._cache.get('transform'), undefined);
+    assert.equal(circle._cache.get('transform').dirty, false);
   });
 
   // ======================================================
-  test('visible cache', function() {
+  test('visible cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -153,7 +153,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     layer.add(circle);
     stage.add(layer);
@@ -171,7 +171,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('shadow cache', function() {
+  test('shadow cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -180,7 +180,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     layer.add(circle);
     stage.add(layer);
@@ -197,7 +197,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('has shadow', function() {
+  test('has shadow', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -208,7 +208,7 @@ suite('Node', function() {
       fill: 'red',
       stroke: 'black',
       strokeWidth: 4,
-      draggable: true
+      draggable: true,
     });
     layer.add(rect);
     stage.add(layer);
@@ -220,7 +220,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('opacity cache', function() {
+  test('opacity cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -229,7 +229,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     layer.add(circle);
     stage.add(layer);
@@ -243,7 +243,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('listening cache', function() {
+  test('listening cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -252,7 +252,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     layer.add(circle);
     stage.add(layer);
@@ -270,7 +270,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('stage cache', function() {
+  test('stage cache', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -279,7 +279,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     layer.add(circle);
     stage.add(layer);
@@ -290,7 +290,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('toDataURL + HDPI', function(done) {
+  test('toDataURL + HDPI', function (done) {
     // this.timeout(5000);
     var oldRatio = Konva.pixelRatio;
     Konva.pixelRatio = 2;
@@ -303,7 +303,7 @@ suite('Node', function() {
       fill: 'green',
       x: stage.width() / 2,
       y: stage.height() / 2,
-      radius: 50
+      radius: 50,
     });
     layer.add(circle);
 
@@ -313,13 +313,13 @@ suite('Node', function() {
     stage.draw();
     stage.toDataURL({
       pixelRatio: 2,
-      callback: function(url) {
+      callback: function (url) {
         var img = new Image();
-        img.onload = function() {
+        img.onload = function () {
           var image = new Konva.Image({
             image: img,
             scaleX: 0.5,
-            scaleY: 0.5
+            scaleY: 0.5,
           });
           assert.equal(
             image.width(),
@@ -333,19 +333,69 @@ suite('Node', function() {
           done();
         };
         img.src = url;
-      }
+      },
     });
   });
 
   // ======================================================
-  test('toDataURL of moved shape', function() {
+  test('toDataURL with moved layer', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer({
+      x: 50,
+      y: 50,
+    });
+    stage.add(layer);
+
+    var circle = new Konva.Circle({
+      fill: 'green',
+      x: 50,
+      y: 50,
+      radius: 50,
+    });
+    layer.add(circle);
+
+    stage.draw();
+    var stageExport = stage.toCanvas({
+      pixelRatio: layer.getCanvas().getPixelRatio(),
+    });
+    compareLayerAndCanvas(layer, stageExport);
+  });
+
+  // ======================================================
+  test('toDataURL with moved layer and moved export', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer({});
+    stage.add(layer);
+
+    var circle = new Konva.Circle({
+      fill: 'green',
+      x: 50,
+      y: 50,
+      radius: 50,
+    });
+    layer.add(circle);
+
+    stage.draw();
+    var stageExport = stage.toCanvas({
+      x: 50,
+      y: 50,
+      pixelRatio: layer.getCanvas().getPixelRatio(),
+    });
+    layer.x(-50);
+    layer.y(-50);
+    layer.draw();
+    compareLayerAndCanvas(layer, stageExport);
+  });
+
+  // ======================================================
+  test('toDataURL of moved shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
 
     var circle = new Konva.Circle({
       fill: 'green',
-      radius: 50
+      radius: 50,
     });
     layer.add(circle);
 
@@ -359,7 +409,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('toDataURL of transformer shape', function() {
+  test('toDataURL of transformer shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -367,7 +417,7 @@ suite('Node', function() {
     var text = new Konva.Text({
       fill: 'green',
       text: 'hello, test',
-      rotation: 45
+      rotation: 45,
     });
     layer.add(text);
 
@@ -381,7 +431,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test("listen and don't listen", function() {
+  test("listen and don't listen", function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -389,7 +439,7 @@ suite('Node', function() {
       y: 50,
       width: 200,
       height: 50,
-      fill: 'blue'
+      fill: 'blue',
     });
 
     var rect2 = new Konva.Rect({
@@ -398,13 +448,13 @@ suite('Node', function() {
       width: 200,
       height: 50,
       fill: 'red',
-      listening: false
+      listening: false,
     });
 
     layer.add(rect).add(rect2);
     stage.add(layer);
 
-    assert.equal(rect.getListening(), 'inherit');
+    assert.equal(rect.getListening(), true);
 
     assert.equal(rect.isListening(), true);
     rect.setListening(false);
@@ -416,7 +466,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test("listen and don't listen with one shape", function() {
+  test("listen and don't listen with one shape", function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -424,7 +474,7 @@ suite('Node', function() {
       y: 50,
       width: 200,
       height: 50,
-      fill: 'blue'
+      fill: 'blue',
     });
 
     layer.add(rect);
@@ -434,10 +484,12 @@ suite('Node', function() {
     layer.drawHit();
 
     showHit(layer);
+
+    assert.equal(layer.getIntersection({ x: 60, y: 60 }), null);
   });
 
   // ======================================================
-  test('test offset attr change', function() {
+  test('test offset attr change', function () {
     /*
      * the premise of this test to make sure that only
      * root level attributes trigger an attr change event.
@@ -455,7 +507,7 @@ suite('Node', function() {
       fill: 'blue',
       offset: { x: 10, y: 10 },
       shadowColor: 'black',
-      shadowOffset: { x: 20, y: 20 }
+      shadowOffset: { x: 20, y: 20 },
     });
 
     layer.add(rect);
@@ -464,7 +516,7 @@ suite('Node', function() {
     var offsetChange = false;
     var shadowOffsetChange = false;
 
-    rect.on('offsetChange', function(val) {
+    rect.on('offsetChange', function (val) {
       offsetChange = true;
     });
 
@@ -474,7 +526,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('simple clone', function() {
+  test('simple clone', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -483,11 +535,11 @@ suite('Node', function() {
       y: 0,
       width: 100,
       height: 100,
-      stroke: 'red'
+      stroke: 'red',
     });
 
     var clone = rect.clone({
-      stroke: 'green'
+      stroke: 'green',
     });
 
     layer.add(clone);
@@ -498,7 +550,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('clone - check reference', function() {
+  test('clone - check reference', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
 
@@ -506,11 +558,11 @@ suite('Node', function() {
       x: 0,
       y: 0,
       stroke: 'red',
-      points: [0, 0, 10, 10]
+      points: [0, 0, 10, 10],
     });
 
     var clone = line.clone({
-      stroke: 'green'
+      stroke: 'green',
     });
 
     layer.add(clone);
@@ -521,7 +573,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('complex clone', function() {
+  test('complex clone', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -537,18 +589,18 @@ suite('Node', function() {
       shadowOffsetY: 20,
       draggable: true,
       name: 'myRect',
-      id: 'myRect'
+      id: 'myRect',
     });
 
     var clicks = [];
 
-    rect.on('click', function() {
+    rect.on('click', function () {
       clicks.push(this.getName());
     });
     var clone = rect.clone({
       x: 300,
       fill: 'red',
-      name: 'rectClone'
+      name: 'rectClone',
     });
 
     assert.equal(clone.getX(), 300);
@@ -560,7 +612,7 @@ suite('Node', function() {
     assert.equal(rect.getShadowColor(), 'black');
     assert.equal(clone.getShadowColor(), 'black');
 
-    assert.equal(clone.id() == '', true, 'do not clone id');
+    assert.equal(clone.id() === 'myRect', true, 'clone id');
 
     clone.setShadowColor('green');
 
@@ -588,13 +640,13 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('clone a group', function() {
+  test('clone a group', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group({
       x: 50,
       draggable: true,
-      name: 'myGroup'
+      name: 'myGroup',
     });
 
     var rect = new Konva.Rect({
@@ -608,7 +660,7 @@ suite('Node', function() {
       shadowColor: 'black',
       shadowOffset: [20, 20],
       name: 'myRect',
-      myAttr: 'group rect'
+      myAttr: 'group rect',
     });
     var text = new Konva.Text({
       x: 0,
@@ -617,7 +669,7 @@ suite('Node', function() {
       fontSize: 14,
       fontFamily: 'Calibri',
       fill: 'blue',
-      name: 'myText'
+      name: 'myText',
     });
     group.add(rect);
     group.add(text);
@@ -625,15 +677,15 @@ suite('Node', function() {
     var clicks = [];
     var taps = [];
 
-    group.on('click', function() {
+    group.on('click', function () {
       clicks.push(this.getName());
     });
-    rect.on('tap', function() {
+    rect.on('tap', function () {
       taps.push(this.attrs.myAttr);
     });
     var clone = group.clone({
       x: 300,
-      name: 'groupClone'
+      name: 'groupClone',
     });
 
     showHit(layer);
@@ -657,7 +709,7 @@ suite('Node', function() {
     assert.equal(group.find('.myRect')[0].attrs.myAttr, 'group rect');
     assert.equal(clone.find('.myRect')[0].attrs.myAttr, 'group rect');
     clone.find('.myRect')[0].setAttrs({
-      myAttr: 'clone rect'
+      myAttr: 'clone rect',
     });
 
     // Make sure that when we change a clone object attr that the rect object
@@ -694,7 +746,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test on attr change', function() {
+  test('test on attr change', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -703,7 +755,7 @@ suite('Node', function() {
       width: 200,
       height: 50,
       fill: 'blue',
-      shadowOffset: { x: 10, y: 10 }
+      shadowOffset: { x: 10, y: 10 },
     });
 
     var circle = new Konva.Circle({
@@ -712,7 +764,7 @@ suite('Node', function() {
       radius: 35,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     layer.add(circle);
@@ -723,17 +775,17 @@ suite('Node', function() {
     var shadowChanged = 0;
     var radiusChanged = 0;
 
-    rect.on('widthChange', function(evt) {
+    rect.on('widthChange', function (evt) {
       widthChanged++;
       assert.equal(evt.oldVal, 200);
       assert.equal(evt.newVal, 210);
     });
 
-    rect.on('shadowOffsetChange', function() {
+    rect.on('shadowOffsetChange', function () {
       shadowChanged++;
     });
 
-    circle.on('radiusChange', function() {
+    circle.on('radiusChange', function () {
       radiusChanged++;
     });
 
@@ -741,7 +793,7 @@ suite('Node', function() {
 
     rect.setSize({ width: 210, height: 210 });
     rect.setShadowOffset({
-      x: 20
+      x: 20,
     });
 
     assert.equal(widthChanged, 1);
@@ -750,7 +802,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test on attr change for same value', function() {
+  test('test on attr change for same value', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -759,7 +811,7 @@ suite('Node', function() {
       width: 200,
       height: 50,
       fill: 'blue',
-      shadowOffset: { x: 10, y: 10 }
+      shadowOffset: { x: 10, y: 10 },
     });
 
     layer.add(rect);
@@ -767,7 +819,7 @@ suite('Node', function() {
 
     var widthChanged = 0;
 
-    rect.on('widthChange', function(evt) {
+    rect.on('widthChange', function (evt) {
       widthChanged++;
     });
 
@@ -778,7 +830,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('set shape, layer and stage opacity to 0.5', function() {
+  test('set shape, layer and stage opacity to 0.5', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -787,7 +839,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     circle.setOpacity(0.5);
@@ -802,7 +854,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('hide show layer', function() {
+  test('hide show layer', function () {
     var stage = addStage();
 
     var layer1 = new Konva.Layer();
@@ -814,7 +866,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     var circle2 = new Konva.Circle({
       x: 150,
@@ -822,14 +874,14 @@ suite('Node', function() {
       radius: 70,
       fill: 'red',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
-    circle1.on('mousemove', function() {
+    circle1.on('mousemove', function () {
       console.log('mousemove circle1');
     });
 
-    circle2.on('mousemove', function() {
+    circle2.on('mousemove', function () {
       console.log('mousemove circle2');
     });
 
@@ -848,7 +900,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('rotation in degrees', function() {
+  test('rotation in degrees', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -859,7 +911,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      rotation: 10
+      rotation: 10,
     });
 
     assert.equal(rect.rotation(), 10);
@@ -873,7 +925,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('skew', function() {
+  test('skew', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -884,7 +936,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      skewX: 1
+      skewX: 1,
     });
 
     layer.add(rect);
@@ -905,7 +957,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('init with position, scale, rotation, then change scale', function() {
+  test('init with position, scale, rotation, then change scale', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -918,9 +970,9 @@ suite('Node', function() {
       strokeWidth: 4,
       scale: {
         x: 0.5,
-        y: 0.5
+        y: 0.5,
       },
-      rotation: 20
+      rotation: 20,
     });
 
     assert.equal(rect.getPosition().x, 200);
@@ -938,9 +990,9 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('clone sprite', function(done) {
+  test('clone sprite', function (done) {
     var imageObj = new Image();
-    imageObj.onload = function() {
+    imageObj.onload = function () {
       var stage = addStage();
       var layer = new Konva.Layer();
 
@@ -974,7 +1026,7 @@ suite('Node', function() {
             262,
             0,
             49,
-            109
+            109,
           ],
           kicking: [
             0,
@@ -1000,15 +1052,15 @@ suite('Node', function() {
             287,
             109,
             41,
-            98
-          ]
+            98,
+          ],
         },
         frameRate: 10,
         draggable: true,
         shadowColor: 'black',
         shadowBlur: 3,
         shadowOffset: { x: 3, y: 1 },
-        shadowOpacity: 0.3
+        shadowOpacity: 0.3,
       });
 
       var clone = sprite.clone();
@@ -1022,7 +1074,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('node caching', function(done) {
+  test('node caching', function (done) {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -1035,7 +1087,7 @@ suite('Node', function() {
       stroke: 'blue',
       strokeWidth: 5,
       draggable: true,
-      closed: true
+      closed: true,
     });
 
     group.add(poly);
@@ -1045,7 +1097,7 @@ suite('Node', function() {
     poly.toImage({
       width: 500,
       height: 300,
-      callback: function(imageObj) {
+      callback: function (imageObj) {
         //document.body.appendChild(imageObj)
         assert.equal(Konva.Util._isElement(imageObj), true);
 
@@ -1055,20 +1107,20 @@ suite('Node', function() {
           stroke: 'red',
           strokeWidth: 5,
           x: 50,
-          y: -120
+          y: -120,
         });
 
         layer.add(cachedShape);
         layer.draw();
         done();
-      }
+      },
     });
 
     showHit(layer);
   });
 
   // ======================================================
-  test('hide group', function() {
+  test('hide group', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -1080,7 +1132,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
     var circle2 = new Konva.Circle({
       x: 150,
@@ -1088,14 +1140,14 @@ suite('Node', function() {
       radius: 70,
       fill: 'red',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
-    circle1.on('mousemove', function() {
+    circle1.on('mousemove', function () {
       console.log('mousemove circle1');
     });
 
-    circle2.on('mousemove', function() {
+    circle2.on('mousemove', function () {
       console.log('mousemove circle2');
     });
 
@@ -1114,7 +1166,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('add shape with custom attr pointing to self', function() {
+  test('add shape with custom attr pointing to self', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -1126,12 +1178,12 @@ suite('Node', function() {
       strokeWidth: 4,
       offset: {
         x: 0,
-        y: 0
+        y: 0,
       },
       scale: {
         x: 2,
-        y: 2
-      }
+        y: 2,
+      },
     });
     layer.add(circle);
     stage.add(layer);
@@ -1141,7 +1193,7 @@ suite('Node', function() {
      * not inifinitely recurse causing a stack overflow
      */
     circle.setAttrs({
-      self: circle
+      self: circle,
     });
 
     /*
@@ -1158,7 +1210,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('set offset offset after instantiation', function() {
+  test('set offset offset after instantiation', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1169,8 +1221,8 @@ suite('Node', function() {
       stroke: 'blue',
       offset: {
         x: 40,
-        y: 20
-      }
+        y: 20,
+      },
     });
 
     layer.add(rect);
@@ -1192,7 +1244,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test name methods', function() {
+  test('test name methods', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -1201,7 +1253,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     layer.add(circle);
@@ -1232,7 +1284,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test setting shadow offset', function() {
+  test('test setting shadow offset', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1242,7 +1294,7 @@ suite('Node', function() {
       height: 50,
       fill: 'red',
       shadowColor: 'blue',
-      shadowBlur: 12
+      shadowBlur: 12,
     });
 
     layer.add(rect);
@@ -1257,7 +1309,7 @@ suite('Node', function() {
 
     rect.setShadowOffset({
       x: 3,
-      y: 4
+      y: 4,
     });
     assert.equal(rect.getShadowOffset().x, 3);
     assert.equal(rect.getShadowOffset().y, 4);
@@ -1274,7 +1326,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test offset', function() {
+  test('test offset', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1282,7 +1334,7 @@ suite('Node', function() {
       y: 0,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     layer.add(rect);
@@ -1298,7 +1350,7 @@ suite('Node', function() {
 
     rect.offset({
       x: 5,
-      y: 6
+      y: 6,
     });
     assert.equal(rect.offset().x, 5);
     assert.equal(rect.offset().y, 6);
@@ -1313,7 +1365,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test setPosition and move', function() {
+  test('test setPosition and move', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1321,7 +1373,7 @@ suite('Node', function() {
       y: 0,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     layer.add(rect);
@@ -1337,7 +1389,7 @@ suite('Node', function() {
 
     rect.setPosition({
       x: 5,
-      y: 6
+      y: 6,
     });
     assert.equal(rect.getPosition().x, 5);
     assert.equal(rect.getPosition().y, 6);
@@ -1356,7 +1408,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test setScale', function() {
+  test('test setScale', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1366,7 +1418,7 @@ suite('Node', function() {
       height: 50,
       fill: 'red',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     layer.add(rect);
@@ -1390,7 +1442,7 @@ suite('Node', function() {
 
     rect.setScale({
       x: 9,
-      y: 10
+      y: 10,
     });
     assert.equal(rect.getScale().x, 9);
     assert.equal(rect.getScale().y, 10);
@@ -1405,7 +1457,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test config scale', function() {
+  test('test config scale', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect1 = new Konva.Rect({
@@ -1416,8 +1468,8 @@ suite('Node', function() {
       fill: 'red',
       scale: {
         x: 2,
-        y: 3
-      }
+        y: 3,
+      },
     });
 
     var rect2 = new Konva.Rect({
@@ -1426,7 +1478,7 @@ suite('Node', function() {
       width: 100,
       height: 50,
       fill: 'red',
-      scale: { x: 2, y: 2 }
+      scale: { x: 2, y: 2 },
     });
 
     var rect3 = new Konva.Rect({
@@ -1435,7 +1487,7 @@ suite('Node', function() {
       width: 100,
       height: 50,
       fill: 'red',
-      scale: { x: 2, y: 3 }
+      scale: { x: 2, y: 3 },
     });
 
     var rect4 = new Konva.Rect({
@@ -1444,7 +1496,7 @@ suite('Node', function() {
       width: 100,
       height: 50,
       fill: 'red',
-      scaleX: 2
+      scaleX: 2,
     });
 
     var rect5 = new Konva.Rect({
@@ -1453,15 +1505,10 @@ suite('Node', function() {
       width: 100,
       height: 50,
       fill: 'red',
-      scaleY: 2
+      scaleY: 2,
     });
 
-    layer
-      .add(rect1)
-      .add(rect2)
-      .add(rect3)
-      .add(rect4)
-      .add(rect5);
+    layer.add(rect1).add(rect2).add(rect3).add(rect4).add(rect5);
     stage.add(layer);
 
     assert.equal(rect1.getScale().x, 2);
@@ -1481,7 +1528,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test config position', function() {
+  test('test config position', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect1 = new Konva.Rect({
@@ -1489,34 +1536,30 @@ suite('Node', function() {
       y: 2,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     var rect2 = new Konva.Rect({
       x: 3,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     var rect3 = new Konva.Rect({
       y: 4,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     var rect4 = new Konva.Rect({
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
-    layer
-      .add(rect1)
-      .add(rect2)
-      .add(rect3)
-      .add(rect4);
+    layer.add(rect1).add(rect2).add(rect3).add(rect4);
     stage.add(layer);
 
     assert.equal(rect1.getPosition().x, 1);
@@ -1533,7 +1576,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test getPosition and getAbsolutePosition for shape inside transformed stage', function() {
+  test('test getPosition and getAbsolutePosition for shape inside transformed stage', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1544,7 +1587,7 @@ suite('Node', function() {
       fill: 'red',
       stroke: 'black',
       strokeWidth: 4,
-      draggable: true
+      draggable: true,
     });
 
     layer.add(rect);
@@ -1563,7 +1606,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test consecutive getAbsolutePositions()s when shape has offset', function() {
+  test('test consecutive getAbsolutePositions()s when shape has offset', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1576,7 +1619,7 @@ suite('Node', function() {
       strokeWidth: 4,
       draggable: true,
       offsetX: 30,
-      offsetY: 30
+      offsetY: 30,
       //rotationDeg: 60
       //rotationDeg: Math.PI / 3
     });
@@ -1612,13 +1655,13 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test getPosition and getAbsolutePosition for transformed parent with offset offset', function() {
+  test('test getPosition and getAbsolutePosition for transformed parent with offset offset', function () {
     var side = 100;
     var diagonal = Math.sqrt(side * side * 2);
 
     var stage = addStage();
     var layer = new Konva.Layer({
-      name: 'layerName'
+      name: 'layerName',
     });
     var group = new Konva.Group({
       name: 'groupName',
@@ -1626,7 +1669,7 @@ suite('Node', function() {
       rotation: 45,
       offset: { x: side / 2, y: side / 2 },
       x: diagonal / 2,
-      y: diagonal / 2
+      y: diagonal / 2,
     });
     var rect = new Konva.Rect({
       x: 0,
@@ -1634,7 +1677,7 @@ suite('Node', function() {
       width: side,
       height: side,
       fill: 'red',
-      name: 'rectName'
+      name: 'rectName',
     });
     var marker = new Konva.Rect({
       x: side,
@@ -1645,7 +1688,7 @@ suite('Node', function() {
       stroke: 'blue',
       strokeWidth: 4,
       name: 'markerName',
-      id: 'markerId'
+      id: 'markerId',
     });
 
     group.add(rect);
@@ -1672,17 +1715,17 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('test relative getAbsolutePosition for transformed parent ', function() {
+  test('test relative getAbsolutePosition for transformed parent ', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
       name: 'layerName',
       x: 100,
-      y: 100
+      y: 100,
     });
     var group = new Konva.Group({
       name: 'groupName',
       x: 100,
-      y: 100
+      y: 100,
     });
     var rect = new Konva.Rect({
       x: 50,
@@ -1690,7 +1733,7 @@ suite('Node', function() {
       width: 50,
       height: 50,
       fill: 'red',
-      name: 'rectName'
+      name: 'rectName',
     });
 
     group.add(rect);
@@ -1705,7 +1748,7 @@ suite('Node', function() {
   test(
     'results of getAbsoluteTransform limited to position and offset transformations are the same' +
       " when used with transformsEnabled = 'all' and transformsEnabled = 'position'",
-    function() {
+    function () {
       var stage = addStage();
       var layer1 = new Konva.Layer({
         name: 'layerName',
@@ -1713,7 +1756,7 @@ suite('Node', function() {
         y: 110,
         offsetX: 50,
         offsetY: 50,
-        transformsEnabled: 'all'
+        transformsEnabled: 'all',
       });
       var group1 = new Konva.Group({
         name: 'groupName',
@@ -1721,7 +1764,7 @@ suite('Node', function() {
         y: 30,
         offsetX: -60,
         offsetY: -80,
-        transformsEnabled: 'all'
+        transformsEnabled: 'all',
       });
       var rect1 = new Konva.Rect({
         x: -50,
@@ -1733,7 +1776,7 @@ suite('Node', function() {
         fill: 'red',
         name: 'rectName',
         id: 'rectId1',
-        transformsEnabled: 'all'
+        transformsEnabled: 'all',
       });
 
       var layer2 = layer1.clone({ transformsEnabled: 'position' });
@@ -1764,7 +1807,7 @@ suite('Node', function() {
   );
 
   // ======================================================
-  test('test dragDistance', function() {
+  test('test dragDistance', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect1 = new Konva.Rect({
@@ -1772,18 +1815,18 @@ suite('Node', function() {
       y: 2,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
 
     var group = new Konva.Group({
-      dragDistance: 2
+      dragDistance: 2,
     });
 
     var rect2 = new Konva.Rect({
       x: 3,
       width: 100,
       height: 50,
-      fill: 'red'
+      fill: 'red',
     });
     group.add(rect2);
 
@@ -1796,7 +1839,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('translate, rotate, scale shape', function() {
+  test('translate, rotate, scale shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Rect({
@@ -1810,20 +1853,26 @@ suite('Node', function() {
       strokeWidth: 4,
       scale: {
         x: 2,
-        y: 1
+        y: 1,
       },
       offset: {
         x: 50,
-        y: 25
-      }
+        y: 25,
+      },
     });
 
     layer.add(circle);
     stage.add(layer);
+
+    var trace = layer.getContext().getTrace();
+    assert.equal(
+      trace,
+      'clearRect(0,0,578,200);save();transform(1.879,0.684,-0.342,0.94,14.581,42.306);beginPath();rect(0,0,100,50);closePath();fillStyle=green;fill();lineWidth=4;strokeStyle=black;stroke();restore();'
+    );
   });
 
   // ======================================================
-  test('test isListening', function() {
+  test('test isListening', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var rect = new Konva.Rect({
@@ -1834,7 +1883,7 @@ suite('Node', function() {
       height: 50,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     layer.add(rect);
@@ -1845,7 +1894,7 @@ suite('Node', function() {
     rect.setListening(false);
     assert.equal(rect.isListening(), false);
 
-    rect.setListening('inherit');
+    rect.setListening(true);
     assert.equal(rect.isListening(), true);
 
     layer.setListening(false);
@@ -1855,19 +1904,12 @@ suite('Node', function() {
     layer.setListening(true);
     assert.equal(rect.isListening(), true);
 
-    // even though we set stage listening to false, since the layer
-    // listening is set to try, rect listening will be true
     stage.setListening(false);
-    assert.equal(rect.isListening(), true);
-
-    // setting layer listening to inherit means that the layer listening
-    // will inherit the stage listening, which is false
-    layer.setListening('inherit');
     assert.equal(rect.isListening(), false);
   });
 
   // ======================================================
-  test('test fire event', function() {
+  test('test fire event', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -1877,7 +1919,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     stage.add(layer);
@@ -1886,7 +1928,7 @@ suite('Node', function() {
 
     var clicks = [];
 
-    circle.on('click', function() {
+    circle.on('click', function () {
       clicks.push('circle');
 
       /*
@@ -1896,15 +1938,15 @@ suite('Node', function() {
              */
     });
     var foo;
-    circle.on('customEvent', function(evt) {
+    circle.on('customEvent', function (evt) {
       foo = evt.foo;
     });
 
-    layer.on('click', function() {
+    layer.on('click', function () {
       clicks.push('layer');
     });
     // fire event with bubbling
-    circle.fire('click', null, true);
+    circle.fire('click', undefined, true);
 
     //console.log(clicks);
 
@@ -1917,7 +1959,7 @@ suite('Node', function() {
 
     // test custom event
     circle.fire('customEvent', {
-      foo: 'bar'
+      foo: 'bar',
     });
 
     assert.equal(foo, 'bar');
@@ -1927,7 +1969,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('add remove event', function() {
+  test('add remove event', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -1937,7 +1979,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     /*
@@ -1945,10 +1987,10 @@ suite('Node', function() {
      */
     assert.equal(circle.eventListeners['click'], undefined);
 
-    circle.on('click', function() {});
+    circle.on('click', function () {});
     assert.equal(circle.eventListeners['click'].length, 1);
 
-    circle.on('click', function() {});
+    circle.on('click', function () {});
     assert.equal(circle.eventListeners['click'].length, 2);
 
     circle.off('click');
@@ -1957,12 +1999,12 @@ suite('Node', function() {
     /*
      * test name spacing
      */
-    circle.on('click.foo', function() {});
+    circle.on('click.foo', function () {});
     assert.equal(circle.eventListeners['click'].length, 1);
 
-    circle.on('click.foo', function() {});
+    circle.on('click.foo', function () {});
     assert.equal(circle.eventListeners['click'].length, 2);
-    circle.on('click.bar', function() {});
+    circle.on('click.bar', function () {});
     assert.equal(circle.eventListeners['click'].length, 3);
 
     circle.off('click.foo');
@@ -1974,11 +2016,11 @@ suite('Node', function() {
     /*
      * test remove all events in name space
      */
-    circle.on('click.foo', function() {});
-    circle.on('click.foo', function() {});
-    circle.on('touch.foo', function() {});
-    circle.on('click.bar', function() {});
-    circle.on('touch.bar', function() {});
+    circle.on('click.foo', function () {});
+    circle.on('click.foo', function () {});
+    circle.on('touch.foo', function () {});
+    circle.on('click.bar', function () {});
+    circle.on('touch.bar', function () {});
     assert.equal(circle.eventListeners['click'].length, 3);
     assert.equal(circle.eventListeners['touch'].length, 2);
     circle.off('.foo');
@@ -1990,9 +2032,9 @@ suite('Node', function() {
     assert.equal(circle.eventListeners['touch'], undefined);
 
     //  test remove all events
-    circle.on('click.konva', function() {});
-    circle.on('click', function() {});
-    circle.on('boo', function() {});
+    circle.on('click.konva', function () {});
+    circle.on('click', function () {});
+    circle.on('boo', function () {});
     assert.equal(circle.eventListeners['click'].length, 2);
     assert.equal(circle.eventListeners['boo'].length, 1);
     circle.off();
@@ -2005,7 +2047,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('remove event with with callback', function() {
+  test('remove event with with callback', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2015,7 +2057,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
     stage.add(layer);
     layer.add(circle);
@@ -2024,10 +2066,10 @@ suite('Node', function() {
     var event1 = 0;
     var event2 = 0;
 
-    var callback1 = function() {
+    var callback1 = function () {
       event1 += 1;
     };
-    var callback2 = function() {
+    var callback2 = function () {
       event2 += 1;
     };
 
@@ -2047,7 +2089,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('simulate event bubble', function() {
+  test('simulate event bubble', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2057,7 +2099,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     stage.add(layer);
@@ -2066,22 +2108,22 @@ suite('Node', function() {
 
     var clicks = [];
 
-    circle.on('click', function() {
+    circle.on('click', function () {
       clicks.push('circle');
     });
 
-    layer.on('click', function() {
+    layer.on('click', function () {
       clicks.push('layer');
     });
 
-    circle.fire('click', null, true);
+    circle.fire('click', undefined, true);
 
     assert.equal(clicks[0], 'circle');
     assert.equal(clicks[1], 'layer');
   });
 
   // ======================================================
-  test('simulate cancel event bubble', function() {
+  test('simulate cancel event bubble', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2091,7 +2133,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     stage.add(layer);
@@ -2100,12 +2142,12 @@ suite('Node', function() {
 
     var clicks = [];
 
-    circle.on('click', function(e) {
+    circle.on('click', function (e) {
       e.cancelBubble = true;
       clicks.push('circle');
     });
 
-    layer.on('click', function() {
+    layer.on('click', function () {
       clicks.push('layer');
     });
 
@@ -2115,7 +2157,7 @@ suite('Node', function() {
     assert.equal(clicks.length, 1);
   });
 
-  test('simple event delegation', function() {
+  test('simple event delegation', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2125,7 +2167,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     stage.add(layer);
@@ -2133,16 +2175,16 @@ suite('Node', function() {
     layer.draw();
 
     var fired = false;
-    layer.on('click', 'Circle', function(e) {
+    layer.on('click', 'Circle', function (e) {
       assert.equal(this, circle);
       assert.equal(e.currentTarget, circle);
       fired = true;
     });
-    circle.fire('click', null, true);
+    circle.fire('click', undefined, true);
     assert.equal(fired, true);
   });
 
-  test('complex event delegation', function() {
+  test('complex event delegation', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -2153,10 +2195,10 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
     var group = new Konva.Group({
-      name: 'group1 group2'
+      name: 'group1 group2',
     });
     group.add(circle);
     layer.add(group);
@@ -2164,16 +2206,16 @@ suite('Node', function() {
     layer.draw();
 
     var fired = false;
-    layer.on('click', '.group1', function(e) {
+    layer.on('click', '.group1', function (e) {
       assert.equal(this, group);
       assert.equal(e.currentTarget, group);
       fired = true;
     });
-    circle.fire('click', null, true);
+    circle.fire('click', undefined, true);
     assert.equal(fired, true);
   });
   // ======================================================
-  test('move shape, group, and layer, and then get absolute position', function() {
+  test('move shape, group, and layer, and then get absolute position', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -2184,7 +2226,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     group.add(circle);
@@ -2209,17 +2251,17 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('scale layer, rotate group, position shape, and then get absolute position', function() {
+  test('scale layer, rotate group, position shape, and then get absolute position', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
       scale: {
         x: 2,
-        y: 2
-      }
+        y: 2,
+      },
     });
     var group = new Konva.Group({
       x: 100,
-      rotation: 90
+      rotation: 90,
     });
 
     var rect = new Konva.Rect({
@@ -2230,7 +2272,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      draggable: true
+      draggable: true,
     });
 
     group.add(rect);
@@ -2245,7 +2287,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('hide show circle', function() {
+  test('hide show circle', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2254,7 +2296,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     layer.add(circle);
@@ -2274,7 +2316,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('set shape opacity to 0.5', function() {
+  test('set shape opacity to 0.5', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2284,7 +2326,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 20,
-      draggable: true
+      draggable: true,
     });
 
     circle.setOpacity(0.5);
@@ -2307,7 +2349,7 @@ suite('Node', function() {
     );
   });
 
-  test('set shape opacity to 0.5 then back to 1', function() {
+  test('set shape opacity to 0.5 then back to 1', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2316,7 +2358,7 @@ suite('Node', function() {
       radius: 70,
       fill: 'green',
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     circle.setOpacity(0.5);
@@ -2332,7 +2374,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('get absolute z index', function() {
+  test('get absolute z index', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group1 = new Konva.Group();
@@ -2344,14 +2386,14 @@ suite('Node', function() {
       x: 150,
       y: stage.getHeight() / 2,
       radius: 40,
-      fill: 'green'
+      fill: 'green',
     });
 
     var shape2 = new Konva.Circle({
       x: 250,
       y: stage.getHeight() / 2,
       radius: 40,
-      fill: 'green'
+      fill: 'green',
     });
 
     /*
@@ -2392,7 +2434,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('JPEG toDataURL() Not Hiding Lower Layers with Black', function(done) {
+  test('JPEG toDataURL() Not Hiding Lower Layers with Black', function (done) {
     var stage = addStage();
 
     var layer1 = new Konva.Layer();
@@ -2404,7 +2446,7 @@ suite('Node', function() {
         y: 10,
         width: 25,
         height: 15,
-        fill: 'red'
+        fill: 'red',
       })
     );
     layer2.add(
@@ -2413,7 +2455,7 @@ suite('Node', function() {
         y: 50,
         width: 15,
         height: 25,
-        fill: 'green'
+        fill: 'green',
       })
     );
 
@@ -2425,26 +2467,26 @@ suite('Node', function() {
       width: 100,
       mimeType: 'image/jpeg',
       quality: 0.8,
-      callback: function(url) {
+      callback: function (url) {
         var imageObj = new Image();
-        imageObj.onload = function() {
+        imageObj.onload = function () {
           layer2.add(
             new Konva.Image({
               x: 200,
               y: 10,
-              image: imageObj
+              image: imageObj,
             })
           );
           layer2.draw();
           done();
         };
         imageObj.src = url;
-      }
+      },
     });
   });
 
   // ======================================================
-  test('serialize stage', function() {
+  test('serialize stage', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -2456,7 +2498,7 @@ suite('Node', function() {
       stroke: 'black',
       strokeWidth: 4,
       name: 'myCircle',
-      draggable: true
+      draggable: true,
     });
 
     stage.add(layer);
@@ -2471,7 +2513,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('serialize shape', function() {
+  test('serialize shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -2484,7 +2526,7 @@ suite('Node', function() {
       strokeWidth: 4,
       name: 'myCircle',
       draggable: true,
-      dash: [5, 5]
+      dash: [5, 5],
     });
 
     stage.add(layer);
@@ -2499,7 +2541,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('serialize shape with custom attributes', function() {
+  test('serialize shape with custom attributes', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -2511,7 +2553,7 @@ suite('Node', function() {
       stroke: 'black',
       strokeWidth: 4,
       name: 'myCircle',
-      draggable: true
+      draggable: true,
     });
 
     stage.add(layer);
@@ -2525,8 +2567,8 @@ suite('Node', function() {
       y: 5,
       size: {
         width: 10,
-        height: 20
-      }
+        height: 20,
+      },
     });
 
     var expectedJson =
@@ -2536,7 +2578,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('load stage using json', function() {
+  test('load stage using json', function () {
     var container = addContainer();
     var json =
       '{"attrs":{"width":578,"height":200},"className":"Stage","children":[{"attrs":{},"className":"Layer","children":[{"attrs":{},"className":"Group","children":[{"attrs":{"x":289,"y":100,"radius":70,"fill":"green","stroke":"black","strokeWidth":4,"name":"myCircle","draggable":true},"className":"Circle"}]}]}]}';
@@ -2546,17 +2588,17 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('create node using object', function() {
+  test('create node using object', function () {
     var node = new Konva.Circle({
       id: 'test',
-      radius: 10
+      radius: 10,
     });
     var clone = Konva.Node.create(node.toObject());
 
     assert.deepEqual(node.toObject(), clone.toObject());
   });
 
-  test('make sure we can create non existing node type', function() {
+  test('make sure we can create non existing node type', function () {
     var json =
       '{"attrs":{},"className":"Layer","children":[{"attrs":{},"className":"Group","children":[{"attrs":{"x":289,"y":100,"radius":70,"fill":"green","stroke":"black","strokeWidth":4,"name":"myCircle","draggable":true},"className":"WeirdShape"}]}]}';
     var layer = Konva.Node.create(json);
@@ -2565,12 +2607,12 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('serialize stage with custom shape', function() {
+  test('serialize stage with custom shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
 
-    var drawTriangle = function(context) {
+    var drawTriangle = function (context) {
       context.beginPath();
       context.moveTo(200, 50);
       context.lineTo(420, 80);
@@ -2583,7 +2625,7 @@ suite('Node', function() {
       fill: '#00D2FF',
       stroke: 'black',
       strokeWidth: 4,
-      id: 'myTriangle'
+      id: 'myTriangle',
     });
 
     group.add(triangle);
@@ -2601,10 +2643,10 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('load stage with custom shape using json', function() {
+  test('load stage with custom shape using json', function () {
     var container = addContainer();
 
-    var drawTriangle = function(context) {
+    var drawTriangle = function (context) {
       context.beginPath();
       context.moveTo(200, 50);
       context.lineTo(420, 80);
@@ -2617,7 +2659,7 @@ suite('Node', function() {
 
     var stage = Konva.Node.create(json, container);
 
-    stage.find('#myTriangle1').each(function(node) {
+    stage.find('#myTriangle1').each(function (node) {
       node.sceneFunc(drawTriangle);
     });
 
@@ -2627,9 +2669,9 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('serialize stage with an image', function(done) {
+  test('serialize stage with an image', function (done) {
     var imageObj = new Image();
-    imageObj.onload = function() {
+    imageObj.onload = function () {
       var stage = addStage();
       var layer = new Konva.Layer();
       darth = new Konva.Image({
@@ -2638,9 +2680,9 @@ suite('Node', function() {
         image: imageObj,
         offset: {
           x: 50,
-          y: imageObj.height / 2
+          y: imageObj.height / 2,
         },
-        id: 'darth'
+        id: 'darth',
       });
 
       layer.add(darth);
@@ -2656,16 +2698,16 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('load stage with an image', function(done) {
+  test('load stage with an image', function (done) {
     var imageObj = new Image();
     var container = addContainer();
-    imageObj.onload = function() {
+    imageObj.onload = function () {
       var json =
         '{"attrs":{"width":578,"height":200},"className":"Stage","children":[{"attrs":{},"className":"Layer","children":[{"attrs":{"x":200,"y":60,"offsetX":50,"offsetY":150,"id":"darth1"},"className":"Image"}]}]}';
       var stage = Konva.Node.create(json, container);
 
       assert.equal(stage.toJSON(), json);
-      stage.find('#darth1').each(function(node) {
+      stage.find('#darth1').each(function (node) {
         node.setImage(imageObj);
       });
       stage.draw();
@@ -2676,7 +2718,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('remove shape', function() {
+  test('remove shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2686,7 +2728,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer.add(circle);
@@ -2704,7 +2746,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy shape', function() {
+  test('destroy shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2714,7 +2756,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer.add(circle);
@@ -2732,7 +2774,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('memory leak test for destroy and a shape with several names', function() {
+  test('memory leak test for destroy and a shape with several names', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2742,7 +2784,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'my-new-shape my-new-circle'
+      name: 'my-new-shape my-new-circle',
     });
 
     layer.add(circle);
@@ -2758,7 +2800,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy shape without adding its parent to stage', function() {
+  test('destroy shape without adding its parent to stage', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2768,7 +2810,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      id: 'myCircle'
+      id: 'myCircle',
     });
 
     layer.add(circle);
@@ -2781,10 +2823,10 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy layer with shape', function() {
+  test('destroy layer with shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
-      name: 'myLayer'
+      name: 'myLayer',
     });
     var circle = new Konva.Circle({
       x: stage.getWidth() / 2,
@@ -2793,7 +2835,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer.add(circle);
@@ -2813,10 +2855,10 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy stage with layer and shape', function() {
+  test('destroy stage with layer and shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
-      name: 'myLayer'
+      name: 'myLayer',
     });
     var circle = new Konva.Circle({
       x: stage.getWidth() / 2,
@@ -2825,7 +2867,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer.add(circle);
@@ -2840,13 +2882,13 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy group with shape', function() {
+  test('destroy group with shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
-      name: 'myLayer'
+      name: 'myLayer',
     });
     var group = new Konva.Group({
-      name: 'myGroup'
+      name: 'myGroup',
     });
 
     var circle = new Konva.Circle({
@@ -2856,7 +2898,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     group.add(circle);
@@ -2877,7 +2919,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy layer with no shapes', function() {
+  test('destroy layer with no shapes', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -2887,7 +2929,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy shape multiple times', function() {
+  test('destroy shape multiple times', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var shape1 = new Konva.Circle({
@@ -2895,7 +2937,7 @@ suite('Node', function() {
       y: 100,
       radius: 50,
       fill: 'green',
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     var shape2 = new Konva.Circle({
@@ -2903,7 +2945,7 @@ suite('Node', function() {
       y: 100,
       radius: 50,
       fill: 'green',
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer.add(shape1);
@@ -2921,7 +2963,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('remove layer multiple times', function() {
+  test('remove layer multiple times', function () {
     var stage = addStage();
     var layer1 = new Konva.Layer();
     var layer2 = new Konva.Layer();
@@ -2931,7 +2973,7 @@ suite('Node', function() {
       y: 100,
       radius: 50,
       fill: 'green',
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     var shape2 = new Konva.Circle({
@@ -2939,7 +2981,7 @@ suite('Node', function() {
       y: 100,
       radius: 50,
       fill: 'green',
-      name: 'myCircle'
+      name: 'myCircle',
     });
 
     layer1.add(shape1);
@@ -2958,7 +3000,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy shape by id or name', function() {
+  test('destroy shape by id or name', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2968,7 +3010,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      id: 'myCircle2'
+      id: 'myCircle2',
     });
 
     var rect = new Konva.Rect({
@@ -2979,7 +3021,7 @@ suite('Node', function() {
       fill: 'purple',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'myRect2'
+      name: 'myRect2',
     });
 
     var circleColorKey = circle.colorKey;
@@ -3010,7 +3052,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('destroy should remove only required shape from ids regestry', function() {
+  test('destroy should remove only required shape from ids regestry', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -3020,7 +3062,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      id: 'shape'
+      id: 'shape',
     });
 
     var rect = new Konva.Rect({
@@ -3031,7 +3073,7 @@ suite('Node', function() {
       fill: 'purple',
       stroke: 'black',
       strokeWidth: 4,
-      id: 'shape'
+      id: 'shape',
     });
 
     layer.add(circle);
@@ -3048,9 +3090,9 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('hide stage', function() {
+  test('hide stage', function () {
     var stage = addStage({
-      visible: false
+      visible: false,
     });
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -3067,9 +3109,9 @@ suite('Node', function() {
       rotation: 60,
       scale: {
         x: 2,
-        y: 1
+        y: 1,
       },
-      visible: false
+      visible: false,
     });
 
     group.add(rect);
@@ -3088,7 +3130,7 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('listening, & shouldDrawHit', function() {
+  test('listening, & shouldDrawHit', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -3099,7 +3141,7 @@ suite('Node', function() {
       width: 100,
       height: 50,
       fill: 'green',
-      stroke: 'blue'
+      stroke: 'blue',
     });
 
     layer.add(rect);
@@ -3115,16 +3157,16 @@ suite('Node', function() {
   });
 
   // ======================================================
-  test('group, listening, & shouldDrawHit', function() {
+  test('group, listening, & shouldDrawHit', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer({
-      listening: false
+      listening: false,
     });
     stage.add(layer);
 
     var group = new Konva.Group({
-      listening: false
+      listening: false,
     });
     layer.add(group);
 
@@ -3135,54 +3177,53 @@ suite('Node', function() {
       height: 50,
       fill: 'green',
       stroke: 'blue',
-      listening: true
+      listening: true,
     });
     group.add(rect);
     layer.draw();
 
     showHit(layer);
 
-    assert.equal(rect.isListening(), true);
-    assert.equal(rect.shouldDrawHit(), true);
+    assert.equal(rect.isListening(), false);
+    assert.equal(rect.shouldDrawHit(), false);
 
     assert.equal(group.isListening(), false);
-    assert.equal(group.shouldDrawHit(), true, 'hit graph for group');
+    assert.equal(group.shouldDrawHit(), false, 'hit graph for group');
 
     assert.equal(layer.isListening(), false);
-    assert.equal(layer.shouldDrawHit(), true, 'hit graph for layer');
+    assert.equal(layer.shouldDrawHit(), false, 'hit graph for layer');
 
     var layerClick = 0;
     var groupClick = 0;
     var rectClick = 0;
 
-    rect.on('click', function() {
+    rect.on('click', function () {
       rectClick += 1;
     });
-    group.on('click', function() {
+    group.on('click', function () {
       groupClick += 1;
     });
-    layer.on('click', function() {
+    layer.on('click', function () {
       layerClick += 1;
     });
     showHit(layer);
-    var top = stage.content.getBoundingClientRect().top;
 
     stage.simulateMouseDown({
       x: 150,
-      y: 75
+      y: 75,
     });
     stage.simulateMouseUp({
       x: 150,
-      y: 75
+      y: 75,
     });
 
-    assert.equal(rectClick, 1, 'click on rectangle');
+    assert.equal(rectClick, 0, 'click on rectangle');
     assert.equal(groupClick, 0, 'no click on group');
     assert.equal(layerClick, 0, 'no click on layer');
   });
 
   // ======================================================
-  test('isVisible', function() {
+  test('isVisible', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -3194,7 +3235,7 @@ suite('Node', function() {
       stroke: 'black',
       strokeWidth: 4,
       name: 'myCircle',
-      draggable: true
+      draggable: true,
     });
 
     group.add(circle);
@@ -3211,35 +3252,35 @@ suite('Node', function() {
     assert.equal(layer.isVisible(), false);
     assert.equal(circle.isVisible(), false);
 
-    stage.setVisible('inherit');
+    stage.setVisible(true);
     layer.setVisible(false);
 
     assert.equal(stage.isVisible(), true);
     assert.equal(layer.isVisible(), false);
     assert.equal(circle.isVisible(), false);
 
-    layer.setVisible('inherit');
+    layer.setVisible(true);
     circle.setVisible(false);
 
     assert.equal(stage.isVisible(), true);
     assert.equal(layer.isVisible(), true);
     assert.equal(circle.isVisible(), false);
 
-    circle.setVisible('inherit');
+    circle.setVisible(true);
     stage.setVisible(true);
 
     assert.equal(stage.isVisible(), true);
     assert.equal(layer.isVisible(), true);
     assert.equal(circle.isVisible(), true);
 
-    stage.setVisible('inherit');
+    stage.setVisible(true);
     layer.setVisible(true);
 
     assert.equal(stage.isVisible(), true);
     assert.equal(layer.isVisible(), true);
     assert.equal(circle.isVisible(), true);
 
-    layer.setVisible('inherit');
+    layer.setVisible(true);
     circle.setVisible(true);
 
     assert.equal(stage.isVisible(), true);
@@ -3247,7 +3288,7 @@ suite('Node', function() {
     assert.equal(circle.isVisible(), true);
   });
 
-  test('overloaders', function() {
+  test('overloaders', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -3259,7 +3300,7 @@ suite('Node', function() {
       stroke: 'black',
       strokeWidth: 4,
       name: 'myCircle',
-      draggable: true
+      draggable: true,
     });
 
     group.add(circle);
@@ -3339,7 +3380,7 @@ suite('Node', function() {
     assert.equal(circle.size().height, 11);
   });
 
-  test('cache shape', function() {
+  test('cache shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group();
@@ -3351,7 +3392,7 @@ suite('Node', function() {
       stroke: 'black',
       strokeWidth: 4,
       name: 'myCircle',
-      draggable: true
+      draggable: true,
     });
 
     group.add(circle);
@@ -3365,11 +3406,11 @@ suite('Node', function() {
         x: -74,
         y: -74,
         width: 148,
-        height: 148
+        height: 148,
       })
       .offset({
         x: 74,
-        y: 74
+        y: 74,
       });
 
     assert.notEqual(circle._getCanvasCache().scene, undefined);
@@ -3387,12 +3428,12 @@ suite('Node', function() {
     //assert.equal(circle._getCanvasCache().scene.getContext().getTrace(), 'save();translate(74,74);beginPath();arc(0,0,70,0,6.283,false);closePath();fillStyle=green;fill();lineWidth=4;strokeStyle=black;stroke();restore();');
   });
 
-  test('cache shape before adding to layer', function() {
+  test('cache shape before adding to layer', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var group = new Konva.Group({
       x: 0,
-      y: 0
+      y: 0,
     });
     var rect = new Konva.Rect({
       x: 35,
@@ -3406,7 +3447,7 @@ suite('Node', function() {
       offsetX: 25,
       offsetY: 25,
       rotation: 45,
-      draggable: true
+      draggable: true,
     });
     group.add(rect);
 
@@ -3415,7 +3456,7 @@ suite('Node', function() {
       x: 0,
       y: 0,
       width: 148,
-      height: 148
+      height: 148,
     });
     stage.add(layer);
 
@@ -3427,19 +3468,19 @@ suite('Node', function() {
     showHit(layer);
     var shape = stage.getIntersection({
       x: 5,
-      y: 5
+      y: 5,
     });
     assert(!shape, 'no shape (rotate applied)');
     shape = stage.getIntersection({
       x: 35,
-      y: 35
+      y: 35,
     });
     assert.equal(shape, rect, 'rect found');
   });
 
-  test('stage.toObject() when stage contains an image', function(done) {
+  test('stage.toObject() when stage contains an image', function (done) {
     var imageObj = new Image();
-    imageObj.onload = function() {
+    imageObj.onload = function () {
       var stage = addStage();
 
       var layer = new Konva.Layer();
@@ -3451,7 +3492,7 @@ suite('Node', function() {
         height: 100,
         offset: { x: 50, y: 30 },
         crop: { x: 135, y: 7, width: 167, height: 134 },
-        draggable: true
+        draggable: true,
       });
 
       layer.add(darth);
@@ -3464,41 +3505,41 @@ suite('Node', function() {
     imageObj.src = 'assets/darth-vader.jpg';
   });
 
-  test('toObject with extended prototypes', function() {
+  test('toObject with extended prototypes', function () {
     var node = new Konva.Circle({
       id: 'foo',
-      radius: 10
+      radius: 10,
     });
-    Number.prototype.customFunc = function() {};
+    Number.prototype.customFunc = function () {};
     assert.equal(node.toObject().attrs.radius, 10);
     delete Number.prototype.customFunc;
   });
 
-  test('toObject with property in attrs and instanse', function() {
+  test('toObject with property in attrs and instanse', function () {
     var node = new Konva.Circle({
       id: 'foo1',
       radius: 10,
-      filled: true
+      filled: true,
     });
     node.filled = true;
     assert.equal(node.toObject().attrs.filled, true);
   });
 
-  test('test findAncestor', function() {
+  test('test findAncestor', function () {
     var stage = addStage();
     stage.setAttrs({
       name: 'stage',
-      id: 'stage'
+      id: 'stage',
     });
     var layer = new Konva.Layer({
       id: 'layer',
-      name: 'layer'
+      name: 'layer',
     });
     stage.add(layer);
 
     var group = new Konva.Group({
       id: 'group',
-      name: 'group'
+      name: 'group',
     });
     layer.add(group);
 
@@ -3510,7 +3551,7 @@ suite('Node', function() {
       fill: 'green',
       stroke: 'black',
       strokeWidth: 4,
-      name: 'rect'
+      name: 'rect',
     });
     group.add(rect);
 
@@ -3539,7 +3580,7 @@ suite('Node', function() {
     assert.equal(rect.findAncestor(), null, 'return null if no selector');
   });
 
-  test('moveToTop() properly changes z-indices of the node and its siblings', function() {
+  test('moveToTop() properly changes z-indices of the node and its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3570,7 +3611,7 @@ suite('Node', function() {
     assert.equal(rect1.getZIndex(), 3);
   });
 
-  test('moveToBottom() properly changes z-indices of the node and its siblings', function() {
+  test('moveToBottom() properly changes z-indices of the node and its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3601,7 +3642,7 @@ suite('Node', function() {
     assert.equal(rect2.getZIndex(), 3);
   });
 
-  test('moveUp() properly changes z-indices of the node and its siblings', function() {
+  test('moveUp() properly changes z-indices of the node and its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3632,7 +3673,7 @@ suite('Node', function() {
     assert.equal(rect3.getZIndex(), 3);
   });
 
-  test('moveDown() properly changes z-indices of the node and its siblings', function() {
+  test('moveDown() properly changes z-indices of the node and its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3663,7 +3704,7 @@ suite('Node', function() {
     assert.equal(rect3.getZIndex(), 3);
   });
 
-  test('setZIndex() properly changes z-indices of the node and its siblings', function() {
+  test('setZIndex() properly changes z-indices of the node and its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3708,7 +3749,7 @@ suite('Node', function() {
     assert.equal(rect1.getZIndex(), 3);
   });
 
-  test('remove() removes the node and properly changes z-indices of its siblings', function() {
+  test('remove() removes the node and properly changes z-indices of its siblings', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -3744,12 +3785,12 @@ suite('Node', function() {
     assert.equal(rect3.getZIndex(), 0);
   });
 
-  test('show warning when we are trying to use non-objects for component setters', function() {
+  test('show warning when we are trying to use non-objects for component setters', function () {
     var stage = addStage();
 
     var callCount = 0;
     var oldWarn = Konva.Util.warn;
-    Konva.Util.warn = function() {
+    Konva.Util.warn = function () {
       callCount += 1;
     };
 
@@ -3758,7 +3799,7 @@ suite('Node', function() {
     Konva.Util.warn = oldWarn;
   });
 
-  test('show warning for unexpected zIndexes', function() {
+  test('show warning for unexpected zIndexes', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -3766,13 +3807,13 @@ suite('Node', function() {
 
     var shape = new Konva.Circle({
       radius: 50,
-      fill: 'red'
+      fill: 'red',
     });
     layer.add(shape);
 
     var callCount = 0;
     var oldWarn = Konva.Util.warn;
-    Konva.Util.warn = function() {
+    Konva.Util.warn = function () {
       callCount += 1;
     };
 
@@ -3784,7 +3825,7 @@ suite('Node', function() {
     Konva.Util.warn = oldWarn;
   });
 
-  test('check transform caching', function() {
+  test('check transform caching', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();
@@ -3795,14 +3836,14 @@ suite('Node', function() {
       width: 150,
       height: 50,
       stroke: 'black',
-      strokeWidth: 4
+      strokeWidth: 4,
     });
 
     var text00 = new Konva.Text({
       text: 'Sample text',
       x: 50,
       y: 50,
-      fontSize: 20
+      fontSize: 20,
     });
 
     layer.add(rect);

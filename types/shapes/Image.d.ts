@@ -1,12 +1,13 @@
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet, IRect } from '../types';
+import { Context } from '../Context';
 export interface ImageConfig extends ShapeConfig {
     image: CanvasImageSource | undefined;
     crop?: IRect;
 }
 export declare class Image extends Shape<ImageConfig> {
     _useBufferCanvas(): boolean;
-    _sceneFunc(context: any): void;
+    _sceneFunc(context: Context): void;
     _hitFunc(context: any): void;
     getWidth(): any;
     getHeight(): any;

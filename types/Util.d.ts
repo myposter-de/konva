@@ -1,17 +1,8 @@
 import { Node } from './Node';
-import { IRect, RGB, RGBA } from './types';
-export declare type Point = {
-    x: number;
-    y: number;
-};
-export interface RectConf {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
+import { IRect, RGB, RGBA, Vector2d } from './types';
 export declare class Collection<Child extends Node> {
     [index: number]: Child;
+    [Symbol.iterator](): Iterator<Child>;
     length: number;
     each: (f: (child: Child, index: number) => void) => void;
     toArray: () => Array<Child>;
@@ -24,9 +15,12 @@ export declare class Collection<Child extends Node> {
 }
 export declare class Transform {
     m: Array<number>;
+    dirty: boolean;
     constructor(m?: number[]);
+    reset(): void;
     copy(): Transform;
-    point(point: Point): {
+    copyInto(tr: Transform): void;
+    point(point: Vector2d): {
         x: number;
         y: number;
     };
@@ -42,12 +36,21 @@ export declare class Transform {
     invert(): this;
     getMatrix(): number[];
     setAbsolutePosition(x: number, y: number): this;
+    decompose(): {
+        x: number;
+        y: number;
+        rotation: number;
+        scaleX: number;
+        scaleY: number;
+        skewX: number;
+        skewY: number;
+    };
 }
 export declare const Util: {
     _isElement(obj: any): obj is Element;
     _isFunction(obj: any): boolean;
     _isPlainObject(obj: any): boolean;
-    _isArray(obj: any): boolean;
+    _isArray(obj: any): obj is any[];
     _isNumber(obj: any): obj is number;
     _isString(obj: any): obj is string;
     _isBoolean(obj: any): obj is boolean;
@@ -82,6 +85,7 @@ export declare const Util: {
     cloneArray(arr: any[]): any[];
     _degToRad(deg: number): number;
     _radToDeg(rad: number): number;
+    _getRotation(radians: any): any;
     _capitalize(str: string): string;
     throw(str: string): never;
     error(str: string): void;
@@ -92,7 +96,7 @@ export declare const Util: {
     each(obj: any, func: any): void;
     _inRange(val: any, left: any, right: any): boolean;
     _getProjectionToSegment(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any): any[];
-    _getProjectionToLine(pt: Point, line: any, isClosed: any): Point;
+    _getProjectionToLine(pt: Vector2d, line: any, isClosed: any): Vector2d;
     _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): any[];
     _prepareToStringify(obj: any): any;
     _assign<T, U>(target: T, source: U): T & U;

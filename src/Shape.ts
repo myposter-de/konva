@@ -5,19 +5,24 @@ import {
   getNumberValidator,
   getNumberOrAutoValidator,
   getStringValidator,
-  getBooleanValidator
+  getBooleanValidator,
+  getStringOrGradientValidator,
 } from './Validators';
 
-import { Context } from './Context';
+import { Context, SceneContext } from './Context';
 import { _registerNode } from './Global';
 import * as PointerEvents from './PointerEvents';
 
 import { GetSet, Vector2d } from './types';
+import { HitCanvas, SceneCanvas } from './Canvas';
 
 // hack from here https://stackoverflow.com/questions/52667959/what-is-the-purpose-of-bivariancehack-in-typescript-types/52668133#52668133
 export type ShapeConfigHandler<TTarget> = {
   bivarianceHack(ctx: Context, shape: TTarget): void;
 }['bivarianceHack'];
+
+export type LineJoin = 'round' | 'bevel' | 'miter';
+export type LineCap = 'butt' | 'round' | 'square';
 
 export interface ShapeConfig extends NodeConfig {
   fill?: string;
@@ -52,12 +57,13 @@ export interface ShapeConfig extends NodeConfig {
   fillPriority?: string;
   stroke?: string;
   strokeWidth?: number;
+  fillAfterStrokeEnabled?: boolean;
   hitStrokeWidth?: number | string;
   strokeScaleEnabled?: boolean;
   strokeHitEnabled?: boolean;
   strokeEnabled?: boolean;
-  lineJoin?: string;
-  lineCap?: string;
+  lineJoin?: LineJoin;
+  lineCap?: LineCap;
   sceneFunc?: (con: Context, shape: Shape) => void;
   hitFunc?: (con: Context, shape: Shape) => void;
   shadowColor?: string;
@@ -74,13 +80,20 @@ export interface ShapeConfig extends NodeConfig {
   perfectDrawEnabled?: boolean;
 }
 
+export interface ShapeGetClientRectConfig {
+  skipTransform?: boolean;
+  skipShadow?: boolean;
+  skipStroke?: boolean;
+  relativeTo?: Node;
+}
+
 var HAS_SHADOW = 'hasShadow';
 var SHADOW_RGBA = 'shadowRGBA';
 var patternImage = 'patternImage';
 var linearGradient = 'linearGradient';
 var radialGradient = 'radialGradient';
 
-var dummyContext;
+let dummyContext: CanvasRenderingContext2D;
 function getDummyContext(): CanvasRenderingContext2D {
   if (dummyContext) {
     return dummyContext;
@@ -89,7 +102,7 @@ function getDummyContext(): CanvasRenderingContext2D {
   return dummyContext;
 }
 
-export const shapes = {};
+export const shapes: { [key: string]: Shape } = {};
 
 // TODO: idea - use only "remove" (or destroy method)
 // how? on add, check that every inner shape has reference in konva store with color
@@ -170,7 +183,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   constructor(config?: Config) {
     super(config);
     // set colorKey
-    var key;
+    let key: string;
 
     while (true) {
       key = Util.getRandomColor();
@@ -181,31 +194,6 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
 
     this.colorKey = key;
     shapes[key] = this;
-
-    this.on(
-      'shadowColorChange.konva shadowBlurChange.konva shadowOffsetChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
-      _clearHasShadowCache
-    );
-
-    this.on(
-      'shadowColorChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
-      _clearGetShadowRGBACache
-    );
-
-    this.on(
-      'fillPriorityChange.konva fillPatternImageChange.konva fillPatternRepeatChange.konva fillPatternScaleXChange.konva fillPatternScaleYChange.konva',
-      _clearFillPatternCache
-    );
-
-    this.on(
-      'fillPriorityChange.konva fillLinearGradientColorStopsChange.konva fillLinearGradientStartPointXChange.konva fillLinearGradientStartPointYChange.konva fillLinearGradientEndPointXChange.konva fillLinearGradientEndPointYChange.konva',
-      _clearLinearGradientCache
-    );
-
-    this.on(
-      'fillPriorityChange.konva fillRadialGradientColorStopsChange.konva fillRadialGradientStartPointXChange.konva fillRadialGradientStartPointYChange.konva fillRadialGradientEndPointXChange.konva fillRadialGradientEndPointYChange.konva fillRadialGradientStartRadiusChange.konva fillRadialGradientEndRadiusChange.konva',
-      _clearRadialGradientCache
-    );
   }
 
   /**
@@ -246,13 +234,13 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   _hasShadow() {
     return (
       this.shadowEnabled() &&
-      (this.shadowOpacity() !== 0 &&
-        !!(
-          this.shadowColor() ||
-          this.shadowBlur() ||
-          this.shadowOffsetX() ||
-          this.shadowOffsetY()
-        ))
+      this.shadowOpacity() !== 0 &&
+      !!(
+        this.shadowColor() ||
+        this.shadowBlur() ||
+        this.shadowOffsetX() ||
+        this.shadowOffsetY()
+      )
     );
   }
   _getFillPattern() {
@@ -265,15 +253,16 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
         this.fillPatternImage(),
         this.fillPatternRepeat() || 'repeat'
       );
-      // TODO: how to enable it? It doesn't work in FF...
-      // pattern.setTransform({
-      //   a: this.fillPatternScaleX(), // Horizontal scaling. A value of 1 results in no scaling.
-      //   b: 0, // Vertical skewing.
-      //   c: 0, // Horizontal skewing.
-      //   d: this.fillPatternScaleY(), // Vertical scaling. A value of 1 results in no scaling.
-      //   e: 0, // Horizontal translation (moving).
-      //   f: 0 // Vertical translation (moving).
-      // });
+      if (pattern && pattern.setTransform) {
+        pattern.setTransform({
+          a: this.fillPatternScaleX(), // Horizontal scaling. A value of 1 results in no scaling.
+          b: 0, // Vertical skewing.
+          c: 0, // Horizontal skewing.
+          d: this.fillPatternScaleY(), // Vertical scaling. A value of 1 results in no scaling.
+          e: 0, // Horizontal translation (moving).
+          f: 0, // Vertical translation (moving).
+        });
+      }
       return pattern;
     }
   }
@@ -349,11 +338,26 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
    * @returns {Boolean}
    */
   hasFill() {
-    return this.fillEnabled() && !!(
-      this.fill() ||
-      this.fillPatternImage() ||
-      this.fillLinearGradientColorStops() ||
-      this.fillRadialGradientColorStops()
+    return this._calculate(
+      'hasFill',
+      [
+        'fillEnabled',
+        'fill',
+        'fillPatternImage',
+        'fillLinearGradientColorStops',
+        'fillRadialGradientColorStops',
+      ],
+      () => {
+        return (
+          this.fillEnabled() &&
+          !!(
+            this.fill() ||
+            this.fillPatternImage() ||
+            this.fillLinearGradientColorStops() ||
+            this.fillRadialGradientColorStops()
+          )
+        );
+      }
     );
   }
   /**
@@ -363,22 +367,41 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
    * @returns {Boolean}
    */
   hasStroke() {
-    return (
-      this.strokeEnabled() &&
-      this.strokeWidth() &&
-      !!(this.stroke() || this.strokeLinearGradientColorStops())
-      // this.getStrokeRadialGradientColorStops()
+    return this._calculate(
+      'hasStroke',
+      [
+        'strokeEnabled',
+        'strokeWidth',
+        'stroke',
+        'strokeLinearGradientColorStops',
+      ],
+      () => {
+        return (
+          this.strokeEnabled() &&
+          this.strokeWidth() &&
+          !!(this.stroke() || this.strokeLinearGradientColorStops())
+          // this.getStrokeRadialGradientColorStops()
+        );
+      }
     );
+    // return (
+    //   this.strokeEnabled() &&
+    //   this.strokeWidth() &&
+    //   !!(this.stroke() || this.strokeLinearGradientColorStops())
+    //   // this.getStrokeRadialGradientColorStops()
+    // );
   }
   hasHitStroke() {
     const width = this.hitStrokeWidth();
 
-    // we should enable hit stroke we stroke is enabled
+    // on auto just check by stroke
+    if (width === 'auto') {
+      return this.hasStroke();
+    }
+
+    // we should enable hit stroke if stroke is enabled
     // and we have some value from width
-    return (
-      this.strokeEnabled() &&
-      (width || this.strokeWidth() && width === 'auto')
-    );
+    return this.strokeEnabled() && !!width;
   }
   /**
    * determines if point is in the shape, regardless if other shapes are on top of it.  Note: because
@@ -398,7 +421,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       p;
 
     bufferHitCanvas.getContext().clear();
-    this.drawHit(bufferHitCanvas);
+    this.drawHit(bufferHitCanvas, null, true);
     p = bufferHitCanvas.context.getImageData(
       Math.round(point.x),
       Math.round(point.y),
@@ -417,17 +440,39 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   // why do we need buffer canvas?
   // it give better result when a shape has
   // stroke with fill and with some opacity
-  _useBufferCanvas(caching): boolean {
-    return !!(
-      (!caching || this.hasShadow()) &&
-      this.perfectDrawEnabled() &&
-      this.getAbsoluteOpacity() !== 1 &&
-      this.hasFill() &&
-      this.hasStroke() &&
-      this.getStage()
-    );
+  _useBufferCanvas(forceFill?: boolean): boolean {
+    // image and sprite still has "fill" as image
+    // so they use that method with forced fill
+    // it probably will be simpler, then copy/paste the code
+
+    // buffer canvas is available only inside the stage
+    if (!this.getStage()) {
+      return false;
+    }
+    // force skip buffer canvas
+    const perfectDrawEnabled = this.attrs.perfectDrawEnabled ?? true;
+    if (!perfectDrawEnabled) {
+      return false;
+    }
+    const hasFill = forceFill || this.hasFill();
+    const hasStroke = this.hasStroke();
+    const isTransparent = this.getAbsoluteOpacity() !== 1;
+
+    if (hasFill && hasStroke && isTransparent) {
+      return true;
+    }
+
+    const hasShadow = this.hasShadow();
+    const strokeForShadow = this.shadowForStrokeEnabled();
+    if (hasFill && hasStroke && hasShadow && strokeForShadow) {
+      return true;
+    }
+    return false;
   }
   setStrokeHitEnabled(val: number) {
+    Util.warn(
+      'strokeHitEnabled property is deprecated. Please use hitStrokeWidth instead.'
+    );
     if (val) {
       this.hitStrokeWidth('auto');
     } else {
@@ -456,46 +501,45 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   getSelfRect() {
     var size = this.size();
     return {
-      x: this._centroid ? Math.round(-size.width / 2) : 0,
-      y: this._centroid ? Math.round(-size.height / 2) : 0,
+      x: this._centroid ? -size.width / 2 : 0,
+      y: this._centroid ? -size.height / 2 : 0,
       width: size.width,
-      height: size.height
+      height: size.height,
     };
   }
-  getClientRect(attrs) {
-    attrs = attrs || {};
-    var skipTransform = attrs.skipTransform;
+  getClientRect(config: ShapeGetClientRectConfig = {}) {
+    const skipTransform = config.skipTransform;
 
-    var relativeTo = attrs.relativeTo;
+    const relativeTo = config.relativeTo;
 
-    var fillRect = this.getSelfRect();
+    const fillRect = this.getSelfRect();
 
-    var applyStroke = !attrs.skipStroke && this.hasStroke();
-    var strokeWidth = (applyStroke && this.strokeWidth()) || 0;
+    const applyStroke = !config.skipStroke && this.hasStroke();
+    const strokeWidth = (applyStroke && this.strokeWidth()) || 0;
 
-    var fillAndStrokeWidth = fillRect.width + strokeWidth;
-    var fillAndStrokeHeight = fillRect.height + strokeWidth;
+    const fillAndStrokeWidth = fillRect.width + strokeWidth;
+    const fillAndStrokeHeight = fillRect.height + strokeWidth;
 
-    var applyShadow = !attrs.skipShadow && this.hasShadow();
-    var shadowOffsetX = applyShadow ? this.shadowOffsetX() : 0;
-    var shadowOffsetY = applyShadow ? this.shadowOffsetY() : 0;
+    const applyShadow = !config.skipShadow && this.hasShadow();
+    const shadowOffsetX = applyShadow ? this.shadowOffsetX() : 0;
+    const shadowOffsetY = applyShadow ? this.shadowOffsetY() : 0;
 
-    var preWidth = fillAndStrokeWidth + Math.abs(shadowOffsetX);
-    var preHeight = fillAndStrokeHeight + Math.abs(shadowOffsetY);
+    const preWidth = fillAndStrokeWidth + Math.abs(shadowOffsetX);
+    const preHeight = fillAndStrokeHeight + Math.abs(shadowOffsetY);
 
-    var blurRadius = (applyShadow && this.shadowBlur()) || 0;
+    const blurRadius = (applyShadow && this.shadowBlur()) || 0;
 
-    var width = preWidth + blurRadius * 2;
-    var height = preHeight + blurRadius * 2;
+    const width = preWidth + blurRadius * 2;
+    const height = preHeight + blurRadius * 2;
 
     // if stroke, for example = 3
     // we need to set x to 1.5, but after Math.round it will be 2
     // as we have additional offset we need to increase width and height by 1 pixel
-    var roundingOffset = 0;
+    let roundingOffset = 0;
     if (Math.round(strokeWidth / 2) !== strokeWidth / 2) {
       roundingOffset = 1;
     }
-    var rect = {
+    const rect = {
       width: width + roundingOffset,
       height: height + roundingOffset,
       x:
@@ -505,41 +549,54 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       y:
         -Math.round(strokeWidth / 2 + blurRadius) +
         Math.min(shadowOffsetY, 0) +
-        fillRect.y
+        fillRect.y,
     };
     if (!skipTransform) {
       return this._transformedRect(rect, relativeTo);
     }
     return rect;
   }
-  drawScene(can, top, caching, skipBuffer) {
+  drawScene(can?: SceneCanvas, top?: Node) {
+    // basically there are 3 drawing modes
+    // 1 - simple drawing when nothing is cached.
+    // 2 - when we are caching current
+    // 3 - when node is cached and we need to draw it into layer
+
     var layer = this.getLayer(),
       canvas = can || layer.getCanvas(),
-      context = canvas.getContext(),
+      context = canvas.getContext() as SceneContext,
       cachedCanvas = this._getCanvasCache(),
-      drawFunc = this.sceneFunc(),
+      drawFunc = this.getSceneFunc(),
       hasShadow = this.hasShadow(),
-      hasStroke = this.hasStroke(),
       stage,
       bufferCanvas,
       bufferContext;
 
+    var caching = canvas.isCache;
+    var skipBuffer = canvas.isCache;
+    var cachingSelf = top === this;
+
     if (!this.isVisible() && !caching) {
       return this;
     }
+    // if node is cached we just need to draw from cache
     if (cachedCanvas) {
       context.save();
-      layer._applyTransform(this, context, top);
+
+      var m = this.getAbsoluteTransform(top).getMatrix();
+      context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
       this._drawCachedSceneCanvas(context);
       context.restore();
       return this;
     }
+
     if (!drawFunc) {
       return this;
     }
+
     context.save();
     // if buffer canvas is needed
-    if (this._useBufferCanvas(caching) && !skipBuffer) {
+    if (this._useBufferCanvas() && !skipBuffer) {
       stage = this.getStage();
       bufferCanvas = stage.bufferCanvas;
       bufferContext = bufferCanvas.getContext();
@@ -547,95 +604,50 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       bufferContext.save();
       bufferContext._applyLineJoin(this);
       // layer might be undefined if we are using cache before adding to layer
-      if (!caching) {
-        if (layer) {
-          layer._applyTransform(this, bufferContext, top);
-        } else {
-          var m = this.getAbsoluteTransform(top).getMatrix();
-          context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
-        }
-      }
+      var o = this.getAbsoluteTransform(top).getMatrix();
+      bufferContext.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
 
       drawFunc.call(this, bufferContext, this);
       bufferContext.restore();
 
       var ratio = bufferCanvas.pixelRatio;
-      if (hasShadow && !canvas.hitCanvas) {
-        context.save();
 
+      if (hasShadow) {
         context._applyShadow(this);
-        context._applyOpacity(this);
-        context._applyGlobalCompositeOperation(this);
-        context.drawImage(
-          bufferCanvas._canvas,
-          0,
-          0,
-          bufferCanvas.width / ratio,
-          bufferCanvas.height / ratio
-        );
-        context.restore();
-      } else {
-        context._applyOpacity(this);
-        context._applyGlobalCompositeOperation(this);
-        context.drawImage(
-          bufferCanvas._canvas,
-          0,
-          0,
-          bufferCanvas.width / ratio,
-          bufferCanvas.height / ratio
-        );
       }
+      context._applyOpacity(this);
+      context._applyGlobalCompositeOperation(this);
+      context.drawImage(
+        bufferCanvas._canvas,
+        0,
+        0,
+        bufferCanvas.width / ratio,
+        bufferCanvas.height / ratio
+      );
     } else {
-      // if buffer canvas is not needed
       context._applyLineJoin(this);
-      // layer might be undefined if we are using cache before adding to layer
-      if (!caching) {
-        if (layer) {
-          layer._applyTransform(this, context, top);
-        } else {
-          var o = this.getAbsoluteTransform(top).getMatrix();
-          context.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
-        }
+
+      if (!cachingSelf) {
+        var o = this.getAbsoluteTransform(top).getMatrix();
+        context.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
+        context._applyOpacity(this);
+        context._applyGlobalCompositeOperation(this);
       }
 
-      if (hasShadow && hasStroke && !canvas.hitCanvas) {
-        context.save();
-        // apply shadow
-        if (!caching) {
-          context._applyOpacity(this);
-          context._applyGlobalCompositeOperation(this);
-        }
+      if (hasShadow) {
         context._applyShadow(this);
-
-        drawFunc.call(this, context, this);
-        context.restore();
-        // if shape has stroke we need to redraw shape
-        // otherwise we will see a shadow under stroke (and over fill)
-        // but I think this is unexpected behavior
-        if (this.hasFill() && this.shadowForStrokeEnabled()) {
-          drawFunc.call(this, context, this);
-        }
-      } else if (hasShadow && !canvas.hitCanvas) {
-        context.save();
-        if (!caching) {
-          context._applyOpacity(this);
-          context._applyGlobalCompositeOperation(this);
-        }
-        context._applyShadow(this);
-        drawFunc.call(this, context, this);
-        context.restore();
-      } else {
-        if (!caching) {
-          context._applyOpacity(this);
-          context._applyGlobalCompositeOperation(this);
-        }
-        drawFunc.call(this, context, this);
       }
+
+      drawFunc.call(this, context, this);
     }
     context.restore();
     return this;
   }
-  drawHit(can, top?, caching?) {
+  drawHit(can?: HitCanvas, top?: Node, skipDragCheck = false) {
+    if (!this.shouldDrawHit(top, skipDragCheck)) {
+      return this;
+    }
+
     var layer = this.getLayer(),
       canvas = can || layer.hitCanvas,
       context = canvas && canvas.getContext(),
@@ -650,12 +662,12 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       );
     }
 
-    if (!this.shouldDrawHit() && !caching) {
-      return this;
-    }
     if (cachedHitCanvas) {
       context.save();
-      layer._applyTransform(this, context, top);
+
+      var m = this.getAbsoluteTransform(top).getMatrix();
+      context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+
       this._drawCachedHitCanvas(context);
       context.restore();
       return this;
@@ -665,13 +677,11 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
     }
     context.save();
     context._applyLineJoin(this);
-    if (!caching) {
-      if (layer) {
-        layer._applyTransform(this, context, top);
-      } else {
-        var o = this.getAbsoluteTransform(top).getMatrix();
-        context.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
-      }
+
+    const selfCache = this === top;
+    if (!selfCache) {
+      var o = this.getAbsoluteTransform(top).getMatrix();
+      context.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
     }
     drawFunc.call(this, context, this);
     context.restore();
@@ -789,8 +799,8 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   fillPatternY: GetSet<number, this>;
   fillPriority: GetSet<string, this>;
   hitFunc: GetSet<ShapeConfigHandler<this>, this>;
-  lineCap: GetSet<string, this>;
-  lineJoin: GetSet<string, this>;
+  lineCap: GetSet<LineCap, this>;
+  lineJoin: GetSet<LineJoin, this>;
   perfectDrawEnabled: GetSet<boolean, this>;
   sceneFunc: GetSet<ShapeConfigHandler<this>, this>;
   shadowColor: GetSet<string, this>;
@@ -803,6 +813,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   shadowBlur: GetSet<number, this>;
   stroke: GetSet<string, this>;
   strokeEnabled: GetSet<boolean, this>;
+  fillAfterStrokeEnabled: GetSet<boolean, this>;
   strokeScaleEnabled: GetSet<boolean, this>;
   strokeHitEnabled: GetSet<boolean, this>;
   strokeWidth: GetSet<number, this>;
@@ -819,8 +830,44 @@ Shape.prototype._centroid = false;
 Shape.prototype.nodeType = 'Shape';
 _registerNode(Shape);
 
+Shape.prototype.eventListeners = {};
+Shape.prototype.on.call(
+  Shape.prototype,
+  'shadowColorChange.konva shadowBlurChange.konva shadowOffsetChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
+  _clearHasShadowCache
+);
+
+Shape.prototype.on.call(
+  Shape.prototype,
+  'shadowColorChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
+  _clearGetShadowRGBACache
+);
+
+Shape.prototype.on.call(
+  Shape.prototype,
+  'fillPriorityChange.konva fillPatternImageChange.konva fillPatternRepeatChange.konva fillPatternScaleXChange.konva fillPatternScaleYChange.konva',
+  _clearFillPatternCache
+);
+
+Shape.prototype.on.call(
+  Shape.prototype,
+  'fillPriorityChange.konva fillLinearGradientColorStopsChange.konva fillLinearGradientStartPointXChange.konva fillLinearGradientStartPointYChange.konva fillLinearGradientEndPointXChange.konva fillLinearGradientEndPointYChange.konva',
+  _clearLinearGradientCache
+);
+
+Shape.prototype.on.call(
+  Shape.prototype,
+  'fillPriorityChange.konva fillRadialGradientColorStopsChange.konva fillRadialGradientStartPointXChange.konva fillRadialGradientStartPointYChange.konva fillRadialGradientEndPointXChange.konva fillRadialGradientEndPointYChange.konva fillRadialGradientStartRadiusChange.konva fillRadialGradientEndRadiusChange.konva',
+  _clearRadialGradientCache
+);
+
 // add getters and setters
-Factory.addGetterSetter(Shape, 'stroke', undefined, getStringValidator());
+Factory.addGetterSetter(
+  Shape,
+  'stroke',
+  undefined,
+  getStringOrGradientValidator()
+);
 
 /**
  * get/set stroke color
@@ -861,6 +908,25 @@ Factory.addGetterSetter(Shape, 'strokeWidth', 2, getNumberValidator());
  * shape.strokeWidth(10);
  */
 
+Factory.addGetterSetter(Shape, 'fillAfterStrokeEnabled', false);
+
+/**
+ * get/set fillAfterStrokeEnabled property. By default Konva is drawing filling first, then stroke on top of the fill.
+ * In rare situations you may want a different behavior. When you have a stroke first then fill on top of it.
+ * Especially useful for Text objects.
+ * Default is false.
+ * @name Konva.Shape#fillAfterStrokeEnabled
+ * @method
+ * @param {Boolean} fillAfterStrokeEnabled
+ * @returns {Boolean}
+ * @example
+ * // get stroke width
+ * var fillAfterStrokeEnabled = shape.fillAfterStrokeEnabled();
+ *
+ * // set stroke width
+ * shape.fillAfterStrokeEnabled(true);
+ */
+
 Factory.addGetterSetter(
   Shape,
   'hitStrokeWidth',
@@ -884,11 +950,10 @@ Factory.addGetterSetter(
  * shape.hitStrokeWidth('auto');
  */
 
-// TODO: probably we should deprecate it
 Factory.addGetterSetter(Shape, 'strokeHitEnabled', true, getBooleanValidator());
 
 /**
- * get/set strokeHitEnabled property. Useful for performance optimization.
+ * **deprecated, use hitStrokeWidth instead!** get/set strokeHitEnabled property. Useful for performance optimization.
  * You may set `shape.strokeHitEnabled(false)`. In this case stroke will be no draw on hit canvas, so hit area
  * of shape will be decreased (by lineWidth / 2). Remember that non closed line with `strokeHitEnabled = false`
  * will be not drawn on hit canvas, that is mean line will no trigger pointer events (like mouseover)
@@ -1192,7 +1257,12 @@ Factory.addGetterSetter(Shape, 'fillPatternImage');
  * imageObj.src = 'path/to/image/jpg';
  */
 
-Factory.addGetterSetter(Shape, 'fill', undefined, getStringValidator());
+Factory.addGetterSetter(
+  Shape,
+  'fill',
+  undefined,
+  getStringOrGradientValidator()
+);
 
 /**
  * get/set fill color
@@ -1572,7 +1642,7 @@ Factory.addGetterSetter(Shape, 'fillPatternScaleY', 1, getNumberValidator());
 
 Factory.addComponentsGetterSetter(Shape, 'fillLinearGradientStartPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1596,7 +1666,7 @@ Factory.addComponentsGetterSetter(Shape, 'fillLinearGradientStartPoint', [
 
 Factory.addComponentsGetterSetter(Shape, 'strokeLinearGradientStartPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1683,7 +1753,7 @@ Factory.addGetterSetter(Shape, 'strokeLinearGradientStartPointY', 0);
 
 Factory.addComponentsGetterSetter(Shape, 'fillLinearGradientEndPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1707,7 +1777,7 @@ Factory.addComponentsGetterSetter(Shape, 'fillLinearGradientEndPoint', [
 
 Factory.addComponentsGetterSetter(Shape, 'strokeLinearGradientEndPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1791,7 +1861,7 @@ Factory.addGetterSetter(Shape, 'strokeLinearGradientEndPointY', 0);
 
 Factory.addComponentsGetterSetter(Shape, 'fillRadialGradientStartPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1845,7 +1915,7 @@ Factory.addGetterSetter(Shape, 'fillRadialGradientStartPointY', 0);
 
 Factory.addComponentsGetterSetter(Shape, 'fillRadialGradientEndPoint', [
   'x',
-  'y'
+  'y',
 ]);
 
 /**
@@ -1924,7 +1994,7 @@ Factory.backCompat(Shape, {
 
   drawHitFunc: 'hitFunc',
   getDrawHitFunc: 'getHitFunc',
-  setDrawHitFunc: 'setHitFunc'
+  setDrawHitFunc: 'setHitFunc',
 });
 
 Collection.mapMethods(Shape);

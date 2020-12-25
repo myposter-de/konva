@@ -1,9 +1,12 @@
 import { Node, NodeConfig } from './Node';
 import { Context } from './Context';
 import { GetSet, Vector2d } from './types';
+import { HitCanvas, SceneCanvas } from './Canvas';
 export declare type ShapeConfigHandler<TTarget> = {
     bivarianceHack(ctx: Context, shape: TTarget): void;
 }['bivarianceHack'];
+export declare type LineJoin = 'round' | 'bevel' | 'miter';
+export declare type LineCap = 'butt' | 'round' | 'square';
 export interface ShapeConfig extends NodeConfig {
     fill?: string;
     fillPatternImage?: HTMLImageElement;
@@ -37,12 +40,13 @@ export interface ShapeConfig extends NodeConfig {
     fillPriority?: string;
     stroke?: string;
     strokeWidth?: number;
+    fillAfterStrokeEnabled?: boolean;
     hitStrokeWidth?: number | string;
     strokeScaleEnabled?: boolean;
     strokeHitEnabled?: boolean;
     strokeEnabled?: boolean;
-    lineJoin?: string;
-    lineCap?: string;
+    lineJoin?: LineJoin;
+    lineCap?: LineCap;
     sceneFunc?: (con: Context, shape: Shape) => void;
     hitFunc?: (con: Context, shape: Shape) => void;
     shadowColor?: string;
@@ -58,7 +62,15 @@ export interface ShapeConfig extends NodeConfig {
     dashEnabled?: boolean;
     perfectDrawEnabled?: boolean;
 }
-export declare const shapes: {};
+export interface ShapeGetClientRectConfig {
+    skipTransform?: boolean;
+    skipShadow?: boolean;
+    skipStroke?: boolean;
+    relativeTo?: Node;
+}
+export declare const shapes: {
+    [key: string]: Shape;
+};
 export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<Config> {
     _centroid: boolean;
     colorKey: string;
@@ -68,7 +80,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     _strokeFuncHit: (ctx: Context) => void;
     constructor(config?: Config);
     getContext(): Context;
-    getCanvas(): import("./Canvas").SceneCanvas;
+    getCanvas(): SceneCanvas;
     getSceneFunc(): any;
     getHitFunc(): any;
     hasShadow(): any;
@@ -81,12 +93,12 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     __getRadialGradient(): CanvasGradient;
     getShadowRGBA(): any;
     _getShadowRGBA(): string;
-    hasFill(): boolean;
-    hasStroke(): boolean;
-    hasHitStroke(): number | boolean | "" | "auto";
+    hasFill(): any;
+    hasStroke(): any;
+    hasHitStroke(): any;
     intersects(point: any): boolean;
     destroy(): this;
-    _useBufferCanvas(caching: any): boolean;
+    _useBufferCanvas(forceFill?: boolean): boolean;
     setStrokeHitEnabled(val: number): void;
     getStrokeHitEnabled(): boolean;
     getSelfRect(): {
@@ -95,14 +107,14 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
         width: number;
         height: number;
     };
-    getClientRect(attrs: any): {
+    getClientRect(config?: ShapeGetClientRectConfig): {
         width: number;
         height: number;
         x: number;
         y: number;
     };
-    drawScene(can: any, top: any, caching: any, skipBuffer: any): this;
-    drawHit(can: any, top?: any, caching?: any): this;
+    drawScene(can?: SceneCanvas, top?: Node): this;
+    drawHit(can?: HitCanvas, top?: Node, skipDragCheck?: boolean): this;
     drawHitFromCache(alphaThreshold?: number): this;
     hasPointerCapture(pointerId: number): boolean;
     setPointerCapture(pointerId: number): void;
@@ -149,8 +161,8 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     fillPatternY: GetSet<number, this>;
     fillPriority: GetSet<string, this>;
     hitFunc: GetSet<ShapeConfigHandler<this>, this>;
-    lineCap: GetSet<string, this>;
-    lineJoin: GetSet<string, this>;
+    lineCap: GetSet<LineCap, this>;
+    lineJoin: GetSet<LineJoin, this>;
     perfectDrawEnabled: GetSet<boolean, this>;
     sceneFunc: GetSet<ShapeConfigHandler<this>, this>;
     shadowColor: GetSet<string, this>;
@@ -163,6 +175,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     shadowBlur: GetSet<number, this>;
     stroke: GetSet<string, this>;
     strokeEnabled: GetSet<boolean, this>;
+    fillAfterStrokeEnabled: GetSet<boolean, this>;
     strokeScaleEnabled: GetSet<boolean, this>;
     strokeHitEnabled: GetSet<boolean, this>;
     strokeWidth: GetSet<number, this>;

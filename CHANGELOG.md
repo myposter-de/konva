@@ -3,7 +3,174 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## Not released:
+## 7.2.2
+
+* Fix wrong size calculations for `Konva.Line` with tension
+* Fix `shape.intersects()` behavior when a node is dragged
+* Fix ellipsis rendering for `Konva.Text`
+
+## 7.2.1
+
+* Fix correct rendering of `Konva.Label` when heigh of text is changed
+* Fix correct `transformstart` and `transformend` events when several nodes are attached with `Konva.Transformer`
+
+## 7.2.0
+
+* New property `fillAfterStrokeEnabled` for `Konva.Shape`. See API docs for more information.
+* Fix for `Konva.Transformer` when it may fail to draw.
+* Fix rendering of `TextPath` one more time.
+
+## 7.1.9
+
+* Fix autodrawing for `Konva.Transformer` when it is on a different layer
+* Fix `Konva.RegularPolygon` size calculations.
+
+## 7.1.8
+
+* Fix incorrect rendering of `TextPath` in some cases. (again)
+
+## 7.1.7
+
+* Fix incorrect rendering of `TextPath` in some cases.
+
+## 7.1.6
+
+* Fix for correct image/dataURL/canvas exports  for `Konva.Stage`.
+
+## 7.1.5
+
+* Performance fixes for dragging many nodes with `Konva.Transformer`.
+* Documentation updates
+
+## 7.1.4
+
+* Perf fixes
+* Change events trigger flow, so adding new events INSIDE event callback will work correctly.
+* Fix double `dragend`, `dragstart`, `dragmove` triggers on `Konva.Transformer`
+
+## 7.1.3
+
+* Text rendering fixes
+
+## 7.1.2
+
+* fix ellipses behavior for `Konva.Text`.
+* fix scaled fill pattern for text.
+
+## 7.1.1
+
+* fixes for `dragstart` event when `Konva.Transformer` is used. `dragstart` event will have correct native `evt` reference
+* Better unicode support in `Konva.Text` and `Konva.TextPath`. Emoji should work better now 👍
+
+## 7.1.0
+
+* Multi row support for `ellipsis` config for `Konva.Text`
+* Better `Konva.Transfomer` behavior when single attached node is programmatically rotated.
+
+## 7.0.7
+
+* fixes for `dragstart` event when `Konva.Transformer` is used. `dragstart` will not bubble from transformer.
+* `string` and `fill` properties validation can accept `CanvasGradient` as valid value
+
+## 7.0.6
+
+* Better performance for stage dragging
+
+## 7.0.5
+
+* Fixes for `node.cache()` function.
+
+## 7.0.4
+
+* Add `onUpdate` callbacks to `Konva.Tween` configuration and `node.to()` method.
+* Up to 6x faster initializations of objects, like `const shape = new Konva.Shape()`.
+
+## 7.0.3 - 2020-07-09
+
+* Fix wring `dragend` trigger on `draggable` property change inside `click`
+* Fix incorrect text rendering with `letterSpacing !== 0`
+* Typescript fixes
+
+## 7.0.2 - 2020-06-30
+
+* Fix wrong trigger `dbltap` and `click` on mobile
+
+## 7.0.1 - 2020-06-29
+
+* Fixes for different font families support.
+* Fixes for `Konva.Transformer` positions
+* Types fixes for better Typescript support
+
+
+## 7.0.0 - 2020-06-23
+
+* **BREAKING** `inherit` option is removed from `visible` and `listening`. They now just have boolean values `true` or `false`. If you do `group.listening(false);` then whole group and all its children will be removed from the hitGraph (and they will not listen to events). Probably 99% `Konva` applications will be not affected by this *breaking change*.
+* **Many performance fixes and code size optimizations. Up to 70% performance boost for many moving nodes.**
+* `layer.hitGraphEnabled()` is deprecated. Just use `layer.listening(false)` instead
+* Better support for font families with spaces inside (like `Font Awesome 5`).
+* Fix wrong `dblclick` and `dbltap` triggers
+* Deprecate `Konva.FastLayer`. Use `new Konva.Layer({ listening: false });` instead.
+* `dragmove` event will be fired on `Konva.Transformer` too when you drag a node.
+* `dragmove` triggers only after ALL positions of dragging nodes are changed
+
+
+## 6.0.0 - 2020-05-08
+
+* **BREAKING!** `boundBoxFunc` of `Konva.Transformer` works in absolute coordinates of whole transformer. Previously in was working in local coordinates of transforming node.
+* Many `Konva.Transformer` fixes. Now it works correctly when you transform several rotated shapes.
+* Fix for wrong `mouseleave` and `mouseout` fire on shape remove/destroy.
+
+## 5.0.3 - 2020-05-01
+
+* Fixes for `boundBoxFunc` of `Konva.Transformer`.
+
+## 5.0.2 - 2020-04-23
+
+* Deatach fixes for `Konva.Transformer`
+
+## 5.0.1 - 2020-04-22
+
+* Fixes for `Konva.Transformer` when parent scale is changed
+* Fixes for `Konva.Transformer` when parent is draggable
+* Performance optimizations
+
+## 5.0.0 - 2020-04-21
+
+* **New `Konva.Transformer` implementation!**. Old API should work. But I marked this release is `major` (breaking) just for smooth updates. Changes:
+  * Support of transforming multiple nodes at once: `tr.nodes([shape1, shape2])`.
+  * `tr.node()`, `tr.setNode()`, `tr.attachTo()` methods are deprecated. Use `tr.nodes(array)` instead
+  * Fixes for center scaling
+  * Fixes for better `padding` support
+  * `Transformer` can be placed anywhere in the tree of a stage tree (NOT just inside a parent of attached node).
+* Fix `imageSmoothEnabled` resets when stage is resized
+* Memory usage optimizations when a node is cached
+
+## 4.2.2 - 2020-03-26
+
+* Fix hit stroke issues
+
+## 4.2.1 - 2020-03-26
+
+* Fix some issues with `mouseenter` and `mouseleave` events.
+* Deprecate `hitStrokeEnabled` property
+* Fix rounding issues for `getClientRect()` for some shapes
+
+## 4.2.0 - 2020-03-14
+
+* Add `rotationSnapTolerance` property to `Konva.Transformer`.
+* Add `getActiveAnchor()` method to `Konva.Transformer`
+* Fix hit for non-closed `Konva.Path`
+* Some fixes for experimental Offscreen canvas support inside a worker
+
+## 4.1.6 - 2020-02-25
+
+* Events fixes for `Konva.Transformer`
+* Now `Konva` will keep `id` in a cloned node
+* Better error messages on tainted canvas issues
+
+## 4.1.5 - 2020-02-16
+
+* Fixes for `path.getClientRect()` function calculations
 
 ## 4.1.4 - 2020-02-10
 
