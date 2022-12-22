@@ -17,6 +17,7 @@ export declare class Layer extends Container<Group | Shape> {
     constructor(config?: LayerConfig);
     createPNGStream(): any;
     getCanvas(): SceneCanvas;
+    getNativeCanvasElement(): HTMLCanvasElement;
     getHitCanvas(): HitCanvas;
     getContext(): import("./Context").Context;
     clear(bounds?: any): this;
@@ -41,18 +42,19 @@ export declare class Layer extends Container<Group | Shape> {
     getHeight(): number;
     setHeight(): void;
     batchDraw(): this;
-    getIntersection(pos: Vector2d, selector?: string): Node | null;
+    getIntersection(pos: Vector2d): Shape<import("./Shape").ShapeConfig>;
     _getIntersection(pos: Vector2d): {
         shape?: Shape;
         antialiased?: boolean;
     };
-    drawScene(can: any, top: any): this;
-    drawHit(can: any, top: any): this;
+    drawScene(can?: SceneCanvas, top?: Node): this;
+    drawHit(can?: HitCanvas, top?: Node): this;
     enableHitGraph(): this;
     disableHitGraph(): this;
     setHitGraphEnabled(val: any): void;
     getHitGraphEnabled(val: any): boolean;
     toggleHitCanvas(): void;
+    destroy(): this;
     hitGraphEnabled: GetSet<boolean, this>;
     clearBeforeDraw: GetSet<boolean, this>;
     imageSmoothingEnabled: GetSet<boolean, this>;

@@ -3,7 +3,6 @@ import { GetSet } from '../types';
 export interface RingConfig extends ShapeConfig {
     innerRadius: number;
     outerRadius: number;
-    clockwise?: boolean;
 }
 export declare class Ring extends Shape<RingConfig> {
     _sceneFunc(context: any): void;

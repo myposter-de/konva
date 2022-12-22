@@ -6,6 +6,7 @@ export interface TextPathConfig extends ShapeConfig {
     fontFamily?: string;
     fontSize?: number;
     fontStyle?: string;
+    letterSpacing?: number;
 }
 export declare class TextPath extends Shape<TextPathConfig> {
     dummyCanvas: HTMLCanvasElement;
@@ -39,6 +40,7 @@ export declare class TextPath extends Shape<TextPathConfig> {
         width: number;
         height: number;
     };
+    destroy(): this;
     fontFamily: GetSet<string, this>;
     fontSize: GetSet<number, this>;
     fontStyle: GetSet<string, this>;

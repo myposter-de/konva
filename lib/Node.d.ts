@@ -1,4 +1,4 @@
-import { Collection, Transform } from './Util';
+import { Transform } from './Util';
 import { SceneCanvas, Canvas } from './Canvas';
 import { Container } from './Container';
 import { GetSet, Vector2d, IRect } from './types';
@@ -6,13 +6,8 @@ import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
 import { Layer } from './Layer';
-export declare const ids: any;
-export declare const names: any;
-export declare const _removeId: (id: string, node: any) => void;
-export declare const _addName: (node: any, name: string) => void;
-export declare const _removeName: (name: string, _id: number) => void;
-export declare type Filter = (this: Node, imageData: ImageData) => void;
-declare type globalCompositeOperationType = '' | 'source-over' | 'source-in' | 'source-out' | 'source-atop' | 'destination-over' | 'destination-in' | 'destination-out' | 'destination-atop' | 'lighter' | 'copy' | 'xor' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
+export type Filter = (this: Node, imageData: ImageData) => void;
+type globalCompositeOperationType = '' | 'source-over' | 'source-in' | 'source-out' | 'source-atop' | 'destination-over' | 'destination-in' | 'destination-out' | 'destination-atop' | 'lighter' | 'copy' | 'xor' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
 export interface NodeConfig {
     [index: string]: any;
     x?: number;
@@ -23,7 +18,7 @@ export interface NodeConfig {
     listening?: boolean;
     id?: string;
     name?: string;
-    opacity?: Number;
+    opacity?: number;
     scale?: Vector2d;
     scaleX?: number;
     scaleY?: number;
@@ -39,17 +34,18 @@ export interface NodeConfig {
     globalCompositeOperation?: globalCompositeOperationType;
     filters?: Array<Filter>;
 }
-declare type NodeEventMap = GlobalEventHandlersEventMap & {
+type NodeEventMap = GlobalEventHandlersEventMap & {
     [index: string]: any;
 };
 export interface KonvaEventObject<EventType> {
+    type: string;
     target: Shape | Stage;
     evt: EventType;
     currentTarget: Node;
     cancelBubble: boolean;
     child?: Node;
 }
-export declare type KonvaEventListener<This, EventType> = (this: This, ev: KonvaEventObject<EventType>) => void;
+export type KonvaEventListener<This, EventType> = (this: This, ev: KonvaEventObject<EventType>) => void;
 export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _id: number;
     eventListeners: {
@@ -70,19 +66,17 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _needClearTransformCache: boolean;
     _filterUpToDate: boolean;
     _isUnderCache: boolean;
-    children: Collection<any>;
     nodeType: string;
     className: string;
     _dragEventId: number | null;
     _shouldFireChangeEvents: boolean;
     constructor(config?: Config);
     hasChildren(): boolean;
-    getChildren(): Collection<any>;
     _clearCache(attr?: string): void;
     _getCache(attr: string, privateGetter: Function): any;
-    _calculate(name: any, deps: any, getter: any): any;
+    _calculate(name: string, deps: Array<string>, getter: Function): any;
     _getCanvasCache(): any;
-    _clearSelfAndDescendantCache(attr?: string, forceEvent?: boolean): void;
+    _clearSelfAndDescendantCache(attr?: string): void;
     clearCache(): this;
     cache(config?: {
         x?: number;
@@ -93,6 +87,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
         offset?: number;
         pixelRatio?: number;
         imageSmoothingEnabled?: boolean;
+        hitCanvasPixelRatio?: number;
     }): this;
     isCached(): boolean;
     abstract drawScene(canvas?: Canvas, top?: Node): void;
@@ -118,7 +113,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _drawCachedHitCanvas(context: Context): void;
     _getCachedSceneCanvas(): any;
     on<K extends keyof NodeEventMap>(evtStr: K, handler: KonvaEventListener<this, NodeEventMap[K]>): any;
-    off(evtStr: string, callback?: Function): this;
+    off(evtStr?: string, callback?: Function): this;
     dispatchEvent(evt: any): this;
     addEventListener(type: string, handler: (e: Event) => void): this;
     removeEventListener(type: string): this;
@@ -128,30 +123,34 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _remove(): void;
     destroy(): this;
     getAttr(attr: string): any;
-    getAncestors(): Collection<Node<NodeConfig>>;
+    getAncestors(): Node<NodeConfig>[];
     getAttrs(): any;
     setAttrs(config: any): this;
     isListening(): any;
-    _isListening(relativeTo?: Node): any;
+    _isListening(relativeTo?: Node): boolean;
     isVisible(): any;
-    _isVisible(relativeTo: any): any;
-    shouldDrawHit(top?: Node, skipDragCheck?: boolean): any;
+    _isVisible(relativeTo?: Node): boolean;
+    shouldDrawHit(top?: Node, skipDragCheck?: boolean): boolean;
     show(): this;
     hide(): this;
     getZIndex(): number;
     getAbsoluteZIndex(): number;
     getDepth(): number;
     _batchTransformChanges(func: any): void;
-    setPosition(pos: any): this;
+    setPosition(pos: Vector2d): this;
     getPosition(): {
         x: number;
         y: number;
     };
-    getAbsolutePosition(top?: any): {
+    getRelativePointerPosition(): {
         x: number;
         y: number;
     };
-    setAbsolutePosition(pos: any): this;
+    getAbsolutePosition(top?: Node): {
+        x: number;
+        y: number;
+    };
+    setAbsolutePosition(pos: Vector2d): this;
     _setTransform(trans: any): void;
     _clearTransform(): {
         x: number;
@@ -164,9 +163,9 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
         skewX: number;
         skewY: number;
     };
-    move(change: any): this;
+    move(change: Vector2d): this;
     _eachAncestorReverse(func: any, top: any): void;
-    rotate(theta: any): this;
+    rotate(theta: number): this;
     moveToTop(): boolean;
     moveUp(): boolean;
     moveDown(): boolean;
@@ -178,17 +177,17 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     toObject(): any;
     toJSON(): string;
     getParent(): Container<Node<NodeConfig>>;
-    findAncestors(selector: any, includeSelf?: any, stopNode?: any): Node<NodeConfig>[];
-    isAncestorOf(node: any): boolean;
-    findAncestor(selector: any, includeSelf?: any, stopNode?: any): Node<NodeConfig>;
-    _isMatch(selector: any): any;
+    findAncestors(selector: string, includeSelf?: boolean, stopNode?: Node): Node<NodeConfig>[];
+    isAncestorOf(node: Node): boolean;
+    findAncestor(selector?: string, includeSelf?: boolean, stopNode?: Container): Node<NodeConfig>;
+    _isMatch(selector: string | Function): any;
     getLayer(): Layer | null;
     getStage(): Stage | null;
     _getStage(): Stage | undefined;
-    fire(eventType: any, evt?: any, bubble?: any): this;
+    fire(eventType: string, evt?: any, bubble?: boolean): this;
     getAbsoluteTransform(top?: Node): Transform;
     _getAbsoluteTransform(top?: Node): Transform;
-    getAbsoluteScale(top?: any): {
+    getAbsoluteScale(top?: Node): {
         x: number;
         y: number;
     };
@@ -197,7 +196,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _getTransform(): Transform;
     clone(obj?: any): any;
     _toKonvaCanvas(config: any): SceneCanvas;
-    toCanvas(config: any): HTMLCanvasElement;
+    toCanvas(config?: any): HTMLCanvasElement;
     toDataURL(config?: {
         x?: number;
         y?: number;
@@ -217,7 +216,17 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
         mimeType?: string;
         quality?: number;
         callback?: (img: HTMLImageElement) => void;
-    }): void;
+    }): Promise<unknown>;
+    toBlob(config?: {
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+        pixelRatio?: number;
+        mimeType?: string;
+        quality?: number;
+        callback?: (blob: Blob) => void;
+    }): Promise<unknown>;
     setSize(size: any): this;
     getSize(): {
         width: number;
@@ -225,16 +234,15 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     };
     getClassName(): string;
     getType(): string;
-    getDragDistance(): any;
+    getDragDistance(): number;
     _off(type: any, name?: any, callback?: any): void;
     _fireChangeEvent(attr: any, oldVal: any, newVal: any): void;
-    setId(id: any): this;
-    setName(name: any): this;
     addName(name: any): this;
     hasName(name: any): boolean;
     removeName(name: any): this;
     setAttr(attr: any, val: any): this;
-    _setAttr(key: any, val: any, skipFire?: boolean): void;
+    _requestDraw(): void;
+    _setAttr(key: any, val: any): void;
     _setComponentAttr(key: any, component: any, val: any): void;
     _fireAndBubble(eventType: any, evt: any, compareShape?: any): void;
     _getProtoListeners(eventType: any): any;
@@ -249,6 +257,10 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     _listenDrag(): void;
     _dragChange(): void;
     _dragCleanup(): void;
+    isClientRectOnScreen(margin?: {
+        x: number;
+        y: number;
+    }): boolean;
     preventDefault: GetSet<boolean, this>;
     blue: GetSet<number, this>;
     brightness: GetSet<number, this>;
@@ -291,7 +303,7 @@ export declare abstract class Node<Config extends NodeConfig = NodeConfig> {
     opacity: GetSet<number, this>;
     rotation: GetSet<number, this>;
     zIndex: GetSet<number, this>;
-    scale: GetSet<Vector2d, this>;
+    scale: GetSet<Vector2d | undefined, this>;
     scaleX: GetSet<number, this>;
     scaleY: GetSet<number, this>;
     skew: GetSet<Vector2d, this>;

@@ -7,9 +7,11 @@ export interface ArrowConfig extends LineConfig {
     pointerLength?: number;
     pointerWidth?: number;
     pointerAtBeginning?: boolean;
+    pointerAtEnding?: boolean;
 }
 export declare class Arrow extends Line<ArrowConfig> {
     _sceneFunc(ctx: any): void;
+    __fillStroke(ctx: any): void;
     getSelfRect(): {
         x: number;
         y: number;
@@ -18,5 +20,6 @@ export declare class Arrow extends Line<ArrowConfig> {
     };
     pointerLength: GetSet<number, this>;
     pointerWidth: GetSet<number, this>;
+    pointerAtEnding: GetSet<boolean, this>;
     pointerAtBeginning: GetSet<boolean, this>;
 }

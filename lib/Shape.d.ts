@@ -2,11 +2,11 @@ import { Node, NodeConfig } from './Node';
 import { Context } from './Context';
 import { GetSet, Vector2d } from './types';
 import { HitCanvas, SceneCanvas } from './Canvas';
-export declare type ShapeConfigHandler<TTarget> = {
+export type ShapeConfigHandler<TTarget> = {
     bivarianceHack(ctx: Context, shape: TTarget): void;
 }['bivarianceHack'];
-export declare type LineJoin = 'round' | 'bevel' | 'miter';
-export declare type LineCap = 'butt' | 'round' | 'square';
+export type LineJoin = 'round' | 'bevel' | 'miter';
+export type LineCap = 'butt' | 'round' | 'square';
 export interface ShapeConfig extends NodeConfig {
     fill?: string;
     fillPatternImage?: HTMLImageElement;
@@ -38,7 +38,7 @@ export interface ShapeConfig extends NodeConfig {
     fillRadialGradientColorStops?: Array<number | string>;
     fillEnabled?: boolean;
     fillPriority?: string;
-    stroke?: string;
+    stroke?: string | CanvasGradient;
     strokeWidth?: number;
     fillAfterStrokeEnabled?: boolean;
     hitStrokeWidth?: number | string;
@@ -139,7 +139,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     fillLinearRadialEndPoint: GetSet<Vector2d, this>;
     fillLinearRadialEndPointX: GetSet<number, this>;
     fillLinearRadialEndPointY: GetSet<number, this>;
-    fillPatternImage: GetSet<HTMLImageElement, this>;
+    fillPatternImage: GetSet<HTMLImageElement | HTMLCanvasElement, this>;
     fillRadialGradientStartRadius: GetSet<number, this>;
     fillRadialGradientEndRadius: GetSet<number, this>;
     fillRadialGradientColorStops: GetSet<Array<number | string>, this>;

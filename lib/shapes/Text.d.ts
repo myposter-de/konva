@@ -12,6 +12,7 @@ export interface TextConfig extends ShapeConfig {
     verticalAlign?: string;
     padding?: number;
     lineHeight?: number;
+    letterSpacing?: number;
     wrap?: string;
     ellipsis?: boolean;
     textOffsetY?: number;
@@ -20,6 +21,7 @@ export declare class Text extends Shape<TextConfig> {
     textArr: Array<{
         text: string;
         width: number;
+        lastInParagraph: boolean;
     }>;
     _partialText: string;
     _partialTextX: number;
@@ -42,6 +44,8 @@ export declare class Text extends Shape<TextConfig> {
     _addTextLine(line: any): number;
     _getTextWidth(text: any): any;
     _setTextData(): void;
+    _shouldHandleEllipsis(currentHeightPx: number): boolean;
+    _tryToAddEllipsisToLastLine(): void;
     getStrokeScaleEnabled(): boolean;
     fontFamily: GetSet<string, this>;
     fontSize: GetSet<number, this>;

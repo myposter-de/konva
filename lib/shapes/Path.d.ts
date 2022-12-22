@@ -1,7 +1,7 @@
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet } from '../types';
 export interface PathConfig extends ShapeConfig {
-    data: string;
+    data?: string;
 }
 export declare class Path extends Shape<PathConfig> {
     dataArray: any[];
@@ -9,8 +9,8 @@ export declare class Path extends Shape<PathConfig> {
     constructor(config?: PathConfig);
     _sceneFunc(context: any): void;
     getSelfRect(): {
-        x: number;
-        y: number;
+        x: any;
+        y: any;
         width: number;
         height: number;
     };

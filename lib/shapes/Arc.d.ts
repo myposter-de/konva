@@ -12,6 +12,12 @@ export declare class Arc extends Shape<ArcConfig> {
     getHeight(): number;
     setWidth(width: any): void;
     setHeight(height: any): void;
+    getSelfRect(): {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
     innerRadius: GetSet<number, this>;
     outerRadius: GetSet<number, this>;
     angle: GetSet<number, this>;

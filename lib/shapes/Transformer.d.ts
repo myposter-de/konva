@@ -21,12 +21,16 @@ export interface TransformerConfig extends ContainerConfig {
     anchorStroke?: string;
     anchorStrokeWidth?: number;
     anchorSize?: number;
+    anchorCornerRadius?: number;
     keepRatio?: boolean;
     centeredScaling?: boolean;
     enabledAnchors?: Array<string>;
+    flipEnabled?: boolean;
     node?: Rect;
     ignoreStroke?: boolean;
     boundBoxFunc?: (oldBox: Box, newBox: Box) => Box;
+    useSingleNodeRotation?: boolean;
+    shouldOverdrawWholeArea?: boolean;
 }
 export declare class Transformer extends Group {
     _nodes: Array<Node>;
@@ -40,6 +44,7 @@ export declare class Transformer extends Group {
     attachTo(node: any): this;
     setNode(node: any): this;
     getNode(): Node<import("../Node").NodeConfig>;
+    _getEventNamespace(): string;
     setNodes(nodes?: Array<Node>): this;
     _proxyDrag(node: Node): void;
     getNodes(): Node<import("../Node").NodeConfig>[];
@@ -59,7 +64,7 @@ export declare class Transformer extends Group {
         y: number;
         width: number;
         height: number;
-        rotation: any;
+        rotation: number;
     };
     getX(): any;
     getY(): any;
@@ -73,7 +78,7 @@ export declare class Transformer extends Group {
     _handleMouseUp(e: any): void;
     getAbsoluteTransform(): Transform;
     _removeEvents(e?: any): void;
-    _fitNodesInto(newAttrs: any, evt: any): void;
+    _fitNodesInto(newAttrs: any, evt?: any): void;
     forceUpdate(): void;
     _batchChangeChild(selector: string, attrs: any): void;
     update(): void;
@@ -81,6 +86,8 @@ export declare class Transformer extends Group {
     stopTransform(): void;
     destroy(): this;
     toObject(): any;
+    clone(obj?: any): this;
+    getClientRect(): IRect;
     nodes: GetSet<Node[], this>;
     enabledAnchors: GetSet<string[], this>;
     rotationSnaps: GetSet<number[], this>;
@@ -100,7 +107,10 @@ export declare class Transformer extends Group {
     anchorStrokeWidth: GetSet<number, this>;
     keepRatio: GetSet<boolean, this>;
     centeredScaling: GetSet<boolean, this>;
+    flipEnabled: GetSet<boolean, this>;
     ignoreStroke: GetSet<boolean, this>;
     boundBoxFunc: GetSet<(oldBox: Box, newBox: Box) => Box, this>;
+    anchorDragBoundFunc: GetSet<(oldPos: Vector2d, newPos: Vector2d, e: MouseEvent) => Vector2d, this>;
     shouldOverdrawWholeArea: GetSet<boolean, this>;
+    useSingleNodeRotation: GetSet<boolean, this>;
 }
