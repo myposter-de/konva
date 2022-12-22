@@ -13,7 +13,7 @@ import { Filter } from '../Node';
  * node.filters([Konva.Filters.Solarize]);
  */
 
-export const Solarize: Filter = function(imageData) {
+export const Solarize: Filter = function (imageData) {
   var data = imageData.data,
     w = imageData.width,
     h = imageData.height,

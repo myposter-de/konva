@@ -1,8 +1,8 @@
 // what is core parts of Konva?
 import { Konva as Global } from './Global';
 
-import { Collection, Util, Transform } from './Util';
-import { Node, ids, names } from './Node';
+import { Util, Transform } from './Util';
+import { Node } from './Node';
 import { Container } from './Container';
 
 import { Stage, stages } from './Stage';
@@ -23,12 +23,9 @@ import { Context } from './Context';
 import { Canvas } from './Canvas';
 
 export const Konva = Util._assign(Global, {
-  Collection,
   Util,
   Transform,
   Node,
-  ids,
-  names,
   Container,
   Stage,
   stages,
@@ -42,5 +39,7 @@ export const Konva = Util._assign(Global, {
   Tween,
   Easings,
   Context,
-  Canvas
+  Canvas,
 });
+
+export default Konva;

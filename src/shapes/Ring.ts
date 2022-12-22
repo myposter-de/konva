@@ -1,4 +1,3 @@
-import { Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet } from '../types';
@@ -8,7 +7,6 @@ import { _registerNode } from '../Global';
 export interface RingConfig extends ShapeConfig {
   innerRadius: number;
   outerRadius: number;
-  clockwise?: boolean;
 }
 
 var PIx2 = Math.PI * 2;
@@ -20,7 +18,6 @@ var PIx2 = Math.PI * 2;
  * @param {Object} config
  * @param {Number} config.innerRadius
  * @param {Number} config.outerRadius
- * @param {Boolean} [config.clockwise]
  * @@shapeParams
  * @@nodeParams
  * @example
@@ -93,5 +90,3 @@ Factory.addGetterSetter(Ring, 'innerRadius', 0, getNumberValidator());
  * ring.outerRadius(20);
  */
 Factory.addGetterSetter(Ring, 'outerRadius', 0, getNumberValidator());
-
-Collection.mapMethods(Ring);

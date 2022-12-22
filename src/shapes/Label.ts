@@ -1,4 +1,3 @@
-import { Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Group } from '../Group';
@@ -10,6 +9,7 @@ import {
 import { _registerNode } from '../Global';
 
 import { GetSet } from '../types';
+import { Text } from './Text';
 
 export interface LabelConfig extends ContainerConfig {}
 
@@ -23,6 +23,9 @@ var ATTR_CHANGE_LIST = [
     'text',
     'width',
     'height',
+    'pointerDirection',
+    'pointerWidth',
+    'pointerHeight',
   ],
   CHANGE_KONVA = 'Change.konva',
   NONE = 'none',
@@ -72,7 +75,7 @@ var ATTR_CHANGE_LIST = [
  *  }));
  */
 export class Label extends Group {
-  constructor(config) {
+  constructor(config?) {
     super(config);
     this.on('add.konva', function (evt) {
       this._addListeners(evt.child);
@@ -89,7 +92,7 @@ export class Label extends Group {
    * label.getText().fill('red')
    */
   getText() {
-    return this.find('Text')[0];
+    return this.find<Text>('Text')[0];
   }
   /**
    * get Tag shape for the label.  You need to access the Tag shape in order to update
@@ -175,13 +178,11 @@ export class Label extends Group {
 Label.prototype.className = 'Label';
 _registerNode(Label);
 
-Collection.mapMethods(Label);
-
 export interface TagConfig extends ShapeConfig {
   pointerDirection?: string;
   pointerWidth?: number;
   pointerHeight?: number;
-  cornerRadius?: number;
+  cornerRadius?: number | Array<number>;
 }
 
 /**
@@ -211,11 +212,11 @@ export class Tag extends Shape<TagConfig> {
     let bottomRight = 0;
 
     if (typeof cornerRadius === 'number') {
-      topLeft = topRight = bottomLeft = bottomRight = Math.min(
-        cornerRadius,
-        width / 2,
-        height / 2
-      );
+      topLeft =
+        topRight =
+        bottomLeft =
+        bottomRight =
+          Math.min(cornerRadius, width / 2, height / 2);
     } else {
       topLeft = Math.min(cornerRadius[0] || 0, width / 2, height / 2);
       topRight = Math.min(cornerRadius[1] || 0, width / 2, height / 2);
@@ -378,5 +379,3 @@ Factory.addGetterSetter(
   0,
   getNumberOrArrayOfNumbersValidator(4)
 );
-
-Collection.mapMethods(Tag);

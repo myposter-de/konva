@@ -58,7 +58,7 @@ Factory.addGetterSetter(
  * image.luminance(0.2);
  */
 
-export const HSL: Filter = function(imageData) {
+export const HSL: Filter = function (imageData) {
   var data = imageData.data,
     nPixels = data.length,
     v = 1,

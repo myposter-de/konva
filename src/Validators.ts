@@ -56,10 +56,12 @@ export function getNumberOrArrayOfNumbersValidator(noOfElements: number) {
       let isValidArray = Util._isArray(val) && val.length == noOfElements;
       if (!isNumber && !isValidArray) {
         Util.warn(
-            _formatValue(val) +
+          _formatValue(val) +
             ' is a not valid value for "' +
             attr +
-            '" attribute. The value should be a number or Array<number>(' + noOfElements + ')'
+            '" attribute. The value should be a number or Array<number>(' +
+            noOfElements +
+            ')'
         );
       }
       return val;
@@ -107,7 +109,8 @@ export function getStringOrGradientValidator() {
     return function (val: any, attr: string) {
       const isString = Util._isString(val);
       const isGradient =
-        Object.prototype.toString.call(val) === '[object CanvasGradient]';
+        Object.prototype.toString.call(val) === '[object CanvasGradient]' ||
+        (val && val.addColorStop);
       if (!(isString || isGradient)) {
         Util.warn(
           _formatValue(val) +
@@ -139,6 +142,12 @@ export function getFunctionValidator() {
 export function getNumberArrayValidator() {
   if (Konva.isUnminified) {
     return function (val: any, attr: string) {
+      // Retrieve TypedArray constructor as found in MDN (if TypedArray is available)
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray#description
+      const TypedArray = Int8Array ? Object.getPrototypeOf(Int8Array) : null;
+      if (TypedArray && val instanceof TypedArray) {
+        return val;
+      }
       if (!Util._isArray(val)) {
         Util.warn(
           _formatValue(val) +
@@ -182,6 +191,10 @@ export function getBooleanValidator() {
 export function getComponentValidator(components: any) {
   if (Konva.isUnminified) {
     return function (val: any, attr: string) {
+      // ignore validation on undefined value, because it will reset to defalt
+      if (val === undefined || val === null) {
+        return val;
+      }
       if (!Util.isObject(val)) {
         Util.warn(
           _formatValue(val) +

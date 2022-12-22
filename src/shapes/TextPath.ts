@@ -1,4 +1,4 @@
-import { Util, Collection } from '../Util';
+import { Util } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Path } from './Path';
@@ -14,6 +14,7 @@ export interface TextPathConfig extends ShapeConfig {
   fontFamily?: string;
   fontSize?: number;
   fontStyle?: string;
+  letterSpacing?: number;
 }
 
 var EMPTY_STRING = '',
@@ -33,14 +34,13 @@ function _strokeFunc(context) {
  * @memberof Konva
  * @augments Konva.Shape
  * @param {Object} config
- * @param {String} [config.fontFamily] default is Calibri
+ * @param {String} [config.fontFamily] default is Arial
  * @param {Number} [config.fontSize] default is 12
  * @param {String} [config.fontStyle] can be normal, bold, or italic.  Default is normal
  * @param {String} [config.fontVariant] can be normal or small-caps.  Default is normal
  * @param {String} [config.textBaseline] Can be 'top', 'bottom', 'middle', 'alphabetic', 'hanging'. Default is middle
  * @param {String} config.text
  * @param {String} config.data SVG data string
- * @param {Function} config.getKerning a getter for kerning values for the specified characters
  * @param {Function} config.kerningFunc a getter for kerning values for the specified characters
  * @@shapeParams
  * @@nodeParams
@@ -98,16 +98,9 @@ export class TextPath extends Shape<TextPathConfig> {
 
     // update text data for certain attr changes
     this.on(
-      'textChange.konva alignChange.konva letterSpacingChange.konva kerningFuncChange.konva',
+      'textChange.konva alignChange.konva letterSpacingChange.konva kerningFuncChange.konva fontSizeChange.konva fontFamilyChange.konva',
       this._setTextData
     );
-
-    if (config && config['getKerning']) {
-      Util.warn(
-        'getKerning TextPath API is deprecated. Please use "kerningFunc" instead.'
-      );
-      this.kerningFunc(config['getKerning']);
-    }
 
     this._setTextData();
   }
@@ -313,7 +306,7 @@ export class TextPath extends Shape<TextPathConfig> {
           }
         }
 
-        if (pathCmd === {} || p0 === undefined) {
+        if (Object.keys(pathCmd).length === 0 || p0 === undefined) {
           return undefined;
         }
 
@@ -540,6 +533,10 @@ export class TextPath extends Shape<TextPathConfig> {
       height: maxY - minY + fontSize,
     };
   }
+  destroy(): this {
+    Util.releaseCanvas(this.dummyCanvas);
+    return super.destroy();
+  }
 
   fontFamily: GetSet<string, this>;
   fontSize: GetSet<number, this>;
@@ -653,10 +650,10 @@ Factory.addGetterSetter(TextPath, 'align', 'left');
  * @param {Number} letterSpacing
  * @returns {Number}
  * @example
- * // get line height
+ * // get letter spacing value
  * var letterSpacing = shape.letterSpacing();
  *
- * // set the line height
+ * // set the letter spacing value
  * shape.letterSpacing(2);
  */
 
@@ -669,10 +666,10 @@ Factory.addGetterSetter(TextPath, 'letterSpacing', 0, getNumberValidator());
  * @param {String} textBaseline
  * @returns {String}
  * @example
- * // get line height
+ * // get current text baseline
  * var textBaseline = shape.textBaseline();
  *
- * // set the line height
+ * // set new text baseline
  * shape.textBaseline('top');
  */
 Factory.addGetterSetter(TextPath, 'textBaseline', 'middle');
@@ -738,5 +735,3 @@ Factory.addGetterSetter(TextPath, 'textDecoration', null);
  * });
  */
 Factory.addGetterSetter(TextPath, 'kerningFunc', null);
-
-Collection.mapMethods(TextPath);

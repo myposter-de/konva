@@ -11,7 +11,7 @@ import { Filter } from '../Node';
  * node.cache();
  * node.filters([Konva.Filters.Sepia]);
  */
-export const Sepia: Filter = function(imageData) {
+export const Sepia: Filter = function (imageData) {
   var data = imageData.data,
     nPixels = data.length,
     i,

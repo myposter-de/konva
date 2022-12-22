@@ -21,7 +21,7 @@ export function getCapturedShape(pointerId: number) {
 export function createEvent(evt: PointerEvent): KonvaPointerEvent {
   return {
     evt,
-    pointerId: evt.pointerId
+    pointerId: evt.pointerId,
   } as any;
 }
 

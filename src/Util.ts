@@ -1,110 +1,5 @@
-import { glob, Konva } from './Global';
-import { Node } from './Node';
+import { Konva } from './Global';
 import { IRect, RGB, RGBA, Vector2d } from './types';
-
-/**
- * Collection constructor. Collection extends Array.
- * This class is used in conjunction with {@link Konva.Container#find}
- * The good thing about collection is that it has ALL methods of all Konva nodes. Take a look into examples.
- * @constructor
- * @memberof Konva
- * @example
- *
- * // find all rectangles and return them as Collection
- * const shapes = layer.find('Rect');
- * // fill all rectangles with a single function
- * shapes.fill('red');
- */
-export class Collection<Child extends Node> {
-  [index: number]: Child;
-
-  // @ts-ignore
-  [Symbol.iterator](): Iterator<Child>;
-  // @ts-ignore
-  length: number;
-  // @ts-ignore
-  each: (f: (child: Child, index: number) => void) => void;
-  // @ts-ignore
-  toArray: () => Array<Child>;
-  // @ts-ignore
-  push: (item: Child) => void;
-  // @ts-ignore
-  unshift: (item: Child) => void;
-  // @ts-ignore
-  splice: (start: number, length: number, replace?: any) => void;
-
-  /**
-   * convert array into a collection
-   * @method
-   * @memberof Konva.Collection
-   * @param {Array} arr
-   */
-  static toCollection<ChildNode extends Node = Node>(arr: Array<ChildNode>) {
-    var collection = new Collection<ChildNode>(),
-      len = arr.length,
-      n;
-
-    for (n = 0; n < len; n++) {
-      collection.push(arr[n]);
-    }
-    return collection;
-  }
-
-  static _mapMethod(methodName: any) {
-    Collection.prototype[methodName] = function () {
-      var len = this.length,
-        i;
-
-      var args = [].slice.call(arguments);
-      for (i = 0; i < len; i++) {
-        this[i][methodName].apply(this[i], args);
-      }
-
-      return this;
-    };
-  }
-
-  static mapMethods = function (constructor: Function) {
-    var prot = constructor.prototype;
-    for (var methodName in prot) {
-      Collection._mapMethod(methodName);
-    }
-  };
-}
-
-Collection.prototype = [] as any;
-/**
- * iterate through node array and run a function for each node.
- *  The node and index is passed into the function
- * @method
- * @name Konva.Collection#each
- * @param {Function} func
- * @example
- * // get all nodes with name foo inside layer, and set x to 10 for each
- * layer.find('.foo').each(function(shape, n) {
- *   shape.setX(10);
- * });
- */
-Collection.prototype.each = function (func) {
-  for (var n = 0; n < this.length; n++) {
-    func(this[n], n);
-  }
-};
-/**
- * convert collection into an array
- * @method
- * @name Konva.Collection#toArray
- */
-Collection.prototype.toArray = function () {
-  var arr = [],
-    len = this.length,
-    n;
-
-  for (n = 0; n < len; n++) {
-    arr.push(this[n]);
-  }
-  return arr;
-};
 
 /*
  * Last updated November 2011
@@ -310,25 +205,6 @@ export class Transform {
    */
   getMatrix() {
     return this.m;
-  }
-  /**
-   * set to absolute position via translation
-   * @method
-   * @name Konva.Transform#setAbsolutePosition
-   * @returns {Konva.Transform}
-   * @author ericdrowell
-   */
-  setAbsolutePosition(x: number, y: number) {
-    var m0 = this.m[0],
-      m1 = this.m[1],
-      m2 = this.m[2],
-      m3 = this.m[3],
-      m4 = this.m[4],
-      m5 = this.m[5],
-      yt = (m0 * (y - m5) - m1 * (x - m4)) / (m0 * m3 - m1 * m2),
-      xt = (x - m4 - m2 * yt) / m0;
-
-    return this.translate(xt, yt);
   }
   /**
    * convert transformation matrix back into node's attributes
@@ -549,6 +425,11 @@ var OBJECT_ARRAY = '[object Array]',
   RGB_REGEX = /rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)/,
   animQueue: Array<Function> = [];
 
+const req =
+  (typeof requestAnimationFrame !== 'undefined' && requestAnimationFrame) ||
+  function (f) {
+    setTimeout(f, 60);
+  };
 /**
  * @namespace Util
  * @memberof Konva
@@ -599,7 +480,9 @@ export const Util = {
   },
   _sign(number: number) {
     if (number === 0) {
-      return 0;
+      // that is not what sign usually returns
+      // but that is what we need
+      return 1;
     }
     if (number > 0) {
       return 1;
@@ -611,7 +494,7 @@ export const Util = {
   requestAnimFrame(callback: Function) {
     animQueue.push(callback);
     if (animQueue.length === 1) {
-      requestAnimationFrame(function () {
+      req(function () {
         const queue = animQueue;
         animQueue = [];
         queue.forEach(function (cb) {
@@ -639,32 +522,13 @@ export const Util = {
     }
     return false;
   },
-  _simplifyArray(arr: Array<any>) {
-    var retArr = [],
-      len = arr.length,
-      util = Util,
-      n,
-      val;
 
-    for (n = 0; n < len; n++) {
-      val = arr[n];
-      if (util._isNumber(val)) {
-        val = Math.round(val * 1000) / 1000;
-      } else if (!util._isString(val)) {
-        val = val.toString();
-      }
-
-      retArr.push(val);
-    }
-
-    return retArr;
-  },
   /*
    * arg can be an image object or image data
    */
   _urlToImage(url: string, callback: Function) {
     // if arg is a string, then it's a data url
-    var imageObj = new glob.Image();
+    var imageObj = Util.createImageElement();
     imageObj.onload = function () {
       callback(imageObj);
     };
@@ -697,13 +561,6 @@ export const Util = {
     return HASH + randColor;
   },
 
-  get(val: any, def: any) {
-    if (val === undefined) {
-      return def;
-    } else {
-      return val;
-    }
-  },
   /**
    * get RGB components of a color
    * @method
@@ -752,7 +609,9 @@ export const Util = {
     return (
       Util._namedColorToRBA(str) ||
       Util._hex3ColorToRGBA(str) ||
+      Util._hex4ColorToRGBA(str) ||
       Util._hex6ColorToRGBA(str) ||
+      Util._hex8ColorToRGBA(str) ||
       Util._rgbColorToRGBA(str) ||
       Util._rgbaColorToRGBA(str) ||
       Util._hslColorToRGBA(str)
@@ -788,12 +647,28 @@ export const Util = {
   _rgbaColorToRGBA(str: string): RGBA {
     if (str.indexOf('rgba(') === 0) {
       str = str.match(/rgba\(([^)]+)\)/)[1];
-      var parts = str.split(/ *, */).map(Number);
+      var parts = str.split(/ *, */).map((n, index) => {
+        if (n.slice(-1) === '%') {
+          return index === 3 ? parseInt(n) / 100 : (parseInt(n) / 100) * 255;
+        }
+        return Number(n);
+      });
       return {
         r: parts[0],
         g: parts[1],
         b: parts[2],
         a: parts[3],
+      };
+    }
+  },
+  // Parse #nnnnnnnn
+  _hex8ColorToRGBA(str: string): RGBA {
+    if (str[0] === '#' && str.length === 9) {
+      return {
+        r: parseInt(str.slice(1, 3), 16),
+        g: parseInt(str.slice(3, 5), 16),
+        b: parseInt(str.slice(5, 7), 16),
+        a: parseInt(str.slice(7, 9), 16) / 0xff,
       };
     }
   },
@@ -805,6 +680,17 @@ export const Util = {
         g: parseInt(str.slice(3, 5), 16),
         b: parseInt(str.slice(5, 7), 16),
         a: 1,
+      };
+    }
+  },
+  // Parse #nnnn
+  _hex4ColorToRGBA(str: string): RGBA {
+    if (str[0] === '#' && str.length === 5) {
+      return {
+        r: parseInt(str[1] + str[1], 16),
+        g: parseInt(str[2] + str[2], 16),
+        b: parseInt(str[3] + str[3], 16),
+        a: parseInt(str[4] + str[4], 16) / 0xff,
       };
     }
   },
@@ -917,14 +803,26 @@ export const Util = {
   cloneArray(arr: Array<any>) {
     return arr.slice(0);
   },
-  _degToRad(deg: number) {
+  degToRad(deg: number) {
     return deg * PI_OVER_DEG180;
   },
-  _radToDeg(rad: number) {
+  radToDeg(rad: number) {
     return rad * DEG180_OVER_PI;
   },
+  _degToRad(deg: number) {
+    Util.warn(
+      'Util._degToRad is removed. Please use public Util.degToRad instead.'
+    );
+    return Util.degToRad(deg);
+  },
+  _radToDeg(rad: number) {
+    Util.warn(
+      'Util._radToDeg is removed. Please use public Util.radToDeg instead.'
+    );
+    return Util.radToDeg(rad);
+  },
   _getRotation(radians) {
-    return Konva.angleDeg ? Util._radToDeg(radians) : radians;
+    return Konva.angleDeg ? Util.radToDeg(radians) : radians;
   },
   _capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -940,64 +838,6 @@ export const Util = {
       return;
     }
     console.warn(KONVA_WARNING + str);
-  },
-  extend(child: any, parent: any) {
-    function Ctor() {
-      this.constructor = child;
-    }
-    Ctor.prototype = parent.prototype;
-    var oldProto = child.prototype;
-    child.prototype = new Ctor();
-    for (var key in oldProto) {
-      if (oldProto.hasOwnProperty(key)) {
-        child.prototype[key] = oldProto[key];
-      }
-    }
-    child.__super__ = parent.prototype;
-    // create reference to parent
-    child.super = parent;
-  },
-
-  _getControlPoints(x0, y0, x1, y1, x2, y2, t) {
-    var d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2)),
-      d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)),
-      fa = (t * d01) / (d01 + d12),
-      fb = (t * d12) / (d01 + d12),
-      p1x = x1 - fa * (x2 - x0),
-      p1y = y1 - fa * (y2 - y0),
-      p2x = x1 + fb * (x2 - x0),
-      p2y = y1 + fb * (y2 - y0);
-
-    return [p1x, p1y, p2x, p2y];
-  },
-  _expandPoints(p, tension) {
-    var len = p.length,
-      allPoints = [],
-      n,
-      cp;
-
-    for (n = 2; n < len - 2; n += 2) {
-      cp = Util._getControlPoints(
-        p[n - 2],
-        p[n - 1],
-        p[n],
-        p[n + 1],
-        p[n + 2],
-        p[n + 3],
-        tension
-      );
-      if (isNaN(cp[0])) {
-        continue;
-      }
-      allPoints.push(cp[0]);
-      allPoints.push(cp[1]);
-      allPoints.push(p[n]);
-      allPoints.push(p[n + 1]);
-      allPoints.push(cp[2]);
-      allPoints.push(cp[3]);
-    }
-
-    return allPoints;
   },
   each(obj, func) {
     for (var key in obj) {
@@ -1135,10 +975,18 @@ export const Util = {
   },
   _getFirstPointerId(evt) {
     if (!evt.touches) {
-      // fake id for mouse
-      return 999;
+      // try to use pointer id or fake id
+      return evt.pointerId || 999;
     } else {
       return evt.changedTouches[0].identifier;
     }
   },
+  releaseCanvas(...canvases: HTMLCanvasElement[]) {
+    if (!Konva.releaseCanvasOnDestroy) return;
+
+    canvases.forEach(c => {
+      c.width = 0;
+      c.height = 0;
+    })
+  }
 };

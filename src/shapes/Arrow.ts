@@ -1,9 +1,9 @@
-import { Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Line, LineConfig } from './Line';
 import { GetSet } from '../types';
 import { getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
+import { Path } from './Path';
 
 export interface ArrowConfig extends LineConfig {
   points: number[];
@@ -12,6 +12,7 @@ export interface ArrowConfig extends LineConfig {
   pointerLength?: number;
   pointerWidth?: number;
   pointerAtBeginning?: boolean;
+  pointerAtEnding?: boolean;
 }
 
 /**
@@ -25,7 +26,8 @@ export interface ArrowConfig extends LineConfig {
  *   The default is 0
  * @param {Number} config.pointerLength Arrow pointer length. Default value is 10.
  * @param {Number} config.pointerWidth Arrow pointer width. Default value is 10.
- * @param {Boolean} config.pointerAtBeginning Do we need to draw pointer on both sides?. Default false.
+ * @param {Boolean} config.pointerAtBeginning Do we need to draw pointer on beginning position?. Default false.
+ * @param {Boolean} config.pointerAtEnding Do we need to draw pointer on ending position?. Default true.
  * @@shapeParams
  * @@nodeParams
  * @example
@@ -48,34 +50,63 @@ export class Arrow extends Line<ArrowConfig> {
     if (fromTension) {
       tp = this.getTensionPoints();
     }
+    var length = this.pointerLength();
 
     var n = points.length;
 
     var dx, dy;
     if (fromTension) {
-      dx = points[n - 2] - (tp[tp.length - 2] + tp[tp.length - 4]) / 2;
-      dy = points[n - 1] - (tp[tp.length - 1] + tp[tp.length - 3]) / 2;
+      const lp = [
+        tp[tp.length - 4],
+        tp[tp.length - 3],
+        tp[tp.length - 2],
+        tp[tp.length - 1],
+        points[n - 2],
+        points[n - 1],
+      ];
+      const lastLength = Path.calcLength(
+        tp[tp.length - 4],
+        tp[tp.length - 3],
+        'C',
+        lp
+      );
+      const previous = Path.getPointOnQuadraticBezier(
+        Math.min(1, 1 - length / lastLength),
+        lp[0],
+        lp[1],
+        lp[2],
+        lp[3],
+        lp[4],
+        lp[5]
+      );
+
+      dx = points[n - 2] - previous.x;
+      dy = points[n - 1] - previous.y;
     } else {
       dx = points[n - 2] - points[n - 4];
       dy = points[n - 1] - points[n - 3];
     }
 
     var radians = (Math.atan2(dy, dx) + PI2) % PI2;
-    var length = this.pointerLength();
+
     var width = this.pointerWidth();
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.translate(points[n - 2], points[n - 1]);
-    ctx.rotate(radians);
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-length, width / 2);
-    ctx.lineTo(-length, -width / 2);
-    ctx.closePath();
-    ctx.restore();
+    if (this.pointerAtEnding()) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.translate(points[n - 2], points[n - 1]);
+      ctx.rotate(radians);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-length, width / 2);
+      ctx.lineTo(-length, -width / 2);
+      ctx.closePath();
+      ctx.restore();
+      this.__fillStroke(ctx);
+    }
 
     if (this.pointerAtBeginning()) {
       ctx.save();
+      ctx.beginPath();
       ctx.translate(points[0], points[1]);
       if (fromTension) {
         dx = (tp[0] + tp[2]) / 2 - points[0];
@@ -91,8 +122,11 @@ export class Arrow extends Line<ArrowConfig> {
       ctx.lineTo(-length, -width / 2);
       ctx.closePath();
       ctx.restore();
+      this.__fillStroke(ctx);
     }
+  }
 
+  __fillStroke(ctx) {
     // here is a tricky part
     // we need to disable dash for arrow pointers
     var isDashEnabled = this.dashEnabled();
@@ -119,12 +153,13 @@ export class Arrow extends Line<ArrowConfig> {
       x: lineRect.x - offset,
       y: lineRect.y - offset,
       width: lineRect.width + offset * 2,
-      height: lineRect.height + offset * 2
+      height: lineRect.height + offset * 2,
     };
   }
 
   pointerLength: GetSet<number, this>;
   pointerWidth: GetSet<number, this>;
+  pointerAtEnding: GetSet<boolean, this>;
   pointerAtBeginning: GetSet<boolean, this>;
 }
 
@@ -177,4 +212,18 @@ Factory.addGetterSetter(Arrow, 'pointerWidth', 10, getNumberValidator());
  */
 
 Factory.addGetterSetter(Arrow, 'pointerAtBeginning', false);
-Collection.mapMethods(Arrow);
+/**
+ * get/set pointerAtEnding
+ * @name Konva.Arrow#pointerAtEnding
+ * @method
+ * @param {Number} Should pointer displayed at ending of arrow. The default is true.
+ * @returns {Boolean}
+ * @example
+ * // get value
+ * var pointerAtEnding = line.pointerAtEnding();
+ *
+ * // set value
+ * line.pointerAtEnding(false);
+ */
+
+Factory.addGetterSetter(Arrow, 'pointerAtEnding', true);

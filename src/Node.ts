@@ -1,7 +1,7 @@
-import { Util, Collection, Transform } from './Util';
+import { Util, Transform } from './Util';
 import { Factory } from './Factory';
 import { SceneCanvas, HitCanvas, Canvas } from './Canvas';
-import { Konva, _NODES_REGISTRY } from './Global';
+import { Konva } from './Global';
 import { Container } from './Container';
 import { GetSet, Vector2d, IRect } from './types';
 import { DD } from './DragAndDrop';
@@ -14,56 +14,6 @@ import { Stage } from './Stage';
 import { Context } from './Context';
 import { Shape } from './Shape';
 import { Layer } from './Layer';
-
-export const ids: any = {};
-export const names: any = {};
-
-const _addId = function (node: Node, id: string | undefined) {
-  if (!id) {
-    return;
-  }
-  ids[id] = node;
-};
-
-export const _removeId = function (id: string, node: any) {
-  // node has no id
-  if (!id) {
-    return;
-  }
-  // another node is registered (possible for duplicate ids)
-  if (ids[id] !== node) {
-    return;
-  }
-  delete ids[id];
-};
-
-export const _addName = function (node: any, name: string) {
-  if (name) {
-    if (!names[name]) {
-      names[name] = [];
-    }
-    names[name].push(node);
-  }
-};
-
-export const _removeName = function (name: string, _id: number) {
-  if (!name) {
-    return;
-  }
-  var nodes = names[name];
-  if (!nodes) {
-    return;
-  }
-  for (var n = 0; n < nodes.length; n++) {
-    var no = nodes[n];
-    if (no._id === _id) {
-      nodes.splice(n, 1);
-    }
-  }
-  if (nodes.length === 0) {
-    delete names[name];
-  }
-};
 
 export type Filter = (this: Node, imageData: ImageData) => void;
 
@@ -107,7 +57,7 @@ export interface NodeConfig {
   listening?: boolean;
   id?: string;
   name?: string;
-  opacity?: Number;
+  opacity?: number;
   scale?: Vector2d;
   scaleX?: number;
   scaleY?: number;
@@ -155,11 +105,7 @@ var ABSOLUTE_OPACITY = 'absoluteOpacity',
     'offsetXChange.konva',
     'offsetYChange.konva',
     'transformsEnabledChange.konva',
-  ].join(SPACE),
-  SCALE_CHANGE_STR = ['scaleXChange.konva', 'scaleYChange.konva'].join(SPACE);
-
-// TODO: can we remove children from node?
-const emptyChildren: Collection<any> = new Collection();
+  ].join(SPACE);
 
 let idCounter = 1;
 
@@ -169,6 +115,7 @@ type NodeEventMap = GlobalEventHandlersEventMap & {
 };
 
 export interface KonvaEventObject<EventType> {
+  type: string;
   target: Shape | Stage;
   evt: EventType;
   currentTarget: Node;
@@ -207,7 +154,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
   _filterUpToDate = false;
   _isUnderCache = false;
-  children = emptyChildren;
   nodeType!: string;
   className!: string;
 
@@ -225,10 +171,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
   hasChildren() {
     return false;
-  }
-
-  getChildren() {
-    return emptyChildren;
   }
 
   _clearCache(attr?: string) {
@@ -264,7 +206,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return cache;
   }
 
-  _calculate(name, deps, getter) {
+  _calculate(name: string, deps: Array<string>, getter: Function) {
     // if we are trying to calculate function for the first time
     // we need to attach listeners for change events
     if (!this._attachedDepsListeners.get(name)) {
@@ -285,22 +227,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * when the logic for a cached result depends on ancestor propagation, use this
    * method to clear self and children cache
    */
-  _clearSelfAndDescendantCache(attr?: string, forceEvent?: boolean) {
+  _clearSelfAndDescendantCache(attr?: string) {
     this._clearCache(attr);
     // trigger clear cache, so transformer can use it
-    if (forceEvent && attr === ABSOLUTE_TRANSFORM) {
-      this.fire('_clearTransformCache');
-    }
-
-    // skip clearing if node is cached with canvas
-    // for performance reasons !!!
-    if (this.isCached()) {
-      return;
-    }
-    if (this.children) {
-      this.children.each(function (node) {
-        node._clearSelfAndDescendantCache(attr, true);
-      });
+    if (attr === ABSOLUTE_TRANSFORM) {
+      this.fire('absoluteTransformChange');
     }
   }
   /**
@@ -312,8 +243,14 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.clearCache();
    */
   clearCache() {
-    this._cache.delete(CANVAS);
+    if (this._cache.has(CANVAS)) {
+      const { scene, filter, hit } = this._cache.get(CANVAS);
+      Util.releaseCanvas(scene, filter, hit);
+      this._cache.delete(CANVAS);
+    }
+
     this._clearSelfAndDescendantCache();
+    this._requestDraw();
     return this;
   }
   /**
@@ -333,6 +270,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    *  region for debugging purposes
    * @param {Number} [config.pixelRatio] change quality (or pixel ratio) of cached image. pixelRatio = 2 will produce 2x sized cache.
    * @param {Boolean} [config.imageSmoothingEnabled] control imageSmoothingEnabled property of created canvas for cache
+   * @param {Number} [config.hitCanvasPixelRatio] change quality (or pixel ratio) of cached hit canvas.
    * @returns {Konva.Node}
    * @example
    * // cache a shape with the x,y position of the bounding box at the center and
@@ -368,6 +306,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     offset?: number;
     pixelRatio?: number;
     imageSmoothingEnabled?: boolean;
+    hitCanvasPixelRatio?: number;
   }) {
     var conf = config || {};
     var rect = {} as IRect;
@@ -388,10 +327,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var width = Math.ceil(conf.width || rect.width),
       height = Math.ceil(conf.height || rect.height),
       pixelRatio = conf.pixelRatio,
-      x = conf.x === undefined ? rect.x : conf.x,
-      y = conf.y === undefined ? rect.y : conf.y,
+      x = conf.x === undefined ? Math.floor(rect.x) : conf.x,
+      y = conf.y === undefined ? Math.floor(rect.y) : conf.y,
       offset = conf.offset || 0,
-      drawBorder = conf.drawBorder || false;
+      drawBorder = conf.drawBorder || false,
+      hitCanvasPixelRatio = conf.hitCanvasPixelRatio || 1;
 
     if (!width || !height) {
       Util.error(
@@ -400,11 +340,24 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return;
     }
 
-    width += offset * 2;
-    height += offset * 2;
+    // let's just add 1 pixel extra,
+    // because using Math.floor on x, y position may shift drawing
+    width += offset * 2 + 1;
+    height += offset * 2 + 1;
 
     x -= offset;
     y -= offset;
+
+    // if (Math.floor(x) < x) {
+    //   x = Math.floor(x);
+    //   // width += 1;
+    // }
+    // if (Math.floor(y) < y) {
+    //   y = Math.floor(y);
+    //   // height += 1;
+    // }
+
+    // console.log({ x, y, width, height }, rect);
 
     var cachedSceneCanvas = new SceneCanvas({
         pixelRatio: pixelRatio,
@@ -417,7 +370,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         height: 0,
       }),
       cachedHitCanvas = new HitCanvas({
-        pixelRatio: 1,
+        pixelRatio: hitCanvasPixelRatio,
         width: width,
         height: height,
       }),
@@ -427,7 +380,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     cachedHitCanvas.isCache = true;
     cachedSceneCanvas.isCache = true;
 
-    this._cache.delete('canvas');
+    this._cache.delete(CANVAS);
     this._filterUpToDate = false;
 
     if (conf.imageSmoothingEnabled === false) {
@@ -474,6 +427,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       y: y,
     });
 
+    this._requestDraw();
+
     return this;
   }
 
@@ -484,7 +439,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @returns {Boolean}
    */
   isCached() {
-    return this._cache.has('canvas');
+    return this._cache.has(CANVAS);
   }
 
   abstract drawScene(canvas?: Canvas, top?: Node): void;
@@ -587,7 +542,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       hitCanvas = canvasCache.hit;
     context.save();
     context.translate(canvasCache.x, canvasCache.y);
-    context.drawImage(hitCanvas._canvas, 0, 0);
+    context.drawImage(
+      hitCanvas._canvas,
+      0,
+      0,
+      hitCanvas.width / hitCanvas.pixelRatio,
+      hitCanvas.height / hitCanvas.pixelRatio
+    );
     context.restore();
   }
   _getCachedSceneCanvas() {
@@ -779,7 +740,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // remove listener by name
    * node.off('click.foo');
    */
-  off(evtStr: string, callback?: Function) {
+  off(evtStr?: string, callback?: Function) {
     var events = (evtStr || '').split(SPACE),
       len = events.length,
       n,
@@ -896,17 +857,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.destroy();
    */
   destroy() {
-    // remove from ids and names hashes
-    _removeId(this.id(), this);
-
-    // remove all names
-    var names = (this.name() || '').split(/\s/g);
-    for (var i = 0; i < names.length; i++) {
-      var subname = names[i];
-      _removeName(subname, this._id);
-    }
-
     this.remove();
+    this.clearCache();
     return this;
   }
   /**
@@ -930,15 +882,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * get ancestors
    * @method
    * @name Konva.Node#getAncestors
-   * @returns {Konva.Collection}
+   * @returns {Array}
    * @example
-   * shape.getAncestors().each(function(node) {
+   * shape.getAncestors().forEach(function(node) {
    *   console.log(node.getId());
    * })
    */
   getAncestors() {
     var parent = this.getParent(),
-      ancestors = new Collection<Node>();
+      ancestors: Array<Node> = [];
 
     while (parent) {
       ancestors.push(parent);
@@ -1009,7 +961,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   isListening() {
     return this._getCache(LISTENING, this._isListening);
   }
-  _isListening(relativeTo?: Node) {
+  _isListening(relativeTo?: Node): boolean {
     const listening = this.listening();
     if (!listening) {
       return false;
@@ -1038,7 +990,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   isVisible() {
     return this._getCache(VISIBLE, this._isVisible);
   }
-  _isVisible(relativeTo) {
+  _isVisible(relativeTo?: Node): boolean {
     const visible = this.visible();
     if (!visible) {
       return false;
@@ -1118,7 +1070,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         index++;
 
         if (child.nodeType !== SHAPE) {
-          nodes = nodes.concat(child.getChildren().toArray());
+          nodes = nodes.concat(child.getChildren().slice());
         }
 
         if (child._id === that._id) {
@@ -1165,12 +1117,12 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this._batchingTransformChange = false;
     if (this._needClearTransformCache) {
       this._clearCache(TRANSFORM);
-      this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM, true);
+      this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
     }
     this._needClearTransformCache = false;
   }
 
-  setPosition(pos) {
+  setPosition(pos: Vector2d) {
     this._batchTransformChanges(() => {
       this.x(pos.x);
       this.y(pos.y);
@@ -1183,7 +1135,49 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       y: this.y(),
     };
   }
-  getAbsolutePosition(top?) {
+  /**
+   * get position of first pointer (like mouse or first touch) relative to local coordinates of current node
+   * @method
+   * @name Konva.Node#getRelativePointerPosition
+   * @returns {Konva.Node}
+   * @example
+   *
+   * // let's think we have a rectangle at position x = 10, y = 10
+   * // now we clicked at x = 15, y = 15 of the stage
+   * // if you want to know position of the click, related to the rectangle you can use
+   * rect.getRelativePointerPosition();
+   */
+  getRelativePointerPosition() {
+    if (!this.getStage()) {
+      return null;
+    }
+    // get pointer (say mouse or touch) position
+    var pos = this.getStage().getPointerPosition();
+    if (!pos) {
+      return null;
+    }
+    var transform = this.getAbsoluteTransform().copy();
+    // to detect relative position we need to invert transform
+    transform.invert();
+    // now we can find relative point
+    return transform.point(pos);
+  }
+  /**
+   * get absolute position of a node. That function can be used to calculate absolute position, but relative to any ancestor
+   * @method
+   * @name Konva.Node#getAbsolutePosition
+   * @param {Object} Ancestor optional ancestor node
+   * @returns {Konva.Node}
+   * @example
+   *
+   * // returns absolute position relative to top-left corner of canvas
+   * node.getAbsolutePosition();
+   *
+   * // calculate absolute position of node, inside stage
+   * // so stage transforms are ignored
+   * node.getAbsolutePosition(stage)
+   */
+  getAbsolutePosition(top?: Node) {
     let haveCachedParent = false;
     let parent = this.parent;
     while (parent) {
@@ -1196,7 +1190,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     if (haveCachedParent && !top) {
       // make fake top element
       // "true" is not a node, but it will just allow skip all caching
-      top = true;
+      top = true as any;
     }
     var absoluteMatrix = this.getAbsoluteTransform(top).getMatrix(),
       absoluteTransform = new Transform(),
@@ -1208,7 +1202,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     return absoluteTransform.getTranslation();
   }
-  setAbsolutePosition(pos) {
+  setAbsolutePosition(pos: Vector2d) {
     var origTrans = this._clearTransform();
 
     // don't clear translation
@@ -1284,7 +1278,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    *   y: 2
    * });
    */
-  move(change) {
+  move(change: Vector2d) {
     var changeX = change.x,
       changeY = change.y,
       x = this.x(),
@@ -1334,7 +1328,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @param {Number} theta
    * @returns {Konva.Node}
    */
-  rotate(theta) {
+  rotate(theta: number) {
     this.rotation(this.rotation() + theta);
     return this;
   }
@@ -1349,11 +1343,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       Util.warn('Node has no parent. moveToTop function is ignored.');
       return false;
     }
-    var index = this.index;
-    this.parent.children.splice(index, 1);
-    this.parent.children.push(this);
-    this.parent._setChildrenIndices();
-    return true;
+    var index = this.index,
+      len = this.parent.getChildren().length;
+    if (index < len - 1) {
+      this.parent.children.splice(index, 1);
+      this.parent.children.push(this);
+      this.parent._setChildrenIndices();
+      return true;
+    }
+    return false;
   }
   /**
    * move node up
@@ -1463,7 +1461,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // move node from current layer into layer2
    * node.moveTo(layer2);
    */
-  moveTo(newContainer) {
+  moveTo(newContainer: any) {
     // do nothing if new container is already parent
     if (this.getParent() !== newContainer) {
       this._remove();
@@ -1541,7 +1539,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var parentGroups = node.findAncestors('Group');
    */
-  findAncestors(selector, includeSelf?, stopNode?) {
+  findAncestors(selector: string, includeSelf?: boolean, stopNode?: Node) {
     var res: Array<Node> = [];
 
     if (includeSelf && this._isMatch(selector)) {
@@ -1559,7 +1557,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
     return res;
   }
-  isAncestorOf(node) {
+  isAncestorOf(node: Node) {
     return false;
   }
   /**
@@ -1574,11 +1572,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var group = node.findAncestors('.mygroup');
    */
-  findAncestor(selector, includeSelf?, stopNode?) {
+  findAncestor(selector?: string, includeSelf?: boolean, stopNode?: Container) {
     return this.findAncestors(selector, includeSelf, stopNode)[0];
   }
   // is current node match passed selector?
-  _isMatch(selector) {
+  _isMatch(selector: string | Function) {
     if (!selector) {
       return false;
     }
@@ -1671,7 +1669,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // fire click event that bubbles
    * node.fire('click', null, true);
    */
-  fire(eventType, evt: any = {}, bubble?) {
+  fire(eventType: string, evt: any = {}, bubble?: boolean) {
     evt.target = evt.target || this;
     // bubble
     if (bubble) {
@@ -1752,7 +1750,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get absolute scale x
    * var scaleX = node.getAbsoluteScale().x;
    */
-  getAbsoluteScale(top?) {
+  getAbsoluteScale(top?: Node) {
     // do not cache this calculations,
     // because it use cache transform
     // this is special logic for caching with some shapes with shadow
@@ -1856,7 +1854,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    *   x: 5
    * });
    */
-  clone(obj?) {
+  clone(obj?: any) {
     // instantiate new node
     var attrs = Util.cloneObject(this.attrs),
       key,
@@ -1897,16 +1895,23 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var box = this.getClientRect();
 
     var stage = this.getStage(),
-      x = config.x !== undefined ? config.x : box.x,
-      y = config.y !== undefined ? config.y : box.y,
+      x = config.x !== undefined ? config.x : Math.floor(box.x),
+      y = config.y !== undefined ? config.y : Math.floor(box.y),
       pixelRatio = config.pixelRatio || 1,
       canvas = new SceneCanvas({
-        width: config.width || box.width || (stage ? stage.width() : 0),
-        height: config.height || box.height || (stage ? stage.height() : 0),
+        width:
+          config.width || Math.ceil(box.width) || (stage ? stage.width() : 0),
+        height:
+          config.height ||
+          Math.ceil(box.height) ||
+          (stage ? stage.height() : 0),
         pixelRatio: pixelRatio,
       }),
       context = canvas.getContext();
 
+    if (config.imageSmoothingEnabled === false) {
+      context._context.imageSmoothingEnabled = false;
+    }
     context.save();
 
     if (x || y) {
@@ -1932,10 +1937,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * You can use that property to increase quality of the image, for example for super hight quality exports
    * or usage on retina (or similar) displays. pixelRatio will be used to multiply the size of exported image.
    * If you export to 500x500 size with pixelRatio = 2, then produced image will have size 1000x1000.
+   * @param {Boolean} [config.imageSmoothingEnabled] set this to false if you want to disable imageSmoothing
    * @example
    * var canvas = node.toCanvas();
    */
-  toCanvas(config) {
+  toCanvas(config?) {
     return this._toKonvaCanvas(config)._canvas;
   }
   /**
@@ -1958,6 +1964,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * You can use that property to increase quality of the image, for example for super hight quality exports
    * or usage on retina (or similar) displays. pixelRatio will be used to multiply the size of exported image.
    * If you export to 500x500 size with pixelRatio = 2, then produced image will have size 1000x1000.
+   * @param {Boolean} [config.imageSmoothingEnabled] set this to false if you want to disable imageSmoothing
    * @returns {String}
    */
   toDataURL(config?: {
@@ -1981,12 +1988,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
   /**
    * converts node into an image.  Since the toImage
-   *  method is asynchronous, a callback is required.  toImage is most commonly used
+   *  method is asynchronous, the resulting image can only be retrieved from the config callback
+   *  or the returned Promise.  toImage is most commonly used
    *  to cache complex drawings as an image so that they don't have to constantly be redrawn
    * @method
    * @name Konva.Node#toImage
    * @param {Object} config
-   * @param {Function} config.callback function executed when the composite has completed
+   * @param {Function} [config.callback] function executed when the composite has completed
    * @param {String} [config.mimeType] can be "image/png" or "image/jpeg".
    *  "image/png" is the default
    * @param {Number} [config.x] x position of canvas section
@@ -2000,6 +2008,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * You can use that property to increase quality of the image, for example for super hight quality exports
    * or usage on retina (or similar) displays. pixelRatio will be used to multiply the size of exported image.
    * If you export to 500x500 size with pixelRatio = 2, then produced image will have size 1000x1000.
+   * @param {Boolean} [config.imageSmoothingEnabled] set this to false if you want to disable imageSmoothing
+   * @return {Promise<Image>}
    * @example
    * var image = node.toImage({
    *   callback(img) {
@@ -2017,13 +2027,61 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     quality?: number;
     callback?: (img: HTMLImageElement) => void;
   }) {
-    if (!config || !config.callback) {
-      throw 'callback required for toImage method config argument';
-    }
-    var callback = config.callback;
-    delete config.callback;
-    Util._urlToImage(this.toDataURL(config as any), function (img) {
-      callback(img);
+    return new Promise((resolve, reject) => {
+      try {
+        const callback = config?.callback;
+        if (callback) delete config.callback;
+        Util._urlToImage(this.toDataURL(config as any), function (img) {
+          resolve(img);
+          callback?.(img);
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+  /**
+   * Converts node into a blob.  Since the toBlob method is asynchronous,
+   *  the resulting blob can only be retrieved from the config callback
+   *  or the returned Promise.
+   * @method
+   * @name Konva.Node#toBlob
+   * @param {Object} config
+   * @param {Function} [config.callback] function executed when the composite has completed
+   * @param {Number} [config.x] x position of canvas section
+   * @param {Number} [config.y] y position of canvas section
+   * @param {Number} [config.width] width of canvas section
+   * @param {Number} [config.height] height of canvas section
+   * @param {Number} [config.pixelRatio] pixelRatio of output canvas. Default is 1.
+   * You can use that property to increase quality of the image, for example for super hight quality exports
+   * or usage on retina (or similar) displays. pixelRatio will be used to multiply the size of exported image.
+   * If you export to 500x500 size with pixelRatio = 2, then produced image will have size 1000x1000.
+   * @param {Boolean} [config.imageSmoothingEnabled] set this to false if you want to disable imageSmoothing
+   * @example
+   * var blob = await node.toBlob({});
+   * @returns {Promise<Blob>}
+   */
+  toBlob(config?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    pixelRatio?: number;
+    mimeType?: string;
+    quality?: number;
+    callback?: (blob: Blob) => void;
+  }) {
+    return new Promise((resolve, reject) => {
+      try {
+        const callback = config?.callback;
+        if (callback) delete config.callback;
+        this.toCanvas(config).toBlob((blob) => {
+          resolve(blob);
+          callback?.(blob);
+        });
+      } catch (err) {
+        reject(err);
+      }
     });
   }
   setSize(size) {
@@ -2055,7 +2113,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   getType() {
     return this.nodeType;
   }
-  getDragDistance() {
+  getDragDistance(): number {
     // compare with undefined because we need to track 0 value
     if (this.attrs.dragDistance !== undefined) {
       return this.attrs.dragDistance;
@@ -2099,37 +2157,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       newVal: newVal,
     });
   }
-  setId(id) {
-    var oldId = this.id();
-
-    _removeId(oldId, this);
-    _addId(this, id);
-    this._setAttr('id', id);
-    return this;
-  }
-  setName(name) {
-    var oldNames = (this.name() || '').split(/\s/g);
-    var newNames = (name || '').split(/\s/g);
-    var subname, i;
-    // remove all subnames
-    for (i = 0; i < oldNames.length; i++) {
-      subname = oldNames[i];
-      if (newNames.indexOf(subname) === -1 && subname) {
-        _removeName(subname, this._id);
-      }
-    }
-
-    // add new names
-    for (i = 0; i < newNames.length; i++) {
-      subname = newNames[i];
-      if (oldNames.indexOf(subname) === -1 && subname) {
-        _addName(this, subname);
-      }
-    }
-
-    this._setAttr(NAME, name);
-    return this;
-  }
   /**
    * add name to node
    * @method
@@ -2145,7 +2172,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     if (!this.hasName(name)) {
       var oldName = this.name();
       var newName = oldName ? oldName + ' ' + name : name;
-      this.setName(newName);
+      this.name(newName);
     }
     return this;
   }
@@ -2190,7 +2217,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var index = names.indexOf(name);
     if (index !== -1) {
       names.splice(index, 1);
-      this.setName(names.join(' '));
+      this.name(names.join(' '));
     }
     return this;
   }
@@ -2215,7 +2242,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
     return this;
   }
-  _setAttr(key, val, skipFire = false) {
+  _requestDraw() {
+    if (Konva.autoDrawEnabled) {
+      const drawNode = this.getLayer() || this.getStage();
+      drawNode?.batchDraw();
+    }
+  }
+  _setAttr(key, val) {
     var oldVal = this.attrs[key];
     if (oldVal === val && !Util.isObject(val)) {
       return;
@@ -2228,6 +2261,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     if (this._shouldFireChangeEvents) {
       this._fireChangeEvent(key, oldVal, val);
     }
+    this._requestDraw();
   }
   _setComponentAttr(key, component, val) {
     var oldVal;
@@ -2412,11 +2446,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       this._lastPos.y !== newNodePos.y
     ) {
       this.setAbsolutePosition(newNodePos);
-      if (this.getLayer()) {
-        this.getLayer().batchDraw();
-      } else if (this.getStage()) {
-        this.getStage().batchDraw();
-      }
+      this._requestDraw();
     }
 
     this._lastPos = newNodePos;
@@ -2512,6 +2542,37 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this.off('touchstart.konva');
   }
 
+  /**
+   * determine if node (at least partially) is currently in user-visible area
+   * @method
+   * @param {(Number | Object)} margin optional margin in pixels
+   * @param {Number} margin.x
+   * @param {Number} margin.y
+   * @returns {Boolean}
+   * @name Konva.Node#isClientRectOnScreen
+   * @example
+   * // get index
+   * // default calculations
+   * var isOnScreen = node.isClientRectOnScreen()
+   * // increase object size (or screen size) for cases when objects close to the screen still need to be marked as "visible"
+   * var isOnScreen = node.isClientRectOnScreen({ x: stage.width(), y: stage.height() })
+   */
+  isClientRectOnScreen(
+    margin: { x: number; y: number } = { x: 0, y: 0 }
+  ): boolean {
+    const stage = this.getStage();
+    if (!stage) {
+      return false;
+    }
+    const screenRect = {
+      x: -margin.x,
+      y: -margin.y,
+      width: stage.width() + 2 * margin.x,
+      height: stage.height() + 2 * margin.y,
+    };
+    return Util.haveIntersection(screenRect, this.getClientRect());
+  }
+
   preventDefault: GetSet<boolean, this>;
 
   // from filters
@@ -2558,7 +2619,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   rotation: GetSet<number, this>;
   zIndex: GetSet<number, this>;
 
-  scale: GetSet<Vector2d, this>;
+  scale: GetSet<Vector2d | undefined, this>;
   scaleX: GetSet<number, this>;
   scaleY: GetSet<number, this>;
   skew: GetSet<Vector2d, this>;
@@ -2609,7 +2670,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       obj.attrs.container = container;
     }
 
-    if (!_NODES_REGISTRY[className]) {
+    if (!Konva[className]) {
       Util.warn(
         'Can not find a node with class name "' +
           className +
@@ -2618,7 +2679,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       className = 'Shape';
     }
 
-    const Class = _NODES_REGISTRY[className];
+    const Class = Konva[className];
 
     no = new Class(obj.attrs);
     if (children) {
@@ -2794,7 +2855,7 @@ addGetterSetter(Node, 'opacity', 1, getNumberValidator());
 addGetterSetter(Node, 'name', '', getStringValidator());
 
 /**
- * get/set name
+ * get/set name.
  * @name Konva.Node#name
  * @method
  * @param {String} name
@@ -3222,5 +3283,3 @@ Factory.backCompat(Node, {
   setRotationDeg: 'setRotation',
   getRotationDeg: 'getRotation',
 });
-
-Collection.mapMethods(Node);

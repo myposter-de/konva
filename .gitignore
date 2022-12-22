@@ -1,4 +1,7 @@
 dist
+es
+.parcel-cache
+test-build
 documentation
 analysis
 node_modules
@@ -8,13 +11,13 @@ docs
 homedocs
 jsdoc-template
 api
-test/sandbox.html
 package-lock.json
 src_old
 *.zip
 *_cache
 types
 out.png
+cmj
 
 # Numerous always-ignore extensions
 *.diff

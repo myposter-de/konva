@@ -1,4 +1,4 @@
-import { Util, Collection } from '../Util';
+import { Util } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Konva } from '../Global';
@@ -31,6 +31,7 @@ export interface TextConfig extends ShapeConfig {
   verticalAlign?: string;
   padding?: number;
   lineHeight?: number;
+  letterSpacing?: number;
   wrap?: string;
   ellipsis?: boolean;
   textOffsetY?: number;
@@ -130,7 +131,7 @@ function checkDefaultFill(config) {
  * @param {Object} config
  * @param {String} [config.fontFamily] default is Arial
  * @param {Number} [config.fontSize] in pixels.  Default is 12
- * @param {String} [config.fontStyle] can be normal, bold, or italic.  Default is normal
+ * @param {String} [config.fontStyle] can be 'normal', 'bold', 'italic' or even 'italic bold'.  Default is 'normal'
  * @param {String} [config.fontVariant] can be normal or small-caps.  Default is normal
  * @param {String} [config.textDecoration] can be line-through, underline or empty string. Default is empty string.
  * @param {String} config.text
@@ -153,7 +154,7 @@ function checkDefaultFill(config) {
  * });
  */
 export class Text extends Shape<TextConfig> {
-  textArr: Array<{ text: string; width: number }>;
+  textArr: Array<{ text: string; width: number; lastInParagraph: boolean }>;
   _partialText: string;
   _partialTextX = 0;
   _partialTextY = 0;
@@ -221,7 +222,7 @@ export class Text extends Shape<TextConfig> {
       var obj = textArr[n],
         text = obj.text,
         width = obj.width,
-        lastLine = n !== textArrLen - 1,
+        lastLine = obj.lastInParagraph,
         spacesNumber,
         oneWord,
         lineWidth;
@@ -286,7 +287,7 @@ export class Text extends Shape<TextConfig> {
         for (var li = 0; li < array.length; li++) {
           var letter = array[li];
           // skip justify for the last line
-          if (letter === ' ' && n !== textArrLen - 1 && align === JUSTIFY) {
+          if (letter === ' ' && !lastLine && align === JUSTIFY) {
             lineTranslateX += (totalWidth - padding * 2 - width) / spacesNumber;
             // context.translate(
             //   Math.floor((totalWidth - padding * 2 - width) / spacesNumber),
@@ -381,20 +382,6 @@ export class Text extends Shape<TextConfig> {
     };
   }
   _getContextFont() {
-    // IE don't want to work with usual font style
-    // bold was not working
-    // removing font variant will solve
-    // fix for: https://github.com/konvajs/konva/issues/94
-    if (Konva.UA.isIE) {
-      return (
-        this.fontStyle() +
-        SPACE +
-        this.fontSize() +
-        PX_SPACE +
-        this.fontFamily()
-      );
-    }
-
     return (
       this.fontStyle() +
       SPACE +
@@ -410,7 +397,11 @@ export class Text extends Shape<TextConfig> {
       line = line.trim();
     }
     var width = this._getTextWidth(line);
-    return this.textArr.push({ text: line, width: width });
+    return this.textArr.push({
+      text: line,
+      width: width,
+      lastInParagraph: false,
+    });
   }
   _getTextWidth(text) {
     var letterSpacing = this.letterSpacing();
@@ -504,27 +495,11 @@ export class Text extends Shape<TextConfig> {
             this._addTextLine(match);
             textWidth = Math.max(textWidth, matchWidth);
             currentHeightPx += lineHeightPx;
-            if (
-              !shouldWrap ||
-              (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx)
-            ) {
-              var lastLine = this.textArr[this.textArr.length - 1];
-              if (lastLine) {
-                if (shouldAddEllipsis) {
-                  var haveSpace =
-                    this._getTextWidth(lastLine.text + ELLIPSIS) < maxWidth;
-                  if (!haveSpace) {
-                    lastLine.text = lastLine.text.slice(
-                      0,
-                      lastLine.text.length - 3
-                    );
-                  }
 
-                  this.textArr.splice(this.textArr.length - 1, 1);
-                  this._addTextLine(lastLine.text + ELLIPSIS);
-                }
-              }
-
+            var shouldHandleEllipsis =
+              this._shouldHandleEllipsis(currentHeightPx);
+            if (shouldHandleEllipsis) {
+              this._tryToAddEllipsisToLastLine();
               /*
                * stop wrapping if wrapping is disabled or if adding
                * one more line would overflow the fixed height
@@ -554,10 +529,16 @@ export class Text extends Shape<TextConfig> {
         this._addTextLine(line);
         currentHeightPx += lineHeightPx;
         textWidth = Math.max(textWidth, lineWidth);
+        if (this._shouldHandleEllipsis(currentHeightPx) && i < max - 1) {
+          this._tryToAddEllipsisToLastLine();
+        }
       }
       // if element height is fixed, abort if adding one more line would overflow
       if (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx) {
         break;
+      }
+      if (this.textArr[this.textArr.length - 1]) {
+        this.textArr[this.textArr.length - 1].lastInParagraph = true;
       }
     }
     this.textHeight = fontSize;
@@ -566,6 +547,52 @@ export class Text extends Shape<TextConfig> {
     //     maxTextWidth = Math.max(maxTextWidth, this.textArr[j].width);
     // }
     this.textWidth = textWidth;
+  }
+
+  /**
+   * whether to handle ellipsis, there are two cases:
+   * 1. the current line is the last line
+   * 2. wrap is NONE
+   * @param {Number} currentHeightPx
+   * @returns
+   */
+  _shouldHandleEllipsis(currentHeightPx: number): boolean {
+    var fontSize = +this.fontSize(),
+      lineHeightPx = this.lineHeight() * fontSize,
+      height = this.attrs.height,
+      fixedHeight = height !== AUTO && height !== undefined,
+      padding = this.padding(),
+      maxHeightPx = height - padding * 2,
+      wrap = this.wrap(),
+      shouldWrap = wrap !== NONE;
+
+    return (
+      !shouldWrap ||
+      (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx)
+    );
+  }
+
+  _tryToAddEllipsisToLastLine(): void {
+    var width = this.attrs.width,
+      fixedWidth = width !== AUTO && width !== undefined,
+      padding = this.padding(),
+      maxWidth = width - padding * 2,
+      shouldAddEllipsis = this.ellipsis();
+
+    var lastLine = this.textArr[this.textArr.length - 1];
+    if (!lastLine || !shouldAddEllipsis) {
+      return;
+    }
+
+    if (fixedWidth) {
+      var haveSpace = this._getTextWidth(lastLine.text + ELLIPSIS) < maxWidth;
+      if (!haveSpace) {
+        lastLine.text = lastLine.text.slice(0, lastLine.text.length - 3);
+      }
+    }
+
+    this.textArr.splice(this.textArr.length - 1, 1);
+    this._addTextLine(lastLine.text + ELLIPSIS);
   }
 
   // for text we can't disable stroke scaling
@@ -599,6 +626,7 @@ Text.prototype._attrsAffectingSize = [
   'padding',
   'wrap',
   'lineHeight',
+  'letterSpacing',
 ];
 _registerNode(Text);
 
@@ -672,7 +700,7 @@ Factory.addGetterSetter(Text, 'fontFamily', 'Arial');
 Factory.addGetterSetter(Text, 'fontSize', 12, getNumberValidator());
 
 /**
- * get/set font style.  Can be 'normal', 'italic', or 'bold'.  'normal' is the default.
+ * get/set font style.  Can be 'normal', 'italic', or 'bold' or even 'italic bold'.  'normal' is the default.
  * @name Konva.Text#fontStyle
  * @method
  * @param {String} fontStyle
@@ -868,5 +896,3 @@ Factory.addGetterSetter(Text, 'textDecoration', '');
  */
 
 Factory.addGetterSetter(Text, 'textOffsetY', 0, getNumberValidator());
-
-Collection.mapMethods(Text);

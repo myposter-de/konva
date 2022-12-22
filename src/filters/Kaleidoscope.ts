@@ -19,7 +19,7 @@ import { getNumberValidator } from '../Validators';
  *  default is in the middle
  */
 
-var ToPolar = function(src, dst, opt) {
+var ToPolar = function (src, dst, opt) {
   var srcPixels = src.data,
     dstPixels = dst.data,
     xSize = src.width,
@@ -96,7 +96,7 @@ var ToPolar = function(src, dst, opt) {
  *  0 is no rotation, 360 degrees is a full rotation
  */
 
-var FromPolar = function(src, dst, opt) {
+var FromPolar = function (src, dst, opt) {
   var srcPixels = src.data,
     dstPixels = dst.data,
     xSize = src.width,
@@ -177,7 +177,7 @@ var FromPolar = function(src, dst, opt) {
  * node.kaleidoscopePower(3);
  * node.kaleidoscopeAngle(45);
  */
-export const Kaleidoscope: Filter = function(imageData) {
+export const Kaleidoscope: Filter = function (imageData) {
   var xSize = imageData.width,
     ySize = imageData.height;
 
@@ -197,11 +197,11 @@ export const Kaleidoscope: Filter = function(imageData) {
   var scratchData = tempCanvas
     .getContext('2d')
     .getImageData(0, 0, xSize, ySize);
-
+  Util.releaseCanvas(tempCanvas);
   // Convert thhe original to polar coordinates
   ToPolar(imageData, scratchData, {
     polarCenterX: xSize / 2,
-    polarCenterY: ySize / 2
+    polarCenterY: ySize / 2,
   });
 
   // Determine how big each section will be, if it's too small

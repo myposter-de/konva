@@ -37,7 +37,7 @@ function remap(fromValue, fromMin, fromMax, toMin, toMax) {
  * node.filters([Konva.Filters.Enhance]);
  * node.enhance(0.4);
  */
-export const Enhance: Filter = function(imageData) {
+export const Enhance: Filter = function (imageData) {
   var data = imageData.data,
     nSubPixels = data.length,
     rMin = data[0],

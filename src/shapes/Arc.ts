@@ -1,10 +1,10 @@
-import { Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Konva } from '../Global';
 import { GetSet } from '../types';
 import { getNumberValidator, getBooleanValidator } from '../Validators';
 import { _registerNode } from '../Global';
+import { Transform, Util } from '../Util';
 
 export interface ArcConfig extends ShapeConfig {
   angle: number;
@@ -59,6 +59,35 @@ export class Arc extends Shape<ArcConfig> {
   }
   setHeight(height) {
     this.outerRadius(height / 2);
+  }
+
+  getSelfRect() {
+    const innerRadius = this.innerRadius();
+    const outerRadius = this.outerRadius();
+    const clockwise = this.clockwise();
+    const angle = Konva.getAngle(clockwise ? 360 - this.angle() : this.angle());
+
+    const boundLeftRatio = Math.cos(Math.min(angle, Math.PI));
+    const boundRightRatio = 1;
+    const boundTopRatio = Math.sin(
+      Math.min(Math.max(Math.PI, angle), (3 * Math.PI) / 2)
+    );
+    const boundBottomRatio = Math.sin(Math.min(angle, Math.PI / 2));
+    const boundLeft =
+      boundLeftRatio * (boundLeftRatio > 0 ? innerRadius : outerRadius);
+    const boundRight =
+      boundRightRatio * (boundRightRatio > 0 ? outerRadius : innerRadius);
+    const boundTop =
+      boundTopRatio * (boundTopRatio > 0 ? innerRadius : outerRadius);
+    const boundBottom =
+      boundBottomRatio * (boundBottomRatio > 0 ? outerRadius : innerRadius);
+
+    return {
+      x: boundLeft,
+      y: clockwise ? -1 * boundBottom : boundTop,
+      width: boundRight - boundLeft,
+      height: boundBottom - boundTop,
+    };
   }
 
   innerRadius: GetSet<number, this>;
@@ -139,5 +168,3 @@ Factory.addGetterSetter(Arc, 'clockwise', false, getBooleanValidator());
  * // draw arc clockwise
  * arc.clockwise(true);
  */
-
-Collection.mapMethods(Arc);
