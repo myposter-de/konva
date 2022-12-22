@@ -1,4 +1,3 @@
-import { Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { GetSet } from '../types';
@@ -6,7 +5,7 @@ import { getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
 
 export interface CircleConfig extends ShapeConfig {
-  radius: number;
+  radius?: number;
 }
 
 /**
@@ -73,5 +72,3 @@ _registerNode(Circle);
  * circle.radius(10);
  */
 Factory.addGetterSetter(Circle, 'radius', 0, getNumberValidator());
-
-Collection.mapMethods(Circle);

@@ -1,4 +1,5 @@
-import { Util, Collection } from './Util';
+import { Konva } from './Global';
+import { Transform, Util } from './Util';
 import { Factory } from './Factory';
 import { Node, NodeConfig } from './Node';
 import {
@@ -55,7 +56,7 @@ export interface ShapeConfig extends NodeConfig {
   fillRadialGradientColorStops?: Array<number | string>;
   fillEnabled?: boolean;
   fillPriority?: string;
-  stroke?: string;
+  stroke?: string | CanvasGradient;
   strokeWidth?: number;
   fillAfterStrokeEnabled?: boolean;
   hitStrokeWidth?: number | string;
@@ -169,9 +170,9 @@ function _clearRadialGradientCache() {
  *   }
  *});
  */
-export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
-  Config
-> {
+export class Shape<
+  Config extends ShapeConfig = ShapeConfig
+> extends Node<Config> {
   _centroid: boolean;
   colorKey: string;
 
@@ -196,22 +197,12 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
     shapes[key] = this;
   }
 
-  /**
-   * get canvas context tied to the layer
-   * @method
-   * @name Konva.Shape#getContext
-   * @returns {Konva.Context}
-   */
   getContext() {
+    Util.warn('shape.getContext() method is deprecated. Please do not use it.');
     return this.getLayer().getContext();
   }
-  /**
-   * get canvas renderer tied to the layer.  Note that this returns a canvas renderer, not a canvas element
-   * @method
-   * @name Konva.Shape#getCanvas
-   * @returns {Konva.Canvas}
-   */
   getCanvas() {
+    Util.warn('shape.getCanvas() method is deprecated. Please do not use it.');
     return this.getLayer().getCanvas();
   }
 
@@ -254,14 +245,31 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
         this.fillPatternRepeat() || 'repeat'
       );
       if (pattern && pattern.setTransform) {
-        pattern.setTransform({
-          a: this.fillPatternScaleX(), // Horizontal scaling. A value of 1 results in no scaling.
-          b: 0, // Vertical skewing.
-          c: 0, // Horizontal skewing.
-          d: this.fillPatternScaleY(), // Vertical scaling. A value of 1 results in no scaling.
-          e: 0, // Horizontal translation (moving).
-          f: 0, // Vertical translation (moving).
-        });
+        const tr = new Transform();
+
+        tr.translate(this.fillPatternX(), this.fillPatternY());
+        tr.rotate(Konva.getAngle(this.fillPatternRotation()));
+        tr.scale(this.fillPatternScaleX(), this.fillPatternScaleY());
+        tr.translate(
+          -1 * this.fillPatternOffsetX(),
+          -1 * this.fillPatternOffsetY()
+        );
+
+        const m = tr.getMatrix();
+
+        const matrix =
+          typeof DOMMatrix === 'undefined'
+            ? {
+                a: m[0], // Horizontal scaling. A value of 1 results in no scaling.
+                b: m[1], // Vertical skewing.
+                c: m[2], // Horizontal skewing.
+                d: m[3],
+                e: m[4], // Horizontal translation (moving).
+                f: m[5], // Vertical translation (moving).
+              }
+            : new DOMMatrix(m);
+
+        pattern.setTransform(matrix);
       }
       return pattern;
     }
@@ -316,8 +324,11 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
     return this._getCache(SHADOW_RGBA, this._getShadowRGBA);
   }
   _getShadowRGBA() {
-    if (this.hasShadow()) {
-      var rgba = Util.colorToRGBA(this.shadowColor());
+    if (!this.hasShadow()) {
+      return;
+    }
+    var rgba = Util.colorToRGBA(this.shadowColor());
+    if (rgba) {
       return (
         'rgba(' +
         rgba.r +
@@ -532,22 +543,15 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
     const width = preWidth + blurRadius * 2;
     const height = preHeight + blurRadius * 2;
 
-    // if stroke, for example = 3
-    // we need to set x to 1.5, but after Math.round it will be 2
-    // as we have additional offset we need to increase width and height by 1 pixel
-    let roundingOffset = 0;
-    if (Math.round(strokeWidth / 2) !== strokeWidth / 2) {
-      roundingOffset = 1;
-    }
     const rect = {
-      width: width + roundingOffset,
-      height: height + roundingOffset,
+      width: width,
+      height: height,
       x:
-        -Math.round(strokeWidth / 2 + blurRadius) +
+        -(strokeWidth / 2 + blurRadius) +
         Math.min(shadowOffsetX, 0) +
         fillRect.x,
       y:
-        -Math.round(strokeWidth / 2 + blurRadius) +
+        -(strokeWidth / 2 + blurRadius) +
         Math.min(shadowOffsetY, 0) +
         fillRect.y,
     };
@@ -572,11 +576,10 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       bufferCanvas,
       bufferContext;
 
-    var caching = canvas.isCache;
     var skipBuffer = canvas.isCache;
     var cachingSelf = top === this;
 
-    if (!this.isVisible() && !caching) {
+    if (!this.isVisible() && !cachingSelf) {
       return this;
     }
     // if node is cached we just need to draw from cache
@@ -656,9 +659,8 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       cachedHitCanvas = cachedCanvas && cachedCanvas.hit;
 
     if (!this.colorKey) {
-      console.log(this);
       Util.warn(
-        'Looks like your canvas has a destroyed shape in it. Do not reuse shape after you destroyed it. See the shape in logs above. If you want to reuse shape you should call remove() instead of destroy()'
+        'Looks like your canvas has a destroyed shape in it. Do not reuse shape after you destroyed it. If you want to reuse shape you should call remove() instead of destroy()'
       );
     }
 
@@ -777,7 +779,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   fillLinearRadialEndPoint: GetSet<Vector2d, this>;
   fillLinearRadialEndPointX: GetSet<number, this>;
   fillLinearRadialEndPointY: GetSet<number, this>;
-  fillPatternImage: GetSet<HTMLImageElement, this>;
+  fillPatternImage: GetSet<HTMLImageElement | HTMLCanvasElement, this>;
   fillRadialGradientStartRadius: GetSet<number, this>;
   fillRadialGradientEndRadius: GetSet<number, this>;
   fillRadialGradientColorStops: GetSet<Array<number | string>, this>;
@@ -845,7 +847,7 @@ Shape.prototype.on.call(
 
 Shape.prototype.on.call(
   Shape.prototype,
-  'fillPriorityChange.konva fillPatternImageChange.konva fillPatternRepeatChange.konva fillPatternScaleXChange.konva fillPatternScaleYChange.konva',
+  'fillPriorityChange.konva fillPatternImageChange.konva fillPatternRepeatChange.konva fillPatternScaleXChange.konva fillPatternScaleYChange.konva fillPatternOffsetXChange.konva fillPatternOffsetYChange.konva fillPatternXChange.konva fillPatternYChange.konva fillPatternRotationChange.konva',
   _clearFillPatternCache
 );
 
@@ -1996,5 +1998,3 @@ Factory.backCompat(Shape, {
   getDrawHitFunc: 'getHitFunc',
   setDrawHitFunc: 'setHitFunc',
 });
-
-Collection.mapMethods(Shape);

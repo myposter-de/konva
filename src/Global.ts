@@ -24,57 +24,6 @@ function detectBrowser() {
   );
 }
 
-const _detectIE = function(ua) {
-  var msie = ua.indexOf('msie ');
-  if (msie > 0) {
-    // IE 10 or older => return version number
-    return parseInt(ua.substring(msie + 5, ua.indexOf('.', msie)), 10);
-  }
-
-  var trident = ua.indexOf('trident/');
-  if (trident > 0) {
-    // IE 11 => return version number
-    var rv = ua.indexOf('rv:');
-    return parseInt(ua.substring(rv + 3, ua.indexOf('.', rv)), 10);
-  }
-
-  var edge = ua.indexOf('edge/');
-  if (edge > 0) {
-    // Edge (IE 12+) => return version number
-    return parseInt(ua.substring(edge + 5, ua.indexOf('.', edge)), 10);
-  }
-
-  // other browser
-  return false;
-};
-
-export const _parseUA = function(userAgent) {
-  var ua = userAgent.toLowerCase(),
-    // jQuery UA regex
-    match =
-      /(chrome)[ /]([\w.]+)/.exec(ua) ||
-      /(webkit)[ /]([\w.]+)/.exec(ua) ||
-      /(opera)(?:.*version|)[ /]([\w.]+)/.exec(ua) ||
-      /(msie) ([\w.]+)/.exec(ua) ||
-      (ua.indexOf('compatible') < 0 &&
-        /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua)) ||
-      [],
-    // adding mobile flag as well
-    mobile = !!userAgent.match(
-      /Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile/i
-    ),
-    ieMobile = !!userAgent.match(/IEMobile/i);
-
-  return {
-    browser: match[1] || '',
-    version: match[2] || '0',
-    isIE: _detectIE(ua),
-    // adding mobile flab
-    mobile: mobile,
-    ieMobile: ieMobile // If this is true (i.e., WP8), then Konva touch events are executed instead of equivalent Konva mouse events
-  };
-};
-
 declare const WorkerGlobalScope: any;
 
 export const glob: any =
@@ -90,13 +39,23 @@ export const Konva = {
   _global: glob,
   version: '@@version',
   isBrowser: detectBrowser(),
-  isUnminified: /param/.test(function(param) {}.toString()),
+  isUnminified: /param/.test(function (param: any) {}.toString()),
   dblClickWindow: 400,
-  getAngle(angle) {
+  getAngle(angle: number) {
     return Konva.angleDeg ? angle * PI_OVER_180 : angle;
   },
   enableTrace: false,
-  _pointerEventsEnabled: false,
+  pointerEventsEnabled: true,
+  /**
+   * Should Konva automatically update canvas on any changes. Default is true.
+   * @property autoDrawEnabled
+   * @default true
+   * @name autoDrawEnabled
+   * @memberof Konva
+   * @example
+   * Konva.autoDrawEnabled = true;
+   */
+  autoDrawEnabled: true,
   /**
    * Should we enable hit detection while dragging? For performance reasons, by default it is false.
    * But on some rare cases you want to see hit graph and check intersections. Just set it to true.
@@ -113,18 +72,24 @@ export const Konva = {
    * The case: we touchstart on div1, then touchmove out of that element into another element div2.
    * DOM will continue trigger touchmove events on div1 (not div2). Because events are "captured" into initial target.
    * By default Konva do not do that and will trigger touchmove on another element, while pointer is moving.
-   * @property captureTouchEventsEnabled
+   * @property capturePointerEventsEnabled
    * @default false
-   * @name captureTouchEventsEnabled
+   * @name capturePointerEventsEnabled
    * @memberof Konva
    * @example
-   * Konva.captureTouchEventsEnabled = true;
+   * Konva.capturePointerEventsEnabled = true;
    */
-  captureTouchEventsEnabled: false,
+  capturePointerEventsEnabled: false,
 
-  // TODO: move that to stage?
-  listenClickTap: false,
-  inDblClickWindow: false,
+  _mouseListenClick: false,
+  _touchListenClick: false,
+  _pointerListenClick: false,
+  _mouseInDblClickWindow: false,
+  _touchInDblClickWindow: false,
+  _pointerInDblClickWindow: false,
+  _mouseDblClickPointerId: null,
+  _touchDblClickPointerId: null,
+  _pointerDblClickPointerId: null,
 
   /**
    * Global pixel ratio configuration. KonvaJS automatically detect pixel ratio of current device.
@@ -137,7 +102,7 @@ export const Konva = {
    * // before any Konva code:
    * Konva.pixelRatio = 1;
    */
-  pixelRatio: undefined,
+  pixelRatio: (typeof window !== 'undefined' && window.devicePixelRatio) || 1,
 
   /**
    * Drag distance property. If you start to drag a node you may want to wait until pointer is moved to some distance from start point,
@@ -199,20 +164,28 @@ export const Konva = {
   isDragReady() {
     return !!Konva['DD'].node;
   },
+  /**
+   * Should Konva release canvas elements on destroy. Default is true.
+   * Useful to avoid memory leak issues in Safari on macOS/iOS.
+   * @property releaseCanvasOnDestroy
+   * @default true
+   * @name releaseCanvasOnDestroy
+   * @memberof Konva
+   * @example
+   * Konva.releaseCanvasOnDestroy = true;
+   */
+  releaseCanvasOnDestroy: true,
   // user agent
-  UA: _parseUA((glob.navigator && glob.navigator.userAgent) || ''),
   document: glob.document,
   // insert Konva into global namespace (window)
   // it is required for npm packages
   _injectGlobal(Konva) {
     glob.Konva = Konva;
   },
-  _parseUA
 };
 
-export const _NODES_REGISTRY = {};
-
-export const _registerNode = NodeClass => {
-  _NODES_REGISTRY[NodeClass.prototype.getClassName()] = NodeClass;
+export const _registerNode = (NodeClass: any) => {
   Konva[NodeClass.prototype.getClassName()] = NodeClass;
 };
+
+Konva._injectGlobal(Konva);

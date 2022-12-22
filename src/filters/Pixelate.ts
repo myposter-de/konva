@@ -18,7 +18,7 @@ import { getNumberValidator } from '../Validators';
  * node.pixelSize(10);
  */
 
-export const Pixelate: Filter = function(imageData) {
+export const Pixelate: Filter = function (imageData) {
   var pixelSize = Math.ceil(this.pixelSize()),
     width = imageData.width,
     height = imageData.height,

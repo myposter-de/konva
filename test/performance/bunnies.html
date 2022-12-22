@@ -10,10 +10,14 @@
   </head>
   <body>
     <div id="container"></div>
-    <!-- <script src="../../konva.js"></script> -->
-    <script src="https://unpkg.com/konva@7.0.3/konva.min.js"></script>
+    <!-- this line for dev version -->
+    <script src="../../src/index.ts"></script>
+    <!-- this line for old version -->
+    <!-- <script src="https://unpkg.com/konva@7.0.3/konva.min.js"></script> -->
     <script src="http://www.html5canvastutorials.com/lib/stats/stats.js"></script>
     <script defer="defer">
+      Konva.isUnminified = false;
+      // Konva.autoDrawEnabled = trye;
       var lastTime = 0;
 
       var width = window.innerWidth;
@@ -53,7 +57,7 @@
       wabbitTexture.onload = function () {
         _handleTextureLoaded();
       };
-      wabbitTexture.src = '../assets/bunny.png';
+      wabbitTexture.src = 'https://konvajs.org/assets/bunny.png';
 
       document.body.appendChild(stats.domElement);
       stats.domElement.style.position = 'absolute';
@@ -186,7 +190,10 @@
             y: pos.y,
           });
         }
-        layer.draw();
+        if (!Konva.autoDrawEnabled) {
+          layer.draw();
+        }
+
         requestAnimationFrame(update);
         stats.end();
       }

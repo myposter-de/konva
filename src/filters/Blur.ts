@@ -309,7 +309,7 @@ var mul_table = [
   265,
   263,
   261,
-  259
+  259,
 ];
 
 var shg_table = [
@@ -567,7 +567,7 @@ var shg_table = [
   24,
   24,
   24,
-  24
+  24,
 ];
 
 function filterGaussBlurRGBA(imageData, radius) {

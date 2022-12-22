@@ -12,7 +12,7 @@ import { getNumberValidator } from '../Validators';
  * node.contrast(10);
  */
 
-export const Contrast: Filter = function(imageData) {
+export const Contrast: Filter = function (imageData) {
   var adjust = Math.pow((this.contrast() + 100) / 100, 2);
 
   var data = imageData.data,

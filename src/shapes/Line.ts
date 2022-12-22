@@ -1,4 +1,4 @@
-import { Util, Collection } from '../Util';
+import { Util } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { getNumberValidator, getNumberArrayValidator } from '../Validators';
@@ -7,8 +7,51 @@ import { _registerNode } from '../Global';
 import { GetSet } from '../types';
 import { Context } from '../Context';
 
+function getControlPoints(x0, y0, x1, y1, x2, y2, t) {
+  var d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2)),
+    d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)),
+    fa = (t * d01) / (d01 + d12),
+    fb = (t * d12) / (d01 + d12),
+    p1x = x1 - fa * (x2 - x0),
+    p1y = y1 - fa * (y2 - y0),
+    p2x = x1 + fb * (x2 - x0),
+    p2y = y1 + fb * (y2 - y0);
+
+  return [p1x, p1y, p2x, p2y];
+}
+
+function expandPoints(p, tension) {
+  var len = p.length,
+    allPoints = [],
+    n,
+    cp;
+
+  for (n = 2; n < len - 2; n += 2) {
+    cp = getControlPoints(
+      p[n - 2],
+      p[n - 1],
+      p[n],
+      p[n + 1],
+      p[n + 2],
+      p[n + 3],
+      tension
+    );
+    if (isNaN(cp[0])) {
+      continue;
+    }
+    allPoints.push(cp[0]);
+    allPoints.push(cp[1]);
+    allPoints.push(p[n]);
+    allPoints.push(p[n + 1]);
+    allPoints.push(cp[2]);
+    allPoints.push(cp[3]);
+  }
+
+  return allPoints;
+}
+
 export interface LineConfig extends ShapeConfig {
-  points: number[];
+  points?: number[] | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
   tension?: number;
   closed?: boolean;
   bezier?: boolean;
@@ -38,14 +81,14 @@ export interface LineConfig extends ShapeConfig {
  * });
  */
 
-export class Line<Config extends LineConfig = LineConfig> extends Shape<
-  Config
-> {
+export class Line<
+  Config extends LineConfig = LineConfig
+> extends Shape<Config> {
   constructor(config?: Config) {
     super(config);
     this.on(
       'pointsChange.konva tensionChange.konva closedChange.konva bezierChange.konva',
-      function() {
+      function () {
         this._clearCache('tensionPoints');
       }
     );
@@ -134,14 +177,14 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
     if (this.closed()) {
       return this._getTensionPointsClosed();
     } else {
-      return Util._expandPoints(this.points(), this.tension());
+      return expandPoints(this.points(), this.tension());
     }
   }
   _getTensionPointsClosed() {
     var p = this.points(),
       len = p.length,
       tension = this.tension(),
-      firstControlPoints = Util._getControlPoints(
+      firstControlPoints = getControlPoints(
         p[len - 2],
         p[len - 1],
         p[0],
@@ -150,7 +193,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
         p[3],
         tension
       ),
-      lastControlPoints = Util._getControlPoints(
+      lastControlPoints = getControlPoints(
         p[len - 4],
         p[len - 3],
         p[len - 2],
@@ -159,7 +202,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
         p[1],
         tension
       ),
-      middle = Util._expandPoints(p, tension),
+      middle = expandPoints(p, tension),
       tp = [firstControlPoints[2], firstControlPoints[3]]
         .concat(middle)
         .concat([
@@ -172,7 +215,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
           firstControlPoints[0],
           firstControlPoints[1],
           p[0],
-          p[1]
+          p[1],
         ]);
 
     return tp;
@@ -191,7 +234,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
         x: points[0] || 0,
         y: points[1] || 0,
         width: 0,
-        height: 0
+        height: 0,
       };
     }
     if (this.tension() !== 0) {
@@ -200,7 +243,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
         points[1],
         ...this._getTensionPoints(),
         points[points.length - 2],
-        points[points.length - 1]
+        points[points.length - 1],
       ];
     } else {
       points = this.points();
@@ -222,7 +265,7 @@ export class Line<Config extends LineConfig = LineConfig> extends Shape<
       x: minX,
       y: minY,
       width: maxX - minX,
-      height: maxY - minY
+      height: maxY - minY,
     };
   }
 
@@ -305,5 +348,3 @@ Factory.addGetterSetter(Line, 'points', [], getNumberArrayValidator());
  * // push a new point
  * line.points(line.points().concat([70, 80]));
  */
-
-Collection.mapMethods(Line);

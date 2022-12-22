@@ -14,7 +14,7 @@ import { getNumberValidator } from '../Validators';
  * image.value(200);
  */
 
-export const HSV: Filter = function(imageData) {
+export const HSV: Filter = function (imageData) {
   var data = imageData.data,
     nPixels = data.length,
     v = Math.pow(2, this.value()),

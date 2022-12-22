@@ -1,4 +1,4 @@
-import { Util, Collection, Transform } from '../Util';
+import { Util, Transform } from '../Util';
 import { Factory } from '../Factory';
 import { Node } from '../Node';
 import { Shape } from '../Shape';
@@ -6,7 +6,7 @@ import { Rect } from './Rect';
 import { Group } from '../Group';
 import { ContainerConfig } from '../Container';
 import { Konva } from '../Global';
-import { getNumberValidator } from '../Validators';
+import { getBooleanValidator, getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
 
 import { GetSet, IRect, Vector2d } from '../types';
@@ -29,12 +29,16 @@ export interface TransformerConfig extends ContainerConfig {
   anchorStroke?: string;
   anchorStrokeWidth?: number;
   anchorSize?: number;
+  anchorCornerRadius?: number;
   keepRatio?: boolean;
   centeredScaling?: boolean;
   enabledAnchors?: Array<string>;
+  flipEnabled?: boolean;
   node?: Rect;
   ignoreStroke?: boolean;
   boundBoxFunc?: (oldBox: Box, newBox: Box) => Box;
+  useSingleNodeRotation?: boolean;
+  shouldOverdrawWholeArea?: boolean;
 }
 
 var EVENTS_NAME = 'tr-konva';
@@ -72,9 +76,7 @@ var TRANSFORM_CHANGE_STR = [
   'offsetYChange',
   'transformsEnabledChange',
   'strokeWidthChange',
-]
-  .map((e) => e + `.${EVENTS_NAME}`)
-  .join(' ');
+];
 
 var ANGLES = {
   'top-left': -45,
@@ -94,8 +96,8 @@ function getCursor(anchorName, rad) {
     return 'crosshair';
   }
 
-  rad += Util._degToRad(ANGLES[anchorName] || 0);
-  var angle = ((Util._radToDeg(rad) % 360) + 360) % 360;
+  rad += Util.degToRad(ANGLES[anchorName] || 0);
+  var angle = ((Util.radToDeg(rad) % 360) + 360) % 360;
 
   if (Util._inRange(angle, 315 + 22.5, 360) || Util._inRange(angle, 0, 22.5)) {
     // TOP
@@ -216,9 +218,11 @@ function getSnap(snaps: Array<number>, newRotationRad: number, tol: number) {
  * @param {Boolean} [config.keepRatio] Should we keep ratio when we are moving edges? Default is true
  * @param {Boolean} [config.centeredScaling] Should we resize relative to node's center? Default is false
  * @param {Array} [config.enabledAnchors] Array of names of enabled handles
+ * @param {Boolean} [config.flipEnabled] Can we flip/mirror shape on transform?. True by default
  * @param {Function} [config.boundBoxFunc] Bounding box function
  * @param {Function} [config.ignoreStroke] Should we ignore stroke size? Default is false
- *
+ * @param {Boolean} [config.useSingleNodeRotation] When just one node attached, should we use its rotation for transformer?
+ * @param {Boolean} [config.shouldOverdrawWholeArea] Should we fill whole transformer area with fake transparent shape to enable dragging from empty spaces?
  * @example
  * var transformer = new Konva.Transformer({
  *   nodes: [rectangle],
@@ -276,25 +280,24 @@ export class Transformer extends Group {
     return this._nodes && this._nodes[0];
   }
 
+  _getEventNamespace() {
+    return EVENTS_NAME + this._id;
+  }
+
   setNodes(nodes: Array<Node> = []) {
     if (this._nodes && this._nodes.length) {
       this.detach();
     }
     this._nodes = nodes;
-    if (nodes.length === 1) {
-      this.rotation(nodes[0].rotation());
+    if (nodes.length === 1 && this.useSingleNodeRotation()) {
+      this.rotation(nodes[0].getAbsoluteRotation());
     } else {
       this.rotation(0);
     }
     this._nodes.forEach((node) => {
-      const additionalEvents = node._attrsAffectingSize
-        .map((prop) => prop + 'Change.' + EVENTS_NAME)
-        .join(' ');
-
       const onChange = () => {
-        //
-        if (this.nodes().length === 1) {
-          this.rotation(this.nodes()[0].rotation());
+        if (this.nodes().length === 1 && this.useSingleNodeRotation()) {
+          this.rotation(this.nodes()[0].getAbsoluteRotation());
         }
 
         this._resetTransformCache();
@@ -302,10 +305,17 @@ export class Transformer extends Group {
           this.update();
         }
       };
+      const additionalEvents = node._attrsAffectingSize
+        .map((prop) => prop + 'Change.' + this._getEventNamespace())
+        .join(' ');
       node.on(additionalEvents, onChange);
-      node.on(TRANSFORM_CHANGE_STR, onChange);
-      node.on(`_clearTransformCache.${EVENTS_NAME}`, onChange);
-      node.on(`xChange.${EVENTS_NAME} yChange.${EVENTS_NAME}`, onChange);
+      node.on(
+        TRANSFORM_CHANGE_STR.map(
+          (e) => e + `.${this._getEventNamespace()}`
+        ).join(' '),
+        onChange
+      );
+      node.on(`absoluteTransformChange.${this._getEventNamespace()}`, onChange);
       this._proxyDrag(node);
     });
     this._resetTransformCache();
@@ -320,15 +330,15 @@ export class Transformer extends Group {
 
   _proxyDrag(node: Node) {
     let lastPos;
-    node.on(`dragstart.${EVENTS_NAME}`, (e) => {
+    node.on(`dragstart.${this._getEventNamespace()}`, (e) => {
       lastPos = node.getAbsolutePosition();
       // actual dragging of Transformer doesn't make sense
-      // but we need to proxy drag events
+      // but we need to make sure it also has all drag events
       if (!this.isDragging() && node !== this.findOne('.back')) {
         this.startDrag(e, false);
       }
     });
-    node.on(`dragmove.${EVENTS_NAME}`, (e) => {
+    node.on(`dragmove.${this._getEventNamespace()}`, (e) => {
       if (!lastPos) {
         return;
       }
@@ -379,7 +389,7 @@ export class Transformer extends Group {
     // remove events
     if (this._nodes) {
       this._nodes.forEach((node) => {
-        node.off('.' + EVENTS_NAME);
+        node.off('.' + this._getEventNamespace());
       });
     }
     this._nodes = [];
@@ -523,7 +533,7 @@ export class Transformer extends Group {
       name: name + ' _anchor',
       dragDistance: 0,
       // make it draggable,
-      // so activating the anchror will not start drag&drop of any parent
+      // so activating the anchor will not start drag&drop of any parent
       draggable: true,
       hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto',
     });
@@ -543,11 +553,13 @@ export class Transformer extends Group {
     anchor.on('mouseenter', () => {
       var rad = Konva.getAngle(this.rotation());
       var cursor = getCursor(name, rad);
-      anchor.getStage().content.style.cursor = cursor;
+      anchor.getStage().content &&
+        (anchor.getStage().content.style.cursor = cursor);
       this._cursorChange = true;
     });
     anchor.on('mouseout', () => {
-      anchor.getStage().content.style.cursor = '';
+      anchor.getStage().content &&
+        (anchor.getStage().content.style.cursor = '');
       this._cursorChange = false;
     });
     this.add(anchor);
@@ -607,6 +619,10 @@ export class Transformer extends Group {
     back.on('dragend', (e) => {
       e.cancelBubble = true;
     });
+    // force self update when we drag with shouldOverDrawWholeArea setting
+    this.on('dragmove', (e) => {
+      this.update();
+    });
   }
   _handleMouseDown(e) {
     this._movingAnchorName = e.target.name().split(' ')[0];
@@ -619,10 +635,12 @@ export class Transformer extends Group {
     this.sin = Math.abs(height / hypotenuse);
     this.cos = Math.abs(width / hypotenuse);
 
-    window.addEventListener('mousemove', this._handleMouseMove);
-    window.addEventListener('touchmove', this._handleMouseMove);
-    window.addEventListener('mouseup', this._handleMouseUp, true);
-    window.addEventListener('touchend', this._handleMouseUp, true);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mousemove', this._handleMouseMove);
+      window.addEventListener('touchmove', this._handleMouseMove);
+      window.addEventListener('mouseup', this._handleMouseUp, true);
+      window.addEventListener('touchend', this._handleMouseUp, true);
+    }
 
     this._transforming = true;
     var ap = e.target.getAbsolutePosition();
@@ -631,9 +649,9 @@ export class Transformer extends Group {
       x: pos.x - ap.x,
       y: pos.y - ap.y,
     };
-    this._fire('transformstart', { evt: e, target: this.getNode() });
+    this._fire('transformstart', { evt: e.evt, target: this.getNode() });
     this._nodes.forEach((target) => {
-      target._fire('transformstart', { evt: e, target });
+      target._fire('transformstart', { evt: e.evt, target });
     });
   }
   _handleMouseMove(e) {
@@ -644,13 +662,19 @@ export class Transformer extends Group {
     stage.setPointersPositions(e);
 
     const pp = stage.getPointerPosition();
-    var newNodePos = {
+    let newNodePos = {
       x: pp.x - this._anchorDragOffset.x,
       y: pp.y - this._anchorDragOffset.y,
     };
     const oldAbs = anchorNode.getAbsolutePosition();
+
+    if (this.anchorDragBoundFunc()) {
+      newNodePos = this.anchorDragBoundFunc()(oldAbs, newNodePos, e);
+    }
     anchorNode.setAbsolutePosition(newNodePos);
     const newAbs = anchorNode.getAbsolutePosition();
+
+    // console.log(oldAbs, newNodePos, newAbs);
 
     if (oldAbs.x === newAbs.x && oldAbs.y === newAbs.y) {
       return;
@@ -871,10 +895,12 @@ export class Transformer extends Group {
   _removeEvents(e?) {
     if (this._transforming) {
       this._transforming = false;
-      window.removeEventListener('mousemove', this._handleMouseMove);
-      window.removeEventListener('touchmove', this._handleMouseMove);
-      window.removeEventListener('mouseup', this._handleMouseUp, true);
-      window.removeEventListener('touchend', this._handleMouseUp, true);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('mousemove', this._handleMouseMove);
+        window.removeEventListener('touchmove', this._handleMouseMove);
+        window.removeEventListener('mouseup', this._handleMouseUp, true);
+        window.removeEventListener('touchend', this._handleMouseUp, true);
+      }
       var node = this.getNode();
       this._fire('transformend', { evt: e, target: node });
 
@@ -886,7 +912,7 @@ export class Transformer extends Group {
       this._movingAnchorName = null;
     }
   }
-  _fitNodesInto(newAttrs, evt) {
+  _fitNodesInto(newAttrs, evt?) {
     var oldAttrs = this._getNodeRect();
 
     const minSize = 1;
@@ -902,7 +928,7 @@ export class Transformer extends Group {
       return;
     }
 
-    const allowNegativeScale = true;
+    const allowNegativeScale = this.flipEnabled();
     var t = new Transform();
     t.rotate(Konva.getAngle(this.rotation()));
     if (
@@ -1070,7 +1096,7 @@ export class Transformer extends Group {
     var padding = this.padding();
 
     var anchorSize = this.anchorSize();
-    this.find('._anchor').each((node) => {
+    this.find('._anchor').forEach((node) => {
       node.setAttrs({
         width: anchorSize,
         height: anchorSize,
@@ -1180,7 +1206,7 @@ export class Transformer extends Group {
   }
   destroy() {
     if (this.getStage() && this._cursorChange) {
-      this.getStage().content.style.cursor = '';
+      this.getStage().content && (this.getStage().content.style.cursor = '');
     }
     Group.prototype.destroy.call(this);
     this.detach();
@@ -1191,6 +1217,21 @@ export class Transformer extends Group {
   // we will recreate inner nodes manually
   toObject() {
     return Node.prototype.toObject.call(this);
+  }
+
+  // overwrite clone to NOT use method from Container
+  clone(obj?: any) {
+    var node = Node.prototype.clone.call(this, obj);
+    return node as this;
+  }
+  getClientRect() {
+    if (this.nodes().length > 0) {
+      return super.getClientRect();
+    } else {
+      // if we are detached return zero size
+      // so it will be skipped in calculations
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
   }
 
   nodes: GetSet<Node[], this>;
@@ -1212,9 +1253,15 @@ export class Transformer extends Group {
   anchorStrokeWidth: GetSet<number, this>;
   keepRatio: GetSet<boolean, this>;
   centeredScaling: GetSet<boolean, this>;
+  flipEnabled: GetSet<boolean, this>;
   ignoreStroke: GetSet<boolean, this>;
   boundBoxFunc: GetSet<(oldBox: Box, newBox: Box) => Box, this>;
+  anchorDragBoundFunc: GetSet<
+    (oldPos: Vector2d, newPos: Vector2d, e: MouseEvent) => Vector2d,
+    this
+  >;
   shouldOverdrawWholeArea: GetSet<boolean, this>;
+  useSingleNodeRotation: GetSet<boolean, this>;
 }
 
 function validateAnchors(val) {
@@ -1260,11 +1307,31 @@ Factory.addGetterSetter(
 );
 
 /**
+ * get/set flip enabled
+ * @name Konva.Transformer#flipEnabled
+ * @method
+ * @param {Boolean} flag
+ * @returns {Boolean}
+ * @example
+ * // get flip enabled property
+ * var flipEnabled = transformer.flipEnabled();
+ *
+ * // set flip enabled property
+ * transformer.flipEnabled(false);
+ */
+Factory.addGetterSetter(
+  Transformer,
+  'flipEnabled',
+  true,
+  getBooleanValidator()
+);
+
+/**
  * get/set resize ability. If false it will automatically hide resizing handlers
  * @name Konva.Transformer#resizeEnabled
  * @method
- * @param {Array} array
- * @returns {Array}
+ * @param {Boolean} enabled
+ * @returns {Boolean}
  * @example
  * // get
  * var resizeEnabled = transformer.resizeEnabled();
@@ -1275,9 +1342,9 @@ Factory.addGetterSetter(
 Factory.addGetterSetter(Transformer, 'resizeEnabled', true);
 /**
  * get/set anchor size. Default is 10
- * @name Konva.Transformer#validateAnchors
+ * @name Konva.Transformer#anchorSize
  * @method
- * @param {Number} 10
+ * @param {Number} size
  * @returns {Number}
  * @example
  * // get
@@ -1377,8 +1444,8 @@ Factory.addGetterSetter(Transformer, 'borderEnabled', true);
  * get/set anchor stroke color
  * @name Konva.Transformer#anchorStroke
  * @method
- * @param {Boolean} enabled
- * @returns {Boolean}
+ * @param {String} strokeColor
+ * @returns {String}
  * @example
  * // get
  * var anchorStroke = transformer.anchorStroke();
@@ -1392,8 +1459,8 @@ Factory.addGetterSetter(Transformer, 'anchorStroke', 'rgb(0, 161, 255)');
  * get/set anchor stroke width
  * @name Konva.Transformer#anchorStrokeWidth
  * @method
- * @param {Boolean} enabled
- * @returns {Boolean}
+ * @param {Number} anchorStrokeWidth
+ * @returns {Number}
  * @example
  * // get
  * var anchorStrokeWidth = transformer.anchorStrokeWidth();
@@ -1412,8 +1479,8 @@ Factory.addGetterSetter(
  * get/set anchor fill color
  * @name Konva.Transformer#anchorFill
  * @method
- * @param {Boolean} enabled
- * @returns {Boolean}
+ * @param {String} anchorFill
+ * @returns {String}
  * @example
  * // get
  * var anchorFill = transformer.anchorFill();
@@ -1427,7 +1494,7 @@ Factory.addGetterSetter(Transformer, 'anchorFill', 'white');
  * get/set anchor corner radius
  * @name Konva.Transformer#anchorCornerRadius
  * @method
- * @param {Number} enabled
+ * @param {Number} radius
  * @returns {Number}
  * @example
  * // get
@@ -1462,8 +1529,8 @@ Factory.addGetterSetter(Transformer, 'borderStroke', 'rgb(0, 161, 255)');
  * get/set border stroke width
  * @name Konva.Transformer#borderStrokeWidth
  * @method
- * @param {Boolean} enabled
- * @returns {Boolean}
+ * @param {Number} strokeWidth
+ * @returns {Number}
  * @example
  * // get
  * var borderStrokeWidth = transformer.borderStrokeWidth();
@@ -1482,8 +1549,8 @@ Factory.addGetterSetter(
  * get/set border dash array
  * @name Konva.Transformer#borderDash
  * @method
- * @param {Boolean} enabled
- * @returns {Boolean}
+ * @param {Array} dash array
+ * @returns {Array}
  * @example
  * // get
  * var borderDash = transformer.borderDash();
@@ -1599,12 +1666,61 @@ Factory.addGetterSetter(Transformer, 'nodes');
  */
 Factory.addGetterSetter(Transformer, 'boundBoxFunc');
 
+/**
+ * get/set dragging func for transformer anchors
+ * @name Konva.Transformer#anchorDragBoundFunc
+ * @method
+ * @param {Function} func
+ * @returns {Function}
+ * @example
+ * // get
+ * var anchorDragBoundFunc = transformer.anchorDragBoundFunc();
+ *
+ * // set
+ * transformer.anchorDragBoundFunc(function(oldAbsPos, newAbsPos, event) {
+ *  return {
+ *   x: 0,
+ *   y: newAbsolutePosition.y
+ *  }
+ * });
+ */
+Factory.addGetterSetter(Transformer, 'anchorDragBoundFunc');
+
+/**
+ * using this setting you can drag transformer group by dragging empty space between attached nodes
+ * shouldOverdrawWholeArea = true may temporary disable all events on attached nodes
+ * @name Konva.Transformer#shouldOverdrawWholeArea
+ * @method
+ * @param {Boolean} shouldOverdrawWholeArea
+ * @returns {Boolean}
+ * @example
+ * // get
+ * var shouldOverdrawWholeArea = transformer.shouldOverdrawWholeArea();
+ *
+ * // set
+ * transformer.shouldOverdrawWholeArea(true);
+ */
 Factory.addGetterSetter(Transformer, 'shouldOverdrawWholeArea', false);
+
+/**
+ * If you have just one attached node to Transformer it will set its initial rotation to the rotation of that node.
+ * In some cases you may need to set a different rotation.
+ * @name Konva.Transformer#useSingleNodeRotation
+ * @method
+ * @param {Boolean} useSingleNodeRotation
+ * @returns {Boolean}
+ * @example
+ * // set flag to false
+ * transformer.useSingleNodeRotation(false);
+ * // attach a shape
+ * transformer.nodes([shape]);
+ * transformer.rotation(45);
+ * transformer.update();
+ */
+Factory.addGetterSetter(Transformer, 'useSingleNodeRotation', true);
 
 Factory.backCompat(Transformer, {
   lineEnabled: 'borderEnabled',
   rotateHandlerOffset: 'rotateAnchorOffset',
   enabledHandlers: 'enabledAnchors',
 });
-
-Collection.mapMethods(Transformer);

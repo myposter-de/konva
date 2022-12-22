@@ -60,7 +60,7 @@ function backgroundMask(idata, threshold) {
       var d = rgbDistance(mean, [
         idata.data[i * 4],
         idata.data[i * 4 + 1],
-        idata.data[i * 4 + 2]
+        idata.data[i * 4 + 2],
       ]);
       mask[i] = d < thres ? 0 : 255;
     }
@@ -179,7 +179,7 @@ function smoothEdgeMask(mask, sw, sh) {
  * node.filters([Konva.Filters.Mask]);
  * node.threshold(200);
  */
-export const Mask: Filter = function(imageData) {
+export const Mask: Filter = function (imageData) {
   // Detect pixels close to the background color
   var threshold = this.threshold(),
     mask = backgroundMask(imageData, threshold);

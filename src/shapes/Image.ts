@@ -1,4 +1,4 @@
-import { Util, Collection } from '../Util';
+import { Util } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { getNumberValidator } from '../Validators';
@@ -36,6 +36,30 @@ export interface ImageConfig extends ShapeConfig {
  * imageObj.src = '/path/to/image.jpg'
  */
 export class Image extends Shape<ImageConfig> {
+  constructor(attrs: ImageConfig) {
+    super(attrs);
+    this.on('imageChange.konva', () => {
+      this._setImageLoad();
+    });
+
+    this._setImageLoad();
+  }
+  _setImageLoad() {
+    const image = this.image() as any;
+    // check is image is already loaded
+    if (image && image.complete) {
+      return;
+    }
+    // check is video is already loaded
+    if (image && image.readyState === 4) {
+      return;
+    }
+    if (image && image['addEventListener']) {
+      image['addEventListener']('load', () => {
+        this._requestDraw();
+      });
+    }
+  }
   _useBufferCanvas() {
     return super._useBufferCanvas(true);
   }
@@ -86,10 +110,10 @@ export class Image extends Shape<ImageConfig> {
     context.fillStrokeShape(this);
   }
   getWidth() {
-    return this.attrs.width ?? (this.image()?.width || 0);
+    return this.attrs.width ?? this.image()?.width;
   }
   getHeight() {
-    return this.attrs.height ?? (this.image()?.height || 0);
+    return this.attrs.height ?? this.image()?.height;
   }
 
   /**
@@ -98,6 +122,7 @@ export class Image extends Shape<ImageConfig> {
    * @memberof Konva.Image
    * @param {String} url image source
    * @param {Function} callback with Konva.Image instance as first argument
+   * @param {Function} onError optional error handler
    * @example
    *  Konva.Image.fromURL(imageURL, function(image){
    *    // image is Konva.Image instance
@@ -105,7 +130,7 @@ export class Image extends Shape<ImageConfig> {
    *    layer.draw();
    *  });
    */
-  static fromURL(url, callback) {
+  static fromURL(url, callback, onError = null) {
     var img = Util.createImageElement();
     img.onload = function () {
       var image = new Image({
@@ -113,6 +138,7 @@ export class Image extends Shape<ImageConfig> {
       });
       callback(image);
     };
+    img.onerror = onError;
     img.crossOrigin = 'Anonymous';
     img.src = url;
   }
@@ -225,5 +251,3 @@ Factory.addGetterSetter(Image, 'cropHeight', 0, getNumberValidator());
  * // set crop height
  * image.cropHeight(20);
  */
-
-Collection.mapMethods(Image);

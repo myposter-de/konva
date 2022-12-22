@@ -28,10 +28,13 @@ import { Solarize } from './filters/Solarize';
 import { Threshold } from './filters/Threshold';
 
 declare namespace Konva {
+  export let enableTrace: number;
   export let pixelRatio: number;
+  export let autoDrawEnabled: boolean;
   export let dragDistance: number;
   export let angleDeg: boolean;
   export let showWarnings: boolean;
+  export let capturePointerEventsEnabled: boolean;
   export let dragButtons: Array<number>;
   export let hitOnDragEnabled: boolean;
   export const isDragging: () => boolean;
@@ -43,9 +46,9 @@ declare namespace Konva {
   export type Node = import('./Node').Node;
   export type NodeConfig = import('./Node').NodeConfig;
 
-  export type KonvaEventObject<EventType> = import('./Node').KonvaEventObject<
+  export type KonvaEventObject<
     EventType
-  >;
+  > = import('./Node').KonvaEventObject<EventType>;
 
   export type KonvaPointerEvent = import('./PointerEvents').KonvaPointerEvent;
 
@@ -58,8 +61,6 @@ declare namespace Konva {
   export type Container = import('./Container').Container<Node>;
   export type ContainerConfig = import('./Container').ContainerConfig;
 
-  export const Collection: typeof import('./Util').Collection;
-  export type Collection<Node> = import('./Util').Collection<Node>;
   export const Transform: typeof import('./Util').Transform;
   export type Transform = import('./Util').Transform;
 
@@ -70,6 +71,7 @@ declare namespace Konva {
 
   export const Stage: typeof import('./Stage').Stage;
   export type Stage = import('./Stage').Stage;
+  export type StageConfig = import('./Stage').StageConfig;
   export const stages: typeof import('./Stage').stages;
 
   export const Layer: typeof import('./Layer').Layer;
@@ -81,6 +83,7 @@ declare namespace Konva {
 
   export const Group: typeof import('./Group').Group;
   export type Group = import('./Group').Group;
+  export type GroupConfig = import('./Group').GroupConfig;
 
   export const DD: typeof import('./DragAndDrop').DD;
 

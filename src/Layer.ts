@@ -1,4 +1,4 @@
-import { Util, Collection } from './Util';
+import { Util } from './Util';
 import { Container, ContainerConfig } from './Container';
 import { Node } from './Node';
 import { Factory } from './Factory';
@@ -84,6 +84,14 @@ export class Layer extends Container<Group | Shape> {
     return this.canvas;
   }
   /**
+   * get native canvas element
+   * @method
+   * @name Konva.Layer#getNativeCanvasElement
+   */
+  getNativeCanvasElement() {
+    return this.canvas._canvas;
+  }
+  /**
    * get layer hit canvas
    * @method
    * @name Konva.Layer#getHitCanvas
@@ -99,25 +107,7 @@ export class Layer extends Container<Group | Shape> {
   getContext() {
     return this.getCanvas().getContext();
   }
-  /**
-   * clear scene and hit canvas contexts tied to the layer.
-   * This function doesn't remove any nodes. It just clear canvas element.
-   * @method
-   * @name Konva.Layer#clear
-   * @param {Object} [bounds]
-   * @param {Number} [bounds.x]
-   * @param {Number} [bounds.y]
-   * @param {Number} [bounds.width]
-   * @param {Number} [bounds.height]
-   * @example
-   * layer.clear();
-   * layer.clear({
-   *   x : 0,
-   *   y : 0,
-   *   width : 100,
-   *   height : 100
-   * });
-   */
+  // TODO: deprecate this method
   clear(bounds?) {
     this.getContext().clear(bounds);
     this.getHitCanvas().getContext().clear(bounds);
@@ -127,16 +117,16 @@ export class Layer extends Container<Group | Shape> {
   setZIndex(index) {
     super.setZIndex(index);
     var stage = this.getStage();
-    if (stage) {
-      stage.content.removeChild(this.getCanvas()._canvas);
+    if (stage && stage.content) {
+      stage.content.removeChild(this.getNativeCanvasElement());
 
       if (index < stage.children.length - 1) {
         stage.content.insertBefore(
-          this.getCanvas()._canvas,
+          this.getNativeCanvasElement(),
           stage.children[index + 1].getCanvas()._canvas
         );
       } else {
-        stage.content.appendChild(this.getCanvas()._canvas);
+        stage.content.appendChild(this.getNativeCanvasElement());
       }
     }
     return this;
@@ -144,9 +134,9 @@ export class Layer extends Container<Group | Shape> {
   moveToTop() {
     Node.prototype.moveToTop.call(this);
     var stage = this.getStage();
-    if (stage) {
-      stage.content.removeChild(this.getCanvas()._canvas);
-      stage.content.appendChild(this.getCanvas()._canvas);
+    if (stage && stage.content) {
+      stage.content.removeChild(this.getNativeCanvasElement());
+      stage.content.appendChild(this.getNativeCanvasElement());
     }
     return true;
   }
@@ -156,18 +146,18 @@ export class Layer extends Container<Group | Shape> {
       return false;
     }
     var stage = this.getStage();
-    if (!stage) {
+    if (!stage || !stage.content) {
       return false;
     }
-    stage.content.removeChild(this.getCanvas()._canvas);
+    stage.content.removeChild(this.getNativeCanvasElement());
 
     if (this.index < stage.children.length - 1) {
       stage.content.insertBefore(
-        this.getCanvas()._canvas,
+        this.getNativeCanvasElement(),
         stage.children[this.index + 1].getCanvas()._canvas
       );
     } else {
-      stage.content.appendChild(this.getCanvas()._canvas);
+      stage.content.appendChild(this.getNativeCanvasElement());
     }
     return true;
   }
@@ -177,11 +167,13 @@ export class Layer extends Container<Group | Shape> {
       var stage = this.getStage();
       if (stage) {
         var children = stage.children;
-        stage.content.removeChild(this.getCanvas()._canvas);
-        stage.content.insertBefore(
-          this.getCanvas()._canvas,
-          children[this.index + 1].getCanvas()._canvas
-        );
+        if (stage.content) {
+          stage.content.removeChild(this.getNativeCanvasElement());
+          stage.content.insertBefore(
+            this.getNativeCanvasElement(),
+            children[this.index + 1].getCanvas()._canvas
+          );
+        }
       }
       return true;
     }
@@ -193,11 +185,13 @@ export class Layer extends Container<Group | Shape> {
       var stage = this.getStage();
       if (stage) {
         var children = stage.children;
-        stage.content.removeChild(this.getCanvas()._canvas);
-        stage.content.insertBefore(
-          this.getCanvas()._canvas,
-          children[1].getCanvas()._canvas
-        );
+        if (stage.content) {
+          stage.content.removeChild(this.getNativeCanvasElement());
+          stage.content.insertBefore(
+            this.getNativeCanvasElement(),
+            children[1].getCanvas()._canvas
+          );
+        }
       }
       return true;
     }
@@ -207,7 +201,7 @@ export class Layer extends Container<Group | Shape> {
     return this;
   }
   remove() {
-    var _canvas = this.getCanvas()._canvas;
+    var _canvas = this.getNativeCanvasElement();
 
     Node.prototype.remove.call(this);
 
@@ -251,7 +245,8 @@ export class Layer extends Container<Group | Shape> {
   }
 
   _setSmoothEnabled() {
-    this.getContext()._context.imageSmoothingEnabled = this.imageSmoothingEnabled();
+    this.getContext()._context.imageSmoothingEnabled =
+      this.imageSmoothingEnabled();
   }
   /**
    * get/set width of layer. getter return width of stage. setter doing nothing.
@@ -319,14 +314,11 @@ export class Layer extends Container<Group | Shape> {
    * @param {Object} pos
    * @param {Number} pos.x
    * @param {Number} pos.y
-   * @param {String} [selector]
    * @returns {Konva.Node}
    * @example
    * var shape = layer.getIntersection({x: 50, y: 50});
-   * // or if you interested in shape parent:
-   * var group = layer.getIntersection({x: 50, y: 50}, 'Group');
    */
-  getIntersection(pos: Vector2d, selector?: string): Node | null {
+  getIntersection(pos: Vector2d) {
     if (!this.isListening() || !this.isVisible()) {
       return null;
     }
@@ -342,9 +334,7 @@ export class Layer extends Container<Group | Shape> {
           y: pos.y + intersectionOffset.y * spiralSearchDistance,
         });
         const shape = obj.shape;
-        if (shape && selector) {
-          return shape.findAncestor(selector, true);
-        } else if (shape) {
+        if (shape) {
           return shape;
         }
         // we should continue search if we found antialiased pixel
@@ -394,7 +384,7 @@ export class Layer extends Container<Group | Shape> {
     // empty pixel
     return {};
   }
-  drawScene(can, top) {
+  drawScene(can?: SceneCanvas, top?: Node) {
     var layer = this.getLayer(),
       canvas = can || (layer && layer.getCanvas());
 
@@ -414,7 +404,7 @@ export class Layer extends Container<Group | Shape> {
 
     return this;
   }
-  drawHit(can, top) {
+  drawHit(can?: HitCanvas, top?: Node) {
     var layer = this.getLayer(),
       canvas = can || (layer && layer.hitCanvas);
 
@@ -466,7 +456,7 @@ export class Layer extends Container<Group | Shape> {
    * @method
    */
   toggleHitCanvas() {
-    if (!this.parent) {
+    if (!this.parent || !this.parent['content']) {
       return;
     }
     var parent = this.parent as any;
@@ -476,6 +466,11 @@ export class Layer extends Container<Group | Shape> {
     } else {
       parent.content.appendChild(this.hitCanvas._canvas);
     }
+  }
+
+  destroy(): this {
+    Util.releaseCanvas(this.getNativeCanvasElement(), this.getHitCanvas()._canvas);
+    return super.destroy();
   }
 
   hitGraphEnabled: GetSet<boolean, this>;
@@ -543,5 +538,3 @@ Factory.addGetterSetter(Layer, 'hitGraphEnabled', true, getBooleanValidator());
  * // enable hit graph
  * layer.hitGraphEnabled(true);
  */
-
-Collection.mapMethods(Layer);
