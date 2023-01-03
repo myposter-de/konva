@@ -17,7 +17,6 @@ src_old
 *_cache
 types
 out.png
-cmj
 
 # Numerous always-ignore extensions
 *.diff
