@@ -9,7 +9,7 @@
     "lib",
     "cmj"
   ],
-  "main": "./cmj/index-node.js",
+  "main": "./cmj/index.js",
   "browser": "./lib/index.js",
   "typings": "./lib/index-types.d.ts",
   "type": "module",
