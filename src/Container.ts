@@ -7,9 +7,13 @@ import { Shape } from './Shape';
 import { HitCanvas, SceneCanvas } from './Canvas';
 import { SceneContext } from './Context';
 
+export type ClipFuncOutput =
+  | void
+  | [Path2D | CanvasFillRule]
+  | [Path2D, CanvasFillRule];
 export interface ContainerConfig extends NodeConfig {
   clearBeforeDraw?: boolean;
-  clipFunc?: (ctx: SceneContext) => void;
+  clipFunc?: (ctx: SceneContext) => ClipFuncOutput;
   clipX?: number;
   clipY?: number;
   clipWidth?: number;
@@ -29,7 +33,7 @@ export interface ContainerConfig extends NodeConfig {
 export abstract class Container<
   ChildType extends Node = Node
 > extends Node<ContainerConfig> {
-  children: Array<ChildType> | undefined = [];
+  children: Array<ChildType> = [];
 
   /**
    * returns an array of direct descendant nodes
@@ -109,22 +113,27 @@ export abstract class Container<
    * add a child and children into container
    * @name Konva.Container#add
    * @method
-   * @param {...Konva.Node} child
+   * @param {...Konva.Node} children
    * @returns {Container}
    * @example
    * layer.add(rect);
    * layer.add(shape1, shape2, shape3);
+   * // empty arrays are accepted, though each individual child must be defined
+   * layer.add(...shapes);
    * // remember to redraw layer if you changed something
    * layer.draw();
    */
   add(...children: ChildType[]) {
-    if (arguments.length > 1) {
-      for (var i = 0; i < arguments.length; i++) {
-        this.add(arguments[i]);
+    if (children.length === 0) {
+      return this;
+    }
+    if (children.length > 1) {
+      for (var i = 0; i < children.length; i++) {
+        this.add(children[i]);
       }
       return this;
     }
-    var child = children[0];
+    const child = children[0];
     if (child.getParent()) {
       child.moveTo(this);
       return this;
@@ -188,7 +197,7 @@ export abstract class Container<
    *  return node.getType() === 'Node' && node.getAbsoluteOpacity() < 1;
    * });
    */
-  find<ChildNode extends Node = Node>(selector): Array<ChildNode> {
+  find<ChildNode extends Node>(selector): Array<ChildNode> {
     // protecting _generalFind to prevent user from accidentally adding
     // second argument and getting unexpected `findOne` result
     return this._generalFind<ChildNode>(selector, false);
@@ -211,20 +220,22 @@ export abstract class Container<
    *  return node.getType() === 'Shape'
    * })
    */
-  findOne<ChildNode extends Node = Node>(selector: string | Function) {
+  findOne<ChildNode extends Node = Node>(
+    selector: string | Function
+  ): ChildNode | undefined {
     var result = this._generalFind<ChildNode>(selector, true);
     return result.length > 0 ? result[0] : undefined;
   }
-  _generalFind<ChildNode extends Node = Node>(
+  _generalFind<ChildNode extends Node>(
     selector: string | Function,
     findOne: boolean
   ) {
     var retArr: Array<ChildNode> = [];
 
-    this._descendants((node: ChildNode) => {
+    this._descendants((node) => {
       const valid = node._isMatch(selector);
       if (valid) {
-        retArr.push(node);
+        retArr.push(node as unknown as ChildNode);
       }
       if (valid && findOne) {
         return true;
@@ -245,7 +256,7 @@ export abstract class Container<
       if (!child.hasChildren()) {
         continue;
       }
-      shouldStop = (child as any)._descendants(fn);
+      shouldStop = (child as unknown as Container)._descendants(fn);
       if (shouldStop) {
         return true;
       }
@@ -259,7 +270,7 @@ export abstract class Container<
     obj.children = [];
 
     this.getChildren().forEach((child) => {
-      obj.children.push(child.toObject());
+      obj.children!.push(child.toObject());
     });
 
     return obj;
@@ -304,9 +315,9 @@ export abstract class Container<
    * @returns {Array} array of shapes
    */
   getAllIntersections(pos) {
-    var arr = [];
+    var arr: Shape[] = [];
 
-    this.find('Shape').forEach(function (shape: Shape) {
+    this.find<Shape>('Shape').forEach((shape) => {
       if (shape.isVisible() && shape.intersects(pos)) {
         arr.push(shape);
       }
@@ -331,8 +342,8 @@ export abstract class Container<
     });
     this._requestDraw();
   }
-  drawScene(can?: SceneCanvas, top?: Node) {
-    var layer = this.getLayer(),
+  drawScene(can?: SceneCanvas, top?: Node, bufferCanvas?: SceneCanvas) {
+    var layer = this.getLayer()!,
       canvas = can || (layer && layer.getCanvas()),
       context = canvas && canvas.getContext(),
       cachedCanvas = this._getCanvasCache(),
@@ -350,7 +361,7 @@ export abstract class Container<
       this._drawCachedSceneCanvas(context);
       context.restore();
     } else {
-      this._drawChildren('drawScene', canvas, top);
+      this._drawChildren('drawScene', canvas, top, bufferCanvas);
     }
     return this;
   }
@@ -359,7 +370,7 @@ export abstract class Container<
       return this;
     }
 
-    var layer = this.getLayer(),
+    var layer = this.getLayer()!,
       canvas = can || (layer && layer.hitCanvas),
       context = canvas && canvas.getContext(),
       cachedCanvas = this._getCanvasCache(),
@@ -376,7 +387,7 @@ export abstract class Container<
     }
     return this;
   }
-  _drawChildren(drawMethod, canvas, top) {
+  _drawChildren(drawMethod, canvas, top, bufferCanvas?) {
     var context = canvas && canvas.getContext(),
       clipWidth = this.clipWidth(),
       clipHeight = this.clipHeight(),
@@ -391,14 +402,15 @@ export abstract class Container<
       var m = transform.getMatrix();
       context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
       context.beginPath();
+      let clipArgs;
       if (clipFunc) {
-        clipFunc.call(this, context, this);
+        clipArgs = clipFunc.call(this, context, this);
       } else {
         var clipX = this.clipX();
         var clipY = this.clipY();
         context.rect(clipX, clipY, clipWidth, clipHeight);
       }
-      context.clip();
+      context.clip.apply(context, clipArgs);
       m = transform.copy().invert().getMatrix();
       context.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
     }
@@ -414,7 +426,7 @@ export abstract class Container<
     }
 
     this.children?.forEach(function (child) {
-      child[drawMethod](canvas, top);
+      child[drawMethod](canvas, top, bufferCanvas);
     });
     if (hasComposition) {
       context.restore();
@@ -425,13 +437,14 @@ export abstract class Container<
     }
   }
 
-  getClientRect(config?: {
-    skipTransform?: boolean;
-    skipShadow?: boolean;
-    skipStroke?: boolean;
-    relativeTo?: Container<Node>;
-  }): IRect {
-    config = config || {};
+  getClientRect(
+    config: {
+      skipTransform?: boolean;
+      skipShadow?: boolean;
+      skipStroke?: boolean;
+      relativeTo?: Container<Node>;
+    } = {}
+  ): IRect {
     var skipTransform = config.skipTransform;
     var relativeTo = config.relativeTo;
 
@@ -514,7 +527,7 @@ export abstract class Container<
   // there was "this" instead of "Container<ChildType>",
   // but it breaks react-konva types: https://github.com/konvajs/react-konva/issues/390
   clipFunc: GetSet<
-    (ctx: CanvasRenderingContext2D, shape: Container<ChildType>) => void,
+    (ctx: CanvasRenderingContext2D, shape: Container) => ClipFuncOutput,
     this
   >;
 }
@@ -630,8 +643,13 @@ Factory.addGetterSetter(Container, 'clipFunc');
  * // get clip function
  * var clipFunction = container.clipFunc();
  *
- * // set clip height
+ * // set clip function
  * container.clipFunc(function(ctx) {
  *   ctx.rect(0, 0, 100, 100);
+ * });
+ *
+ * container.clipFunc(function(ctx) {
+ *   // optionally return a clip Path2D and clip-rule or just the clip-rule
+ *   return [new Path2D('M0 0v50h50Z'), 'evenodd']
  * });
  */

@@ -22,7 +22,7 @@ This repository began as a GitHub fork of [ericdrowell/KineticJS](https://github
 # Quick Look
 
 ```html
-<script src="https://unpkg.com/konva@8/konva.min.js"></script>
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
 <div id="container"></div>
 <script>
   var stage = new Konva.Stage({
@@ -71,7 +71,7 @@ Konva supports UMD loading. So you can use all possible variants to load the fra
 ### Load Konva via classical `<script>` tag from CDN:
 
 ```html
-<script src="https://unpkg.com/konva@8/konva.min.js"></script>
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
 ```
 
 ### Install with npm:
@@ -140,14 +140,6 @@ const stage = new Konva.Stage({
 // then all regular Konva code will work
 ```
 
-### CommonJS modules
-
-By default `Konva` is delivered as ES modules. Some environments may automatically take CommonJS version of `Konva`. If it doesn't work for you, try to use `cmj` version explicitly:
-
-```js
-const Konva = require('konva/cmj').default;
-```
-
 # Backers
 
 ![https://simpleshow.com](https://avatars.githubusercontent.com/u/99720652?s=200&v=4 'https://simpleshow.com')
@@ -169,7 +161,7 @@ To make a full build run `npm run build`. The command will compile all typescrip
 Konva uses Mocha for testing.
 
 - If you need run test only one time run `npm run test`.
-- While developing it is easy to use `npm start`. Just run it and go to [http://localhost:8080/test/runner.html](http://localhost:8080/test/runner.html). The watcher will rebuild the bundle on any change.
+- While developing it is easy to use `npm start`. Just run it and go to [http://localhost:1234/unit-tests.html](http://localhost:1234/unit-tests.html). The watcher will rebuild the bundle on any change.
 
 Konva is covered with hundreds of tests and well over a thousand assertions.
 Konva uses TDD (test driven development) which means that every new feature or bug fix is accompanied with at least one new test.
@@ -181,7 +173,7 @@ Run `npx gulp api` which will build the documentation files and place them in th
 # Pull Requests
 
 I'd be happy to review any pull requests that may better the Konva project,
-in particular if you have a bug fix, enhancement, or a new shape (see `src/shapes` for examples). Before doing so, please first make sure that all of the tests pass (`gulp lint test`).
+in particular if you have a bug fix, enhancement, or a new shape (see `src/shapes` for examples). Before doing so, please first make sure that all of the tests pass (`npm run test`).
 
 ## Contributors
 
