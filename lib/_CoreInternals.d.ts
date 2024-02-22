@@ -1,15 +1,15 @@
-import { Transform } from './Util';
-import { Node } from './Node';
-import { Container } from './Container';
-import { Stage } from './Stage';
-import { Layer } from './Layer';
-import { FastLayer } from './FastLayer';
-import { Group } from './Group';
-import { Shape } from './Shape';
-import { Animation } from './Animation';
-import { Tween } from './Tween';
-import { Context } from './Context';
-import { Canvas } from './Canvas';
+import { Transform } from './Util.js';
+import { Node } from './Node.js';
+import { Container } from './Container.js';
+import { Stage } from './Stage.js';
+import { Layer } from './Layer.js';
+import { FastLayer } from './FastLayer.js';
+import { Group } from './Group.js';
+import { Shape } from './Shape.js';
+import { Animation } from './Animation.js';
+import { Tween } from './Tween.js';
+import { Context } from './Context.js';
+import { Canvas } from './Canvas.js';
 export declare const Konva: {
     _global: any;
     version: string;
@@ -28,9 +28,9 @@ export declare const Konva: {
     _mouseInDblClickWindow: boolean;
     _touchInDblClickWindow: boolean;
     _pointerInDblClickWindow: boolean;
-    _mouseDblClickPointerId: any;
-    _touchDblClickPointerId: any;
-    _pointerDblClickPointerId: any;
+    _mouseDblClickPointerId: null;
+    _touchDblClickPointerId: null;
+    _pointerDblClickPointerId: null;
     pixelRatio: number;
     dragDistance: number;
     angleDeg: boolean;
@@ -59,44 +59,85 @@ export declare const Konva: {
         _isInDocument(el: any): boolean;
         _urlToImage(url: string, callback: Function): void;
         _rgbToHex(r: number, g: number, b: number): string;
-        _hexToRgb(hex: string): import("./types").RGB;
+        _hexToRgb(hex: string): import("./types.js").RGB;
         getRandomColor(): string;
-        getRGB(color: string): import("./types").RGB;
-        colorToRGBA(str: string): import("./types").RGBA;
-        _namedColorToRBA(str: string): {
-            r: any;
-            g: any;
-            b: any;
+        getRGB(color: string): import("./types.js").RGB;
+        colorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
             a: number;
-        };
-        _rgbColorToRGBA(str: string): import("./types").RGBA;
-        _rgbaColorToRGBA(str: string): import("./types").RGBA;
-        _hex8ColorToRGBA(str: string): import("./types").RGBA;
-        _hex6ColorToRGBA(str: string): import("./types").RGBA;
-        _hex4ColorToRGBA(str: string): import("./types").RGBA;
-        _hex3ColorToRGBA(str: string): import("./types").RGBA;
-        _hslColorToRGBA(str: string): import("./types").RGBA;
-        haveIntersection(r1: import("./types").IRect, r2: import("./types").IRect): boolean;
+        } | undefined;
+        _namedColorToRBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | null;
+        _rgbColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _rgbaColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _hex8ColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _hex6ColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _hex4ColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _hex3ColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        _hslColorToRGBA(str: string): {
+            r: number;
+            g: number;
+            b: number;
+            a: number;
+        } | undefined;
+        haveIntersection(r1: import("./types").IRect, r2: import("./types.js").IRect): boolean;
         cloneObject<Any>(obj: Any): Any;
         cloneArray(arr: any[]): any[];
         degToRad(deg: number): number;
         radToDeg(rad: number): number;
         _degToRad(deg: number): number;
         _radToDeg(rad: number): number;
-        _getRotation(radians: any): any;
+        _getRotation(radians: number): number;
         _capitalize(str: string): string;
         throw(str: string): never;
         error(str: string): void;
         warn(str: string): void;
-        each(obj: any, func: any): void;
-        _inRange(val: any, left: any, right: any): boolean;
+        each(obj: Object, func: Function): void;
+        _inRange(val: number, left: number, right: number): boolean;
         _getProjectionToSegment(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any): any[];
-        _getProjectionToLine(pt: import("./types").Vector2d, line: any, isClosed: any): import("./types").Vector2d;
-        _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): any[];
-        _prepareToStringify(obj: any): any;
-        _assign<T, U>(target: T, source: U): T & U;
+        _getProjectionToLine(pt: import("./types").Vector2d, line: import("./types").Vector2d[], isClosed: boolean): import("./types.js").Vector2d;
+        _prepareArrayForTween(startArray: any, endArray: any, isClosed: any): number[];
+        _prepareToStringify<T>(obj: any): T | null;
+        _assign<T_1, U>(target: T_1, source: U): T_1 & U;
         _getFirstPointerId(evt: any): any;
         releaseCanvas(...canvases: HTMLCanvasElement[]): void;
+        drawRoundedRectPath(context: Context, width: number, height: number, cornerRadius: number | number[]): void;
     };
     Transform: typeof Transform;
     Node: typeof Node;
@@ -109,12 +150,12 @@ export declare const Konva: {
     DD: {
         readonly isDragging: boolean;
         justDragged: boolean;
-        readonly node: Node<import("./Node").NodeConfig>;
+        readonly node: Node<import("./Node.js").NodeConfig> | undefined;
         _dragElements: Map<number, {
-            node: Node<import("./Node").NodeConfig>;
-            startPointerPos: import("./types").Vector2d;
-            offset: import("./types").Vector2d;
-            pointerId?: number;
+            node: Node<import("./Node.js").NodeConfig>;
+            startPointerPos: import("./types.js").Vector2d;
+            offset: import("./types.js").Vector2d;
+            pointerId?: number | undefined;
             dragStatus: "stopped" | "ready" | "dragging";
         }>;
         _drag(evt: any): void;
@@ -123,7 +164,7 @@ export declare const Konva: {
     };
     Shape: typeof Shape;
     shapes: {
-        [key: string]: Shape<import("./Shape").ShapeConfig>;
+        [key: string]: Shape<import("./Shape.js").ShapeConfig>;
     };
     Animation: typeof Animation;
     Tween: typeof Tween;

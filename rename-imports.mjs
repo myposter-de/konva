@@ -1,7 +1,7 @@
 import FileHound from 'filehound';
 import fs from 'fs';
 
-const files = FileHound.create().paths('./lib').ext('js').find();
+const files = FileHound.create().paths('./lib').ext(['js', 'ts']).find();
 
 files.then((filePaths) => {
   filePaths.forEach((filepath) => {
@@ -22,11 +22,26 @@ files.then((filePaths) => {
         "import * as Canvas from 'canvas';"
       );
 
+      // Handle import("./x/y/z") syntax.
+      text = text.replace(/(import\s*\(\s*['"])(.*)(?=['"])/g, '$1$2.js');
+
       fs.writeFile(filepath, text, function (err) {
         if (err) {
           throw err;
         }
       });
+    });
+  });
+});
+
+const indexFiles = ['lib/index.js', 'lib/index-node.js', 'lib/Core.js'];
+indexFiles.forEach((filepath) => {
+  fs.readFile(filepath, 'utf8', (err, text) => {
+    text = text.replace('exports.default =', 'module.exports =');
+    fs.writeFile(filepath, text, function (err) {
+      if (err) {
+        throw err;
+      }
     });
   });
 });

@@ -12,6 +12,7 @@ import {
   compareLayers,
   loadImage,
   Konva,
+  compareCanvases,
 } from './test-utils';
 
 describe('Shape', function () {
@@ -884,7 +885,7 @@ describe('Shape', function () {
     context.strokeStyle = 'black';
     context.strokeText('Test TEXT', 50, 75);
 
-    compareLayerAndCanvas(layer, canvas, 254);
+    compareLayerAndCanvas(layer, canvas, 254, 10);
   });
 
   // ======================================================
@@ -1479,6 +1480,76 @@ describe('Shape', function () {
     }
   });
 
+  it('export when buffer canvas is used should handle scaling correctly', async function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var group = new Konva.Group();
+    layer.add(group);
+
+    var text = new Konva.Text({
+      text: 'hello',
+      fontSize: 300,
+      fill: 'green',
+      shadowColor: 'black',
+    });
+    group.add(text);
+
+    const canvas1 = group.toCanvas({
+      x: group.x(),
+      y: group.y(),
+      width: text.width(),
+      height: text.height(),
+    });
+    text.stroke('transparent');
+    const canvas2 = group.toCanvas({
+      x: group.x(),
+      y: group.y(),
+      width: text.width(),
+      height: text.height(),
+    });
+
+    compareCanvases(canvas2, canvas1, 255, 10);
+  });
+
+  it('export when buffer canvas is used should handle scaling correctly another time', async function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var group = new Konva.Group({
+      x: 400,
+    });
+    layer.add(group);
+
+    var text = new Konva.Text({
+      text: 'hello',
+      fontSize: 300,
+      fill: 'green',
+      shadowColor: 'black',
+    });
+    group.add(text);
+
+    const canvas1 = group.toCanvas({
+      x: group.x(),
+      y: group.y(),
+      width: text.width(),
+      height: text.height(),
+    });
+    text.stroke('transparent');
+    const canvas2 = group.toCanvas({
+      x: group.x(),
+      y: group.y(),
+      width: text.width(),
+      height: text.height(),
+    });
+
+    compareCanvases(canvas2, canvas1, 240, 110);
+  });
+
   // ======================================================
   it('optional disable shadow for stroke', function () {
     var stage = addStage();
@@ -1857,7 +1928,6 @@ describe('Shape', function () {
       var pattern3 = star._getFillPattern();
 
       assert.notEqual(pattern2, pattern3);
-      
 
       star.fillPatternX(10);
 

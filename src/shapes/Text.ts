@@ -1,4 +1,5 @@
 import { Util } from '../Util';
+import { Context } from '../Context';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Konva } from '../Global';
@@ -21,6 +22,7 @@ export function stringToArray(string: string) {
 }
 
 export interface TextConfig extends ShapeConfig {
+  direction?: string;
   text?: string;
   fontFamily?: string;
   fontSize?: number;
@@ -41,11 +43,13 @@ export interface TextConfig extends ShapeConfig {
 var AUTO = 'auto',
   //CANVAS = 'canvas',
   CENTER = 'center',
+  INHERIT = 'inherit',
   JUSTIFY = 'justify',
   CHANGE_KONVA = 'Change.konva',
   CONTEXT_2D = '2d',
   DASH = '-',
   LEFT = 'left',
+  LTR = 'ltr',
   TEXT = 'text',
   TEXT_UPPER = 'Text',
   TOP = 'top',
@@ -55,11 +59,13 @@ var AUTO = 'auto',
   PX_SPACE = 'px ',
   SPACE = ' ',
   RIGHT = 'right',
+  RTL = 'rtl',
   WORD = 'word',
   CHAR = 'char',
   NONE = 'none',
   ELLIPSIS = '…',
   ATTR_CHANGE_LIST = [
+    'direction',
     'fontFamily',
     'fontSize',
     'fontStyle',
@@ -93,23 +99,26 @@ function normalizeFontFamily(fontFamily: string) {
     .join(', ');
 }
 
-var dummyContext;
+var dummyContext: CanvasRenderingContext2D;
 function getDummyContext() {
   if (dummyContext) {
     return dummyContext;
   }
-  dummyContext = Util.createCanvasElement().getContext(CONTEXT_2D);
+  dummyContext = Util.createCanvasElement().getContext(
+    CONTEXT_2D
+  ) as CanvasRenderingContext2D;
   return dummyContext;
 }
 
-function _fillFunc(context) {
+function _fillFunc(this: Text, context: Context) {
   context.fillText(this._partialText, this._partialTextX, this._partialTextY);
 }
-function _strokeFunc(context) {
+function _strokeFunc(this: Text, context: Context) {
+  context.setAttr('miterLimit', 2);
   context.strokeText(this._partialText, this._partialTextX, this._partialTextY);
 }
 
-function checkDefaultFill(config) {
+function checkDefaultFill(config?: TextConfig) {
   config = config || {};
 
   // set default color to black
@@ -129,9 +138,10 @@ function checkDefaultFill(config) {
  * @memberof Konva
  * @augments Konva.Shape
  * @param {Object} config
+ * @param {String} [config.direction] default is inherit
  * @param {String} [config.fontFamily] default is Arial
  * @param {Number} [config.fontSize] in pixels.  Default is 12
- * @param {String} [config.fontStyle] can be 'normal', 'bold', 'italic' or even 'italic bold'.  Default is 'normal'
+ * @param {String} [config.fontStyle] can be 'normal', 'italic', or 'bold', '500' or even 'italic bold'.  'normal' is the default.
  * @param {String} [config.fontVariant] can be normal or small-caps.  Default is normal
  * @param {String} [config.textDecoration] can be line-through, underline or empty string. Default is empty string.
  * @param {String} config.text
@@ -170,7 +180,7 @@ export class Text extends Shape<TextConfig> {
     this._setTextData();
   }
 
-  _sceneFunc(context) {
+  _sceneFunc(context: Context) {
     var textArr = this.textArr,
       textArrLen = textArr.length;
 
@@ -182,6 +192,7 @@ export class Text extends Shape<TextConfig> {
       fontSize = this.fontSize(),
       lineHeightPx = this.lineHeight() * fontSize,
       verticalAlign = this.verticalAlign(),
+      direction = this.direction(),
       alignY = 0,
       align = this.align(),
       totalWidth = this.getWidth(),
@@ -191,6 +202,8 @@ export class Text extends Shape<TextConfig> {
       shouldUnderline = textDecoration.indexOf('underline') !== -1,
       shouldLineThrough = textDecoration.indexOf('line-through') !== -1,
       n;
+    
+    direction = direction === INHERIT ? context.direction : direction;
 
     var translateY = 0;
     var translateY = 0;
@@ -198,9 +211,14 @@ export class Text extends Shape<TextConfig> {
     var lineTranslateX = 0;
     var lineTranslateY = 0;
 
+    if (direction === RTL) {
+      context.setAttr('direction', direction);
+    }
+
     context.setAttr('font', this._getContextFont());
 
     context.setAttr('textAlign', LEFT);
+
 
     // handle vertical alignment
     if (verticalAlign === MIDDLE) {
@@ -246,9 +264,7 @@ export class Text extends Shape<TextConfig> {
         spacesNumber = text.split(' ').length - 1;
         oneWord = spacesNumber === 0;
         lineWidth =
-          align === JUSTIFY && lastLine && !oneWord
-            ? totalWidth - padding * 2
-            : width;
+          align === JUSTIFY && !lastLine ? totalWidth - padding * 2 : width;
         context.lineTo(
           lineTranslateX + Math.round(lineWidth),
           translateY + lineTranslateY + Math.round(fontSize / 2)
@@ -257,7 +273,9 @@ export class Text extends Shape<TextConfig> {
         // I have no idea what is real ratio
         // just /15 looks good enough
         context.lineWidth = fontSize / 15;
-        context.strokeStyle = fill;
+
+        const gradient = this._getLinearGradient();
+        context.strokeStyle = gradient || fill;
         context.stroke();
         context.restore();
       }
@@ -276,11 +294,15 @@ export class Text extends Shape<TextConfig> {
           translateY + lineTranslateY
         );
         context.lineWidth = fontSize / 15;
-        context.strokeStyle = fill;
+        const gradient = this._getLinearGradient();
+        context.strokeStyle = gradient || fill;
         context.stroke();
         context.restore();
       }
-      if (letterSpacing !== 0 || align === JUSTIFY) {
+      // As `letterSpacing` isn't supported on Safari, we use this polyfill.
+      // The exception is for RTL text, which we rely on native as it cannot
+      // be supported otherwise.
+      if (direction !== RTL && (letterSpacing !== 0 || align === JUSTIFY)) {
         //   var words = text.split(' ');
         spacesNumber = text.split(' ').length - 1;
         var array = stringToArray(text);
@@ -301,6 +323,9 @@ export class Text extends Shape<TextConfig> {
           lineTranslateX += this.measureSize(letter).width + letterSpacing;
         }
       } else {
+        if (letterSpacing !== 0) {
+          context.setAttr('letterSpacing', `${letterSpacing}px`);
+        }
         this._partialTextX = lineTranslateX;
         this._partialTextY = translateY + lineTranslateY;
         this._partialText = text;
@@ -313,7 +338,7 @@ export class Text extends Shape<TextConfig> {
       }
     }
   }
-  _hitFunc(context) {
+  _hitFunc(context: Context) {
     var width = this.getWidth(),
       height = this.getHeight();
 
@@ -322,7 +347,7 @@ export class Text extends Shape<TextConfig> {
     context.closePath();
     context.fillStrokeShape(this);
   }
-  setText(text) {
+  setText(text: string) {
     var str = Util._isString(text)
       ? text
       : text === null || text === undefined
@@ -392,8 +417,9 @@ export class Text extends Shape<TextConfig> {
       normalizeFontFamily(this.fontFamily())
     );
   }
-  _addTextLine(line) {
-    if (this.align() === JUSTIFY) {
+  _addTextLine(line: string) {
+    const align = this.align();
+    if (align === JUSTIFY) {
       line = line.trim();
     }
     var width = this._getTextWidth(line);
@@ -403,7 +429,7 @@ export class Text extends Shape<TextConfig> {
       lastInParagraph: false,
     });
   }
-  _getTextWidth(text) {
+  _getTextWidth(text: string) {
     var letterSpacing = this.letterSpacing();
     var length = text.length;
     return (
@@ -534,11 +560,11 @@ export class Text extends Shape<TextConfig> {
         }
       }
       // if element height is fixed, abort if adding one more line would overflow
-      if (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx) {
-        break;
-      }
       if (this.textArr[this.textArr.length - 1]) {
         this.textArr[this.textArr.length - 1].lastInParagraph = true;
+      }
+      if (fixedHeight && currentHeightPx + lineHeightPx > maxHeightPx) {
+        break;
       }
     }
     this.textHeight = fontSize;
@@ -601,6 +627,18 @@ export class Text extends Shape<TextConfig> {
     return true;
   }
 
+  _useBufferCanvas() {
+    const hasLine =
+      this.textDecoration().indexOf('underline') !== -1 ||
+      this.textDecoration().indexOf('line-through') !== -1;
+    const hasShadow = this.hasShadow();
+    if (hasLine && hasShadow) {
+      return true;
+    }
+    return super._useBufferCanvas();
+  }
+
+  direction: GetSet<string, this>;
   fontFamily: GetSet<string, this>;
   fontSize: GetSet<number, this>;
   fontStyle: GetSet<string, this>;
@@ -669,6 +707,22 @@ Factory.overWriteSetter(Text, 'width', getNumberOrAutoValidator());
 
 Factory.overWriteSetter(Text, 'height', getNumberOrAutoValidator());
 
+
+/**
+ * get/set direction
+ * @name Konva.Text#direction
+ * @method
+ * @param {String} direction
+ * @returns {String}
+ * @example
+ * // get direction
+ * var direction = text.direction();
+ *
+ * // set direction
+ * text.direction('rtl');
+ */
+Factory.addGetterSetter(Text, 'direction', INHERIT);
+
 /**
  * get/set font family
  * @name Konva.Text#fontFamily
@@ -700,7 +754,7 @@ Factory.addGetterSetter(Text, 'fontFamily', 'Arial');
 Factory.addGetterSetter(Text, 'fontSize', 12, getNumberValidator());
 
 /**
- * get/set font style.  Can be 'normal', 'italic', or 'bold' or even 'italic bold'.  'normal' is the default.
+ * get/set font style.  Can be 'normal', 'italic', or 'bold', '500' or even 'italic bold'.  'normal' is the default.
  * @name Konva.Text#fontStyle
  * @method
  * @param {String} fontStyle

@@ -1,5 +1,7 @@
-import { Shape, ShapeConfig } from '../Shape';
-import { GetSet, Vector2d } from '../types';
+import { Context } from '../Context.js';
+import { Shape, ShapeConfig } from '../Shape.js';
+import { Text } from './Text.js';
+import { GetSet, PathSegment, Vector2d } from '../types.js';
 export interface TextPathConfig extends ShapeConfig {
     text?: string;
     data?: string;
@@ -10,7 +12,7 @@ export interface TextPathConfig extends ShapeConfig {
 }
 export declare class TextPath extends Shape<TextPathConfig> {
     dummyCanvas: HTMLCanvasElement;
-    dataArray: any[];
+    dataArray: PathSegment[];
     glyphInfo: Array<{
         transposeX: number;
         transposeY: number;
@@ -20,20 +22,24 @@ export declare class TextPath extends Shape<TextPathConfig> {
         p1: Vector2d;
     }>;
     partialText: string;
+    pathLength: number;
     textWidth: number;
     textHeight: number;
     constructor(config?: TextPathConfig);
-    _sceneFunc(context: any): void;
-    _hitFunc(context: any): void;
+    _getTextPathLength(): number;
+    _getPointAtLength(length: number): any;
+    _readDataAttribute(): void;
+    _sceneFunc(context: Context): void;
+    _hitFunc(context: Context): void;
     getTextWidth(): number;
     getTextHeight(): number;
-    setText(text: any): any;
-    _getContextFont(): any;
-    _getTextSize(text: any): {
+    setText(text: string): Text;
+    _getContextFont(): string;
+    _getTextSize(text: string): {
         width: number;
         height: number;
     };
-    _setTextData(): void;
+    _setTextData(): null | undefined;
     getSelfRect(): {
         x: number;
         y: number;

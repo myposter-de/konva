@@ -1,8 +1,9 @@
-import { Context } from './Context';
+import { Context } from './Context.js';
 interface ICanvasConfig {
     width?: number;
     height?: number;
     pixelRatio?: number;
+    willReadFrequently?: boolean;
 }
 export declare class Canvas {
     pixelRatio: number;

@@ -2,7 +2,12 @@ import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { _registerNode } from '../Global';
 
-import { GetSet } from '../types';
+import { GetSet, PathSegment } from '../types';
+import {
+  getCubicArcLength,
+  getQuadraticArcLength,
+  t2length,
+} from '../BezierFunctions';
 
 export interface PathConfig extends ShapeConfig {
   data?: string;
@@ -28,23 +33,21 @@ export interface PathConfig extends ShapeConfig {
  * });
  */
 export class Path extends Shape<PathConfig> {
-  dataArray = [];
+  dataArray: PathSegment[] = [];
   pathLength = 0;
 
   constructor(config?: PathConfig) {
     super(config);
-    this.dataArray = Path.parsePathData(this.data());
-    this.pathLength = 0;
-    for (var i = 0; i < this.dataArray.length; ++i) {
-      this.pathLength += this.dataArray[i].pathLength;
-    }
+    this._readDataAttribute();
+
     this.on('dataChange.konva', function () {
-      this.dataArray = Path.parsePathData(this.data());
-      this.pathLength = 0;
-      for (var i = 0; i < this.dataArray.length; ++i) {
-        this.pathLength += this.dataArray[i].pathLength;
-      }
+      this._readDataAttribute();
     });
+  }
+
+  _readDataAttribute() {
+    this.dataArray = Path.parsePathData(this.data());
+    this.pathLength = Path.getPathLength(this.dataArray);
   }
 
   _sceneFunc(context) {
@@ -106,7 +109,7 @@ export class Path extends Shape<PathConfig> {
     }
   }
   getSelfRect() {
-    var points = [];
+    var points: Array<number> = [];
     this.dataArray.forEach(function (data) {
       if (data.command === 'A') {
         // Approximates by breaking curve into line segments
@@ -215,21 +218,39 @@ export class Path extends Shape<PathConfig> {
    * var point = path.getPointAtLength(10);
    */
   getPointAtLength(length) {
+    return Path.getPointAtLengthOfDataArray(length, this.dataArray);
+  }
+
+  data: GetSet<string, this>;
+
+  static getLineLength(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+  }
+
+  static getPathLength(dataArray: PathSegment[]) {
+    let pathLength = 0;
+    for (var i = 0; i < dataArray.length; ++i) {
+      pathLength += dataArray[i].pathLength;
+    }
+    return pathLength;
+  }
+
+  static getPointAtLengthOfDataArray(length: number, dataArray) {
     var point,
       i = 0,
-      ii = this.dataArray.length;
+      ii = dataArray.length;
 
     if (!ii) {
       return null;
     }
 
-    while (i < ii && length > this.dataArray[i].pathLength) {
-      length -= this.dataArray[i].pathLength;
+    while (i < ii && length > dataArray[i].pathLength) {
+      length -= dataArray[i].pathLength;
       ++i;
     }
 
     if (i === ii) {
-      point = this.dataArray[i - 1].points.slice(-2);
+      point = dataArray[i - 1].points.slice(-2);
       return {
         x: point[0],
         y: point[1],
@@ -237,21 +258,27 @@ export class Path extends Shape<PathConfig> {
     }
 
     if (length < 0.01) {
-      point = this.dataArray[i].points.slice(0, 2);
+      point = dataArray[i].points.slice(0, 2);
       return {
         x: point[0],
         y: point[1],
       };
     }
 
-    var cp = this.dataArray[i];
+    var cp = dataArray[i];
     var p = cp.points;
     switch (cp.command) {
       case 'L':
         return Path.getPointOnLine(length, cp.start.x, cp.start.y, p[0], p[1]);
       case 'C':
         return Path.getPointOnCubicBezier(
-          length / cp.pathLength,
+          t2length(length, Path.getPathLength(dataArray), (i) => {
+            return getCubicArcLength(
+              [cp.start.x, p[0], p[2], p[4]],
+              [cp.start.y, p[1], p[3], p[5]],
+              i
+            );
+          }),
           cp.start.x,
           cp.start.y,
           p[0],
@@ -263,7 +290,13 @@ export class Path extends Shape<PathConfig> {
         );
       case 'Q':
         return Path.getPointOnQuadraticBezier(
-          length / cp.pathLength,
+          t2length(length, Path.getPathLength(dataArray), (i) => {
+            return getQuadraticArcLength(
+              [cp.start.x, p[0], p[2]],
+              [cp.start.y, p[1], p[3]],
+              i
+            );
+          }),
           cp.start.x,
           cp.start.y,
           p[0],
@@ -286,11 +319,6 @@ export class Path extends Shape<PathConfig> {
     return null;
   }
 
-  data: GetSet<string, this>;
-
-  static getLineLength(x1, y1, x2, y2) {
-    return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-  }
   static getPointOnLine(dist, P1x, P1y, P2x, P2y, fromX?, fromY?) {
     if (fromX === undefined) {
       fromX = P1x;
@@ -388,7 +416,14 @@ export class Path extends Shape<PathConfig> {
       y: y,
     };
   }
-  static getPointOnEllipticalArc(cx, cy, rx, ry, theta, psi) {
+  static getPointOnEllipticalArc(
+    cx: number,
+    cy: number,
+    rx: number,
+    ry: number,
+    theta: number,
+    psi: number
+  ) {
     var cosPsi = Math.cos(psi),
       sinPsi = Math.sin(psi);
     var pt = {
@@ -406,7 +441,7 @@ export class Path extends Shape<PathConfig> {
    *  L data for the purpose of high performance Path
    *  rendering
    */
-  static parsePathData(data) {
+  static parsePathData(data): PathSegment[] {
     // Path Data Segment must begin with a moveTo
     //m (x y)+  Relative moveTo (subsequent points are treated as lineTo)
     //M (x y)+  Absolute moveTo (subsequent points are treated as lineTo)
@@ -468,8 +503,8 @@ export class Path extends Shape<PathConfig> {
     }
     // create array
     var arr = cs.split('|');
-    var ca = [];
-    var coords = [];
+    var ca: PathSegment[] = [];
+    var coords: string[] = [];
     // init context point
     var cpx = 0;
     var cpy = 0;
@@ -489,7 +524,7 @@ export class Path extends Shape<PathConfig> {
       // while ((match = re.exec(str))) {
       //   coords.push(match[0]);
       // }
-      var p = [];
+      var p: number[] = [];
 
       for (var j = 0, jlen = coords.length; j < jlen; j++) {
         // extra case for merged flags
@@ -511,8 +546,8 @@ export class Path extends Shape<PathConfig> {
           break;
         }
 
-        var cmd = null;
-        var points = [];
+        var cmd: string = '';
+        var points: number[] = [];
         var startX = cpx,
           startY = cpy;
         // Move var from within the switch to up here (jshint)
@@ -523,20 +558,20 @@ export class Path extends Shape<PathConfig> {
         switch (c) {
           // Note: Keep the lineTo's above the moveTo's in this switch
           case 'l':
-            cpx += p.shift();
-            cpy += p.shift();
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'L';
             points.push(cpx, cpy);
             break;
           case 'L':
-            cpx = p.shift();
-            cpy = p.shift();
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             points.push(cpx, cpy);
             break;
           // Note: lineTo handlers need to be above this point
           case 'm':
-            var dx = p.shift();
-            var dy = p.shift();
+            var dx = p.shift()!;
+            var dy = p.shift()!;
             cpx += dx;
             cpy += dy;
             cmd = 'M';
@@ -556,8 +591,8 @@ export class Path extends Shape<PathConfig> {
             // subsequent points are treated as relative lineTo
             break;
           case 'M':
-            cpx = p.shift();
-            cpy = p.shift();
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             cmd = 'M';
             points.push(cpx, cpy);
             c = 'L';
@@ -565,40 +600,40 @@ export class Path extends Shape<PathConfig> {
             break;
 
           case 'h':
-            cpx += p.shift();
+            cpx += p.shift()!;
             cmd = 'L';
             points.push(cpx, cpy);
             break;
           case 'H':
-            cpx = p.shift();
+            cpx = p.shift()!;
             cmd = 'L';
             points.push(cpx, cpy);
             break;
           case 'v':
-            cpy += p.shift();
+            cpy += p.shift()!;
             cmd = 'L';
             points.push(cpx, cpy);
             break;
           case 'V':
-            cpy = p.shift();
+            cpy = p.shift()!;
             cmd = 'L';
             points.push(cpx, cpy);
             break;
           case 'C':
-            points.push(p.shift(), p.shift(), p.shift(), p.shift());
-            cpx = p.shift();
-            cpy = p.shift();
+            points.push(p.shift()!, p.shift()!, p.shift()!, p.shift()!);
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             points.push(cpx, cpy);
             break;
           case 'c':
             points.push(
-              cpx + p.shift(),
-              cpy + p.shift(),
-              cpx + p.shift(),
-              cpy + p.shift()
+              cpx + p.shift()!,
+              cpy + p.shift()!,
+              cpx + p.shift()!,
+              cpy + p.shift()!
             );
-            cpx += p.shift();
-            cpy += p.shift();
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'C';
             points.push(cpx, cpy);
             break;
@@ -610,9 +645,9 @@ export class Path extends Shape<PathConfig> {
               ctlPtx = cpx + (cpx - prevCmd.points[2]);
               ctlPty = cpy + (cpy - prevCmd.points[3]);
             }
-            points.push(ctlPtx, ctlPty, p.shift(), p.shift());
-            cpx = p.shift();
-            cpy = p.shift();
+            points.push(ctlPtx, ctlPty, p.shift()!, p.shift()!);
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             cmd = 'C';
             points.push(cpx, cpy);
             break;
@@ -624,22 +659,22 @@ export class Path extends Shape<PathConfig> {
               ctlPtx = cpx + (cpx - prevCmd.points[2]);
               ctlPty = cpy + (cpy - prevCmd.points[3]);
             }
-            points.push(ctlPtx, ctlPty, cpx + p.shift(), cpy + p.shift());
-            cpx += p.shift();
-            cpy += p.shift();
+            points.push(ctlPtx, ctlPty, cpx + p.shift()!, cpy + p.shift()!);
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'C';
             points.push(cpx, cpy);
             break;
           case 'Q':
-            points.push(p.shift(), p.shift());
-            cpx = p.shift();
-            cpy = p.shift();
+            points.push(p.shift()!, p.shift()!);
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             points.push(cpx, cpy);
             break;
           case 'q':
-            points.push(cpx + p.shift(), cpy + p.shift());
-            cpx += p.shift();
-            cpy += p.shift();
+            points.push(cpx + p.shift()!, cpy + p.shift()!);
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'Q';
             points.push(cpx, cpy);
             break;
@@ -651,8 +686,8 @@ export class Path extends Shape<PathConfig> {
               ctlPtx = cpx + (cpx - prevCmd.points[0]);
               ctlPty = cpy + (cpy - prevCmd.points[1]);
             }
-            cpx = p.shift();
-            cpy = p.shift();
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             cmd = 'Q';
             points.push(ctlPtx, ctlPty, cpx, cpy);
             break;
@@ -664,21 +699,21 @@ export class Path extends Shape<PathConfig> {
               ctlPtx = cpx + (cpx - prevCmd.points[0]);
               ctlPty = cpy + (cpy - prevCmd.points[1]);
             }
-            cpx += p.shift();
-            cpy += p.shift();
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'Q';
             points.push(ctlPtx, ctlPty, cpx, cpy);
             break;
           case 'A':
-            rx = p.shift();
-            ry = p.shift();
-            psi = p.shift();
-            fa = p.shift();
-            fs = p.shift();
+            rx = p.shift()!;
+            ry = p.shift()!;
+            psi = p.shift()!;
+            fa = p.shift()!;
+            fs = p.shift()!;
             x1 = cpx;
             y1 = cpy;
-            cpx = p.shift();
-            cpy = p.shift();
+            cpx = p.shift()!;
+            cpy = p.shift()!;
             cmd = 'A';
             points = this.convertEndpointToCenterParameterization(
               x1,
@@ -700,8 +735,8 @@ export class Path extends Shape<PathConfig> {
             fs = p.shift();
             x1 = cpx;
             y1 = cpy;
-            cpx += p.shift();
-            cpy += p.shift();
+            cpx += p.shift()!;
+            cpy += p.shift()!;
             cmd = 'A';
             points = this.convertEndpointToCenterParameterization(
               x1,
@@ -732,7 +767,7 @@ export class Path extends Shape<PathConfig> {
         ca.push({
           command: 'z',
           points: [],
-          start: undefined,
+          start: undefined as any,
           pathLength: 0,
         });
       }
@@ -748,61 +783,17 @@ export class Path extends Shape<PathConfig> {
       case 'L':
         return path.getLineLength(x, y, points[0], points[1]);
       case 'C':
-        // Approximates by breaking curve into 100 line segments
-        len = 0.0;
-        p1 = path.getPointOnCubicBezier(
-          0,
-          x,
-          y,
-          points[0],
-          points[1],
-          points[2],
-          points[3],
-          points[4],
-          points[5]
+        return getCubicArcLength(
+          [x, points[0], points[2], points[4]],
+          [y, points[1], points[3], points[5]],
+          1
         );
-        for (t = 0.01; t <= 1; t += 0.01) {
-          p2 = path.getPointOnCubicBezier(
-            t,
-            x,
-            y,
-            points[0],
-            points[1],
-            points[2],
-            points[3],
-            points[4],
-            points[5]
-          );
-          len += path.getLineLength(p1.x, p1.y, p2.x, p2.y);
-          p1 = p2;
-        }
-        return len;
       case 'Q':
-        // Approximates by breaking curve into 100 line segments
-        len = 0.0;
-        p1 = path.getPointOnQuadraticBezier(
-          0,
-          x,
-          y,
-          points[0],
-          points[1],
-          points[2],
-          points[3]
+        return getQuadraticArcLength(
+          [x, points[0], points[2]],
+          [y, points[1], points[3]],
+          1
         );
-        for (t = 0.01; t <= 1; t += 0.01) {
-          p2 = path.getPointOnQuadraticBezier(
-            t,
-            x,
-            y,
-            points[0],
-            points[1],
-            points[2],
-            points[3]
-          );
-          len += path.getLineLength(p1.x, p1.y, p2.x, p2.y);
-          p1 = p2;
-        }
-        return len;
       case 'A':
         // Approximates by breaking curve into line segments
         len = 0.0;

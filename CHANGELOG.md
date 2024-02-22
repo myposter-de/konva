@@ -3,6 +3,82 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+### 9.3.3 (2024-02-09)
+
+- Another fix for exporting buffered shapes
+
+### 9.3.2 (2024-01-26)
+
+- Fix large memory usage on node export
+
+### 9.3.1 (2024-01-17)
+
+- Fix Pixelate filter work/fix caching size
+- Fix node export when large buffer canvas is used
+
+### 9.3.0 (2023-12-20)
+
+- New attribute `rotateLineVisible` for `Konva.Transformer` to show/hide rotate line
+
+### 9.2.3 (2023-10-31)
+
+- Better `Konva.Transformer` work when it has `flipEnabled = false`.
+
+### 9.2.2 (2023-09-14)
+
+- Better RTL support
+- Some typescript fixes
+
+### 9.2.1 (2023-09-14)
+
+- Fix text rendering when text has both underline and shadow
+- Typescript fixes
+
+### 9.2.0 (2023-05-14)
+
+- More controls on clipping
+- `fillRule` for `Konva.Shape`
+
+### 9.1.0 (2023-05-14)
+
+- New `anchorStyleFunc` for `Konva.Transformer` to customize anchor style
+
+### 9.0.2 (2023-05-14)
+
+- Better text rendering when it has stroke
+
+### 9.0.1 (2023-04-17)
+
+- Better performance for any instance creation
+- Little typescript fixes
+
+### 9.0.0 (2023-04-13)
+
+- Migrate the npm package from ES back to CommonJS
+
+### 8.4.4 (2023-04-05)
+
+- Some fixes for `Konva.TextPath` calculations and rendering.
+- Resolve "willReadFrequently" warning in Chrome
+
+### 8.4.3 (2023-03-23)
+
+- Typescript fixes
+- Better validation for `Konva.Transfomer` `nodes` property
+
+### 8.4.2 (2023-01-20)
+
+- Fix justify on text with limited height
+
+### 8.4.1 (2023-01-19)
+
+- Typescript fixes for `container.add()` method. Ability to use empty array as argument. E.g. `container.add(...emptyArray)`
+- Fix underline for justify text
+- Fix gradient display on underline or line-through text
+
+### 8.4.0 (2023-01-05)
+
+- Add support for `cornerRadius` for Konva.Image
 - Fix cloning of `Konva.Transformer`
 
 ### 8.3.14 (2022-11-09)

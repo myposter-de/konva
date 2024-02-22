@@ -60,6 +60,8 @@ export interface NodeConfig {
   opacity?: number;
   scale?: Vector2d;
   scaleX?: number;
+  skewX?: number;
+  skewY?: number;
   scaleY?: number;
   rotation?: number;
   rotationDeg?: number;
@@ -118,6 +120,7 @@ export interface KonvaEventObject<EventType> {
   type: string;
   target: Shape | Stage;
   evt: EventType;
+  pointerId: number;
   currentTarget: Node;
   cancelBubble: boolean;
   child?: Node;
@@ -144,10 +147,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   attrs: any = {};
   index = 0;
   _allEventListeners: null | Array<Function> = null;
-  parent: Container<Node> | null = null;
+  parent: Container | null = null;
   _cache: Map<string, any> = new Map<string, any>();
   _attachedDepsListeners: Map<string, boolean> = new Map<string, boolean>();
-  _lastPos: Vector2d = null;
+  _lastPos: Vector2d | null = null;
   _attrsAffectingSize!: string[];
   _batchingTransformChange = false;
   _needClearTransformCache = false;
@@ -321,7 +324,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     ) {
       rect = this.getClientRect({
         skipTransform: true,
-        relativeTo: this.getParent(),
+        relativeTo: this.getParent() || undefined,
       });
     }
     var width = Math.ceil(conf.width || rect.width),
@@ -340,10 +343,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return;
     }
 
-    // let's just add 1 pixel extra,
     // because using Math.floor on x, y position may shift drawing
-    width += offset * 2 + 1;
-    height += offset * 2 + 1;
+    // to avoid shift we need to increase size
+    // but we better to avoid it, for better filters flows
+    const extraPaddingX = Math.abs(Math.round(rect.x) - x) > 0.5 ? 1 : 0;
+    const extraPaddingY = Math.abs(Math.round(rect.y) - y) > 0.5 ? 1 : 0;
+    width += offset * 2 + extraPaddingX;
+    height += offset * 2 + extraPaddingY;
 
     x -= offset;
     y -= offset;
@@ -368,6 +374,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         pixelRatio: pixelRatio,
         width: 0,
         height: 0,
+        willReadFrequently: true,
       }),
       cachedHitCanvas = new HitCanvas({
         pixelRatio: hitCanvasPixelRatio,
@@ -442,7 +449,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this._cache.has(CANVAS);
   }
 
-  abstract drawScene(canvas?: Canvas, top?: Node): void;
+  abstract drawScene(canvas?: Canvas, top?: Node, bufferCanvas?: Canvas): void;
   abstract drawHit(canvas?: Canvas, top?: Node): void;
   /**
    * Return client rectangle {x, y, width, height} of node. This rectangle also include all styling (strokes, shadows, etc).
@@ -484,20 +491,23 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     skipTransform?: boolean;
     skipShadow?: boolean;
     skipStroke?: boolean;
-    relativeTo?: Container<Node>;
+    relativeTo?: Container;
   }): { x: number; y: number; width: number; height: number } {
     // abstract method
     // redefine in Container and Shape
     throw new Error('abstract "getClientRect" method call');
   }
-  _transformedRect(rect: IRect, top: Node) {
+  _transformedRect(rect: IRect, top?: Node | null) {
     var points = [
       { x: rect.x, y: rect.y },
       { x: rect.x + rect.width, y: rect.y },
       { x: rect.x + rect.width, y: rect.y + rect.height },
       { x: rect.x, y: rect.y + rect.height },
     ];
-    var minX: number, minY: number, maxX: number, maxY: number;
+    var minX: number = Infinity,
+      minY: number = Infinity,
+      maxX: number = -Infinity,
+      maxY: number = -Infinity;
     var trans = this.getAbsoluteTransform(top);
     points.forEach(function (point) {
       var transformed = trans.point(point);
@@ -602,7 +612,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
             filter.call(this, imageData);
             filterContext.putImageData(imageData, 0, 0);
           }
-        } catch (e) {
+        } catch (e: any) {
           Util.error(
             'Unable to apply filter. ' +
               e.message +
@@ -685,7 +695,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this._cache && this._cache.delete(ALL_LISTENERS);
 
     if (arguments.length === 3) {
-      return this._delegate.apply(this, arguments);
+      return this._delegate.apply(this, arguments as any);
     }
     var events = (evtStr as string).split(SPACE),
       len = events.length,
@@ -805,7 +815,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       for (var i = 0; i < targets.length; i++) {
         evt = Util.cloneObject(evt);
         evt.currentTarget = targets[i];
-        handler.call(targets[i], evt);
+        handler.call(targets[i], evt as any);
       }
     });
   }
@@ -906,7 +916,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @returns {Object}
    */
   getAttrs() {
-    return this.attrs || {};
+    return (this.attrs || {}) as Config & Record<string, any>;
   }
   /**
    * set multiple attrs at once using an object literal
@@ -1082,8 +1092,9 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         addChildren(nodes);
       }
     }
-    if (that.nodeType !== UPPER_STAGE) {
-      addChildren(that.getStage().getChildren());
+    const stage = this.getStage();
+    if (that.nodeType !== UPPER_STAGE && stage) {
+      addChildren(stage.getChildren());
     }
 
     return index;
@@ -1148,11 +1159,12 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * rect.getRelativePointerPosition();
    */
   getRelativePointerPosition() {
-    if (!this.getStage()) {
+    const stage = this.getStage();
+    if (!stage) {
       return null;
     }
     // get pointer (say mouse or touch) position
-    var pos = this.getStage().getPointerPosition();
+    var pos = stage.getPointerPosition();
     if (!pos) {
       return null;
     }
@@ -1203,13 +1215,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return absoluteTransform.getTranslation();
   }
   setAbsolutePosition(pos: Vector2d) {
-    var origTrans = this._clearTransform();
+    const { x, y, ...origTrans } = this._clearTransform();
 
     // don't clear translation
-    this.attrs.x = origTrans.x;
-    this.attrs.y = origTrans.y;
-    delete origTrans.x;
-    delete origTrans.y;
+    this.attrs.x = x;
+    this.attrs.y = y;
 
     // important, use non cached value
     this._clearCache(TRANSFORM);
@@ -1296,7 +1306,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this;
   }
   _eachAncestorReverse(func, top) {
-    var family = [],
+    var family: Array<Node> = [],
       parent = this.getParent(),
       len,
       n;
@@ -1476,15 +1486,21 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @returns {Object}
    */
   toObject() {
-    var obj = {} as any,
-      attrs = this.getAttrs(),
+    var attrs = this.getAttrs() as any,
       key,
       val,
       getter,
       defaultValue,
       nonPlainObject;
 
-    obj.attrs = {};
+    const obj: {
+      attrs: Config & Record<string, any>;
+      className: string;
+      children?: Array<any>;
+    } = {
+      attrs: {} as Config & Record<string, any>,
+      className: this.getClassName(),
+    };
 
     for (key in attrs) {
       val = attrs[key];
@@ -1502,12 +1518,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       // restore attr value
       attrs[key] = val;
       if (defaultValue !== val) {
-        obj.attrs[key] = val;
+        (obj.attrs as any)[key] = val;
       }
     }
 
-    obj.className = this.getClassName();
-    return Util._prepareToStringify(obj);
+    return Util._prepareToStringify(obj) as typeof obj;
   }
   /**
    * convert Node into a JSON string.  Returns a JSON string.
@@ -1539,7 +1554,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var parentGroups = node.findAncestors('Group');
    */
-  findAncestors(selector: string, includeSelf?: boolean, stopNode?: Node) {
+  findAncestors(
+    selector: string | Function,
+    includeSelf?: boolean,
+    stopNode?: Node
+  ) {
     var res: Array<Node> = [];
 
     if (includeSelf && this._isMatch(selector)) {
@@ -1572,7 +1591,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // get one of the parent group
    * var group = node.findAncestors('.mygroup');
    */
-  findAncestor(selector?: string, includeSelf?: boolean, stopNode?: Container) {
+  findAncestor(
+    selector: string | Function,
+    includeSelf?: boolean,
+    stopNode?: Container
+  ) {
     return this.findAncestors(selector, includeSelf, stopNode)[0];
   }
   // is current node match passed selector?
@@ -1637,12 +1660,12 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this._getCache(STAGE, this._getStage);
   }
 
-  _getStage(): Stage | undefined {
+  _getStage() {
     var parent = this.getParent();
     if (parent) {
       return parent.getStage();
     } else {
-      return undefined;
+      return null;
     }
   }
   /**
@@ -1687,7 +1710,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @name Konva.Node#getAbsoluteTransform
    * @returns {Konva.Transform}
    */
-  getAbsoluteTransform(top?: Node) {
+  getAbsoluteTransform(top?: Node | null) {
     // if using an argument, we can't cache the result.
     if (top) {
       return this._getAbsoluteTransform(top);
@@ -1754,7 +1777,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // do not cache this calculations,
     // because it use cache transform
     // this is special logic for caching with some shapes with shadow
-    var parent: Node = this;
+    var parent: Node | null = this;
     while (parent) {
       if (parent._isUnderCache) {
         top = parent;
@@ -1909,6 +1932,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }),
       context = canvas.getContext();
 
+    const bufferCanvas = new SceneCanvas({
+      // width and height already multiplied by pixelRatio
+      // so we need to revert that
+      // also increase size by x nd y offset to make sure content fits canvas
+      width: canvas.width / canvas.pixelRatio + Math.abs(x),
+      height: canvas.height / canvas.pixelRatio + Math.abs(y),
+      pixelRatio: canvas.pixelRatio,
+    });
+
     if (config.imageSmoothingEnabled === false) {
       context._context.imageSmoothingEnabled = false;
     }
@@ -1918,7 +1950,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       context.translate(-1 * x, -1 * y);
     }
 
-    this.drawScene(canvas);
+    this.drawScene(canvas, undefined, bufferCanvas);
     context.restore();
 
     return canvas;
@@ -2069,16 +2101,20 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     pixelRatio?: number;
     mimeType?: string;
     quality?: number;
-    callback?: (blob: Blob) => void;
+    callback?: (blob: Blob | null) => void;
   }) {
     return new Promise((resolve, reject) => {
       try {
         const callback = config?.callback;
         if (callback) delete config.callback;
-        this.toCanvas(config).toBlob((blob) => {
-          resolve(blob);
-          callback?.(blob);
-        });
+        this.toCanvas(config).toBlob(
+          (blob) => {
+            resolve(blob);
+            callback?.(blob);
+          },
+          config?.mimeType,
+          config?.quality
+        );
       } catch (err) {
         reject(err);
       }
@@ -2315,28 +2351,23 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
 
   _getProtoListeners(eventType) {
-    let listeners = this._cache.get(ALL_LISTENERS);
-    // if no cache for listeners, we need to pre calculate it
-    if (!listeners) {
-      listeners = {};
+    const allListeners = this._cache.get(ALL_LISTENERS) ?? {};
+    let events = allListeners?.[eventType];
+    if (events === undefined) {
+      //recalculate cache
+      events = [];
       let obj = Object.getPrototypeOf(this);
       while (obj) {
-        if (!obj.eventListeners) {
-          obj = Object.getPrototypeOf(obj);
-          continue;
-        }
-        for (var event in obj.eventListeners) {
-          const newEvents = obj.eventListeners[event];
-          const oldEvents = listeners[event] || [];
-
-          listeners[event] = newEvents.concat(oldEvents);
-        }
+        const hierarchyEvents = obj.eventListeners?.[eventType] ?? [];
+        events.push(...hierarchyEvents);
         obj = Object.getPrototypeOf(obj);
       }
-      this._cache.set(ALL_LISTENERS, listeners);
+      // update cache
+      allListeners[eventType] = events;
+      this._cache.set(ALL_LISTENERS, allListeners);
     }
 
-    return listeners[eventType];
+    return events;
   }
   _fire(eventType, evt) {
     evt = evt || {};
@@ -2376,6 +2407,9 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var pointerId = evt ? evt.pointerId : undefined;
     var stage = this.getStage();
     var ap = this.getAbsolutePosition();
+    if (!stage) {
+      return;
+    }
     var pos =
       stage._getPointerById(pointerId) ||
       stage._changedPointerPositions[0] ||
@@ -2402,7 +2436,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       this._createDragElement(evt);
     }
 
-    const elem = DD._dragElements.get(this._id);
+    const elem = DD._dragElements.get(this._id)!;
     elem.dragStatus = 'dragging';
     this.fire(
       'dragstart',
@@ -2418,7 +2452,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _setDragPosition(evt, elem) {
     // const pointers = this.getStage().getPointersPositions();
     // const pos = pointers.find(p => p.id === this._dragEventId);
-    const pos = this.getStage()._getPointerById(elem.pointerId);
+    const pos = this.getStage()!._getPointerById(elem.pointerId);
 
     if (!pos) {
       return;
@@ -2573,6 +2607,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return Util.haveIntersection(screenRect, this.getClientRect());
   }
 
+  // @ts-ignore:
   preventDefault: GetSet<boolean, this>;
 
   // from filters
@@ -2594,7 +2629,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   threshold: GetSet<number, this>;
   value: GetSet<number, this>;
 
-  dragBoundFunc: GetSet<(this: Node, pos: Vector2d) => Vector2d, this>;
+  dragBoundFunc: GetSet<
+    (this: Node, pos: Vector2d, event: any) => Vector2d,
+    this
+  >;
   draggable: GetSet<boolean, this>;
   dragDistance: GetSet<number, this>;
   embossBlend: GetSet<boolean, this>;
@@ -3150,7 +3188,7 @@ addGetterSetter(Node, 'listening', true, getBooleanValidator());
 
 addGetterSetter(Node, 'preventDefault', true, getBooleanValidator());
 
-addGetterSetter(Node, 'filters', null, function (val) {
+addGetterSetter(Node, 'filters', null, function (this: Node, val) {
   this._filterUpToDate = false;
   return val;
 });

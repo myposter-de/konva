@@ -1,7 +1,9 @@
-import { Shape, ShapeConfig } from '../Shape';
-import { GetSet } from '../types';
+import { Context } from '../Context.js';
+import { Shape, ShapeConfig } from '../Shape.js';
+import { GetSet } from '../types.js';
 export declare function stringToArray(string: string): string[];
 export interface TextConfig extends ShapeConfig {
+    direction?: string;
     text?: string;
     fontFamily?: string;
     fontSize?: number;
@@ -29,9 +31,9 @@ export declare class Text extends Shape<TextConfig> {
     textWidth: number;
     textHeight: number;
     constructor(config?: TextConfig);
-    _sceneFunc(context: any): void;
-    _hitFunc(context: any): void;
-    setText(text: any): this;
+    _sceneFunc(context: Context): void;
+    _hitFunc(context: Context): void;
+    setText(text: string): this;
     getWidth(): any;
     getHeight(): any;
     getTextWidth(): number;
@@ -41,12 +43,14 @@ export declare class Text extends Shape<TextConfig> {
         height: number;
     };
     _getContextFont(): string;
-    _addTextLine(line: any): number;
-    _getTextWidth(text: any): any;
+    _addTextLine(line: string): number;
+    _getTextWidth(text: string): number;
     _setTextData(): void;
     _shouldHandleEllipsis(currentHeightPx: number): boolean;
     _tryToAddEllipsisToLastLine(): void;
     getStrokeScaleEnabled(): boolean;
+    _useBufferCanvas(): boolean;
+    direction: GetSet<string, this>;
     fontFamily: GetSet<string, this>;
     fontSize: GetSet<number, this>;
     fontStyle: GetSet<string, this>;

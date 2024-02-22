@@ -1,7 +1,7 @@
-import { Node, NodeConfig } from './Node';
-import { Context } from './Context';
-import { GetSet, Vector2d } from './types';
-import { HitCanvas, SceneCanvas } from './Canvas';
+import { Node, NodeConfig } from './Node.js';
+import { Context } from './Context.js';
+import { GetSet, Vector2d } from './types.js';
+import { HitCanvas, SceneCanvas } from './Canvas.js';
 export type ShapeConfigHandler<TTarget> = {
     bivarianceHack(ctx: Context, shape: TTarget): void;
 }['bivarianceHack'];
@@ -38,6 +38,7 @@ export interface ShapeConfig extends NodeConfig {
     fillRadialGradientColorStops?: Array<number | string>;
     fillEnabled?: boolean;
     fillPriority?: string;
+    fillRule?: CanvasFillRule;
     stroke?: string | CanvasGradient;
     strokeWidth?: number;
     fillAfterStrokeEnabled?: boolean;
@@ -68,13 +69,14 @@ export interface ShapeGetClientRectConfig {
     skipStroke?: boolean;
     relativeTo?: Node;
 }
+export type FillFuncOutput = void | [Path2D | CanvasFillRule] | [Path2D, CanvasFillRule];
 export declare const shapes: {
     [key: string]: Shape;
 };
 export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<Config> {
     _centroid: boolean;
     colorKey: string;
-    _fillFunc: (ctx: Context) => void;
+    _fillFunc: (ctx: Context) => FillFuncOutput;
     _strokeFunc: (ctx: Context) => void;
     _fillFuncHit: (ctx: Context) => void;
     _strokeFuncHit: (ctx: Context) => void;
@@ -86,13 +88,13 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     hasShadow(): any;
     _hasShadow(): boolean;
     _getFillPattern(): any;
-    __getFillPattern(): CanvasPattern;
+    __getFillPattern(): CanvasPattern | null | undefined;
     _getLinearGradient(): any;
-    __getLinearGradient(): CanvasGradient;
+    __getLinearGradient(): CanvasGradient | undefined;
     _getRadialGradient(): any;
-    __getRadialGradient(): CanvasGradient;
+    __getRadialGradient(): CanvasGradient | undefined;
     getShadowRGBA(): any;
-    _getShadowRGBA(): string;
+    _getShadowRGBA(): string | undefined;
     hasFill(): any;
     hasStroke(): any;
     hasHitStroke(): any;
@@ -113,7 +115,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
         x: number;
         y: number;
     };
-    drawScene(can?: SceneCanvas, top?: Node): this;
+    drawScene(can?: SceneCanvas, top?: Node, bufferCanvas?: SceneCanvas): this;
     drawHit(can?: HitCanvas, top?: Node, skipDragCheck?: boolean): this;
     drawHitFromCache(alphaThreshold?: number): this;
     hasPointerCapture(pointerId: number): boolean;
@@ -180,5 +182,7 @@ export declare class Shape<Config extends ShapeConfig = ShapeConfig> extends Nod
     strokeHitEnabled: GetSet<boolean, this>;
     strokeWidth: GetSet<number, this>;
     hitStrokeWidth: GetSet<number | 'auto', this>;
+    strokeLinearGradientStartPoint: GetSet<Vector2d, this>;
+    strokeLinearGradientEndPoint: GetSet<Vector2d, this>;
     strokeLinearGradientColorStops: GetSet<Array<number | string>, this>;
 }

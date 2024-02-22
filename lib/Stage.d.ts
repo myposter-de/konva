@@ -1,8 +1,8 @@
-import { Container, ContainerConfig } from './Container';
-import { SceneCanvas, HitCanvas } from './Canvas';
-import { GetSet, Vector2d } from './types';
-import { Shape } from './Shape';
-import { Layer } from './Layer';
+import { Container, ContainerConfig } from './Container.js';
+import { SceneCanvas, HitCanvas } from './Canvas.js';
+import { GetSet, Vector2d } from './types.js';
+import { Shape } from './Shape.js';
+import { Layer } from './Layer.js';
 export interface StageConfig extends ContainerConfig {
     container: HTMLDivElement | string;
 }
@@ -36,31 +36,31 @@ export declare class Stage extends Container<Layer> {
     setContainer(container: any): this;
     shouldDrawHit(): boolean;
     clear(): this;
-    clone(obj?: any): any;
+    clone(obj?: any): this;
     destroy(): this;
     getPointerPosition(): Vector2d | null;
-    _getPointerById(id?: number): Vector2d & {
-        id?: number;
-    };
+    _getPointerById(id?: number): (Vector2d & {
+        id?: number | undefined;
+    }) | undefined;
     getPointersPositions(): (Vector2d & {
-        id?: number;
+        id?: number | undefined;
     })[];
     getStage(): this;
     getContent(): HTMLDivElement;
     _toKonvaCanvas(config: any): SceneCanvas;
-    getIntersection(pos: Vector2d): Shape<import("./Shape").ShapeConfig>;
+    getIntersection(pos: Vector2d): Shape<import("./Shape.js").ShapeConfig> | null;
     _resizeDOM(): void;
     add(layer: Layer, ...rest: any[]): this;
-    getParent(): any;
-    getLayer(): any;
+    getParent(): null;
+    getLayer(): null;
     hasPointerCapture(pointerId: number): boolean;
     setPointerCapture(pointerId: number): void;
     releaseCapture(pointerId: number): void;
     getLayers(): Layer[];
     _bindContentEvents(): void;
-    _pointerenter(evt: any): void;
+    _pointerenter(evt: PointerEvent): void;
     _pointerover(evt: any): void;
-    _getTargetShape(evenType: any): Shape<import("./Shape").ShapeConfig>;
+    _getTargetShape(evenType: any): Shape<import("./Shape.js").ShapeConfig> | null;
     _pointerleave(evt: any): void;
     _pointerdown(evt: TouchEvent | MouseEvent | PointerEvent): void;
     _pointermove(evt: TouchEvent | MouseEvent | PointerEvent): void;

@@ -1,12 +1,13 @@
 import { Util } from '../Util';
 import { Factory } from '../Factory';
+import { Context } from '../Context';
 import { Shape, ShapeConfig } from '../Shape';
 import { Path } from './Path';
 import { Text, stringToArray } from './Text';
 import { getNumberValidator } from '../Validators';
 import { _registerNode } from '../Global';
 
-import { GetSet, Vector2d } from '../types';
+import { GetSet, PathSegment, Vector2d } from '../types';
 
 export interface TextPathConfig extends ShapeConfig {
   text?: string;
@@ -20,10 +21,10 @@ export interface TextPathConfig extends ShapeConfig {
 var EMPTY_STRING = '',
   NORMAL = 'normal';
 
-function _fillFunc(context) {
+function _fillFunc(this: TextPath, context) {
   context.fillText(this.partialText, 0, 0);
 }
-function _strokeFunc(context) {
+function _strokeFunc(this: TextPath, context) {
   context.strokeText(this.partialText, 0, 0);
 }
 
@@ -36,7 +37,7 @@ function _strokeFunc(context) {
  * @param {Object} config
  * @param {String} [config.fontFamily] default is Arial
  * @param {Number} [config.fontSize] default is 12
- * @param {String} [config.fontStyle] can be normal, bold, or italic.  Default is normal
+ * @param {String} [config.fontStyle] Can be 'normal', 'italic', or 'bold', '500' or even 'italic bold'.  'normal' is the default.
  * @param {String} [config.fontVariant] can be normal or small-caps.  Default is normal
  * @param {String} [config.textBaseline] Can be 'top', 'bottom', 'middle', 'alphabetic', 'hanging'. Default is middle
  * @param {String} config.text
@@ -73,7 +74,7 @@ function _strokeFunc(context) {
  */
 export class TextPath extends Shape<TextPathConfig> {
   dummyCanvas = Util.createCanvasElement();
-  dataArray = [];
+  dataArray: PathSegment[] = [];
   glyphInfo: Array<{
     transposeX: number;
     transposeY: number;
@@ -83,6 +84,7 @@ export class TextPath extends Shape<TextPathConfig> {
     p1: Vector2d;
   }>;
   partialText: string;
+  pathLength: number;
   textWidth: number;
   textHeight: number;
 
@@ -90,9 +92,10 @@ export class TextPath extends Shape<TextPathConfig> {
     // call super constructor
     super(config);
 
-    this.dataArray = Path.parsePathData(this.attrs.data);
+    this._readDataAttribute();
+
     this.on('dataChange.konva', function () {
-      this.dataArray = Path.parsePathData(this.attrs.data);
+      this._readDataAttribute();
       this._setTextData();
     });
 
@@ -105,7 +108,30 @@ export class TextPath extends Shape<TextPathConfig> {
     this._setTextData();
   }
 
-  _sceneFunc(context) {
+  _getTextPathLength() {
+    return Path.getPathLength(this.dataArray);
+  }
+  _getPointAtLength(length: number) {
+    // if path is not defined yet, do nothing
+    if (!this.attrs.data) {
+      return null;
+    }
+
+    const totalLength = this.pathLength;
+    // -1px for rounding of the last symbol
+    if (length - 1 > totalLength) {
+      return null;
+    }
+
+    return Path.getPointAtLengthOfDataArray(length, this.dataArray);
+  }
+
+  _readDataAttribute() {
+    this.dataArray = Path.parsePathData(this.attrs.data);
+    this.pathLength = this._getTextPathLength();
+  }
+
+  _sceneFunc(context: Context) {
     context.setAttr('font', this._getContextFont());
     context.setAttr('textBaseline', this.textBaseline());
     context.setAttr('textAlign', 'left');
@@ -155,7 +181,7 @@ export class TextPath extends Shape<TextPathConfig> {
 
     context.restore();
   }
-  _hitFunc(context) {
+  _hitFunc(context: Context) {
     context.beginPath();
 
     var glyphInfo = this.glyphInfo;
@@ -185,7 +211,7 @@ export class TextPath extends Shape<TextPathConfig> {
     );
     return this.textHeight;
   }
-  setText(text) {
+  setText(text: string) {
     return Text.prototype.setText.call(this, text);
   }
 
@@ -193,9 +219,9 @@ export class TextPath extends Shape<TextPathConfig> {
     return Text.prototype._getContextFont.call(this);
   }
 
-  _getTextSize(text) {
+  _getTextSize(text: string) {
     var dummyCanvas = this.dummyCanvas;
-    var _context = dummyCanvas.getContext('2d');
+    var _context = dummyCanvas.getContext('2d')!;
 
     _context.save();
 
@@ -206,262 +232,66 @@ export class TextPath extends Shape<TextPathConfig> {
 
     return {
       width: metrics.width,
-      height: parseInt(this.attrs.fontSize, 10),
+      height: parseInt(`${this.fontSize()}`, 10),
     };
   }
   _setTextData() {
-    var that = this;
-    var size = this._getTextSize(this.attrs.text);
-    var letterSpacing = this.letterSpacing();
-    var align = this.align();
-    var kerningFunc = this.kerningFunc();
+    const { width, height } = this._getTextSize(this.attrs.text);
+    this.textWidth = width;
+    this.textHeight = height;
+    this.glyphInfo = [];
 
-    this.textWidth = size.width;
-    this.textHeight = size.height;
+    if (!this.attrs.data) {
+      return null;
+    }
 
-    var textFullWidth = Math.max(
+    const letterSpacing = this.letterSpacing();
+    const align = this.align();
+    const kerningFunc = this.kerningFunc();
+
+    // defines the width of the text on a straight line
+    const textWidth = Math.max(
       this.textWidth + ((this.attrs.text || '').length - 1) * letterSpacing,
       0
     );
 
-    this.glyphInfo = [];
-
-    var fullPathWidth = 0;
-    for (var l = 0; l < that.dataArray.length; l++) {
-      if (that.dataArray[l].pathLength > 0) {
-        fullPathWidth += that.dataArray[l].pathLength;
-      }
-    }
-
-    var offset = 0;
+    let offset = 0;
     if (align === 'center') {
-      offset = Math.max(0, fullPathWidth / 2 - textFullWidth / 2);
+      offset = Math.max(0, this.pathLength / 2 - textWidth / 2);
     }
     if (align === 'right') {
-      offset = Math.max(0, fullPathWidth - textFullWidth);
+      offset = Math.max(0, this.pathLength - textWidth);
     }
 
-    var charArr = stringToArray(this.text());
-    var spacesNumber = this.text().split(' ').length - 1;
+    const charArr = stringToArray(this.text());
 
-    var p0, p1, pathCmd;
-
-    var pIndex = -1;
-    var currentT = 0;
-    // var sumLength = 0;
-    // for(var j = 0; j < that.dataArray.length; j++) {
-    //   if(that.dataArray[j].pathLength > 0) {
-    //
-    //     if (sumLength + that.dataArray[j].pathLength > offset) {}
-    //       fullPathWidth += that.dataArray[j].pathLength;
-    //   }
-    // }
-
-    var getNextPathSegment = function () {
-      currentT = 0;
-      var pathData = that.dataArray;
-
-      for (var j = pIndex + 1; j < pathData.length; j++) {
-        if (pathData[j].pathLength > 0) {
-          pIndex = j;
-
-          return pathData[j];
-        } else if (pathData[j].command === 'M') {
-          p0 = {
-            x: pathData[j].points[0],
-            y: pathData[j].points[1],
-          };
-        }
-      }
-
-      return {};
-    };
-
-    var findSegmentToFitCharacter = function (c) {
-      var glyphWidth = that._getTextSize(c).width + letterSpacing;
-
-      if (c === ' ' && align === 'justify') {
-        glyphWidth += (fullPathWidth - textFullWidth) / spacesNumber;
-      }
-
-      var currLen = 0;
-      var attempts = 0;
-
-      p1 = undefined;
-      while (
-        Math.abs(glyphWidth - currLen) / glyphWidth > 0.01 &&
-        attempts < 20
-      ) {
-        attempts++;
-        var cumulativePathLength = currLen;
-        while (pathCmd === undefined) {
-          pathCmd = getNextPathSegment();
-
-          if (
-            pathCmd &&
-            cumulativePathLength + pathCmd.pathLength < glyphWidth
-          ) {
-            cumulativePathLength += pathCmd.pathLength;
-            pathCmd = undefined;
-          }
-        }
-
-        if (Object.keys(pathCmd).length === 0 || p0 === undefined) {
-          return undefined;
-        }
-
-        var needNewSegment = false;
-
-        switch (pathCmd.command) {
-          case 'L':
-            if (
-              Path.getLineLength(
-                p0.x,
-                p0.y,
-                pathCmd.points[0],
-                pathCmd.points[1]
-              ) > glyphWidth
-            ) {
-              p1 = Path.getPointOnLine(
-                glyphWidth,
-                p0.x,
-                p0.y,
-                pathCmd.points[0],
-                pathCmd.points[1],
-                p0.x,
-                p0.y
-              );
-            } else {
-              pathCmd = undefined;
-            }
-            break;
-          case 'A':
-            var start = pathCmd.points[4];
-            // 4 = theta
-            var dTheta = pathCmd.points[5];
-            // 5 = dTheta
-            var end = pathCmd.points[4] + dTheta;
-
-            if (currentT === 0) {
-              currentT = start + 0.00000001;
-            } else if (glyphWidth > currLen) {
-              // Just in case start is 0
-              currentT += ((Math.PI / 180.0) * dTheta) / Math.abs(dTheta);
-            } else {
-              currentT -= ((Math.PI / 360.0) * dTheta) / Math.abs(dTheta);
-            }
-
-            // Credit for bug fix: @therth https://github.com/ericdrowell/KonvaJS/issues/249
-            // Old code failed to render text along arc of this path: "M 50 50 a 150 50 0 0 1 250 50 l 50 0"
-            if (
-              (dTheta < 0 && currentT < end) ||
-              (dTheta >= 0 && currentT > end)
-            ) {
-              currentT = end;
-              needNewSegment = true;
-            }
-            p1 = Path.getPointOnEllipticalArc(
-              pathCmd.points[0],
-              pathCmd.points[1],
-              pathCmd.points[2],
-              pathCmd.points[3],
-              currentT,
-              pathCmd.points[6]
-            );
-            break;
-          case 'C':
-            if (currentT === 0) {
-              if (glyphWidth > pathCmd.pathLength) {
-                currentT = 0.00000001;
-              } else {
-                currentT = glyphWidth / pathCmd.pathLength;
-              }
-            } else if (glyphWidth > currLen) {
-              currentT += (glyphWidth - currLen) / pathCmd.pathLength / 2;
-            } else {
-              currentT = Math.max(
-                currentT - (currLen - glyphWidth) / pathCmd.pathLength / 2,
-                0
-              );
-            }
-
-            if (currentT > 1.0) {
-              currentT = 1.0;
-              needNewSegment = true;
-            }
-            p1 = Path.getPointOnCubicBezier(
-              currentT,
-              pathCmd.start.x,
-              pathCmd.start.y,
-              pathCmd.points[0],
-              pathCmd.points[1],
-              pathCmd.points[2],
-              pathCmd.points[3],
-              pathCmd.points[4],
-              pathCmd.points[5]
-            );
-            break;
-          case 'Q':
-            if (currentT === 0) {
-              currentT = glyphWidth / pathCmd.pathLength;
-            } else if (glyphWidth > currLen) {
-              currentT += (glyphWidth - currLen) / pathCmd.pathLength;
-            } else {
-              currentT -= (currLen - glyphWidth) / pathCmd.pathLength;
-            }
-
-            if (currentT > 1.0) {
-              currentT = 1.0;
-              needNewSegment = true;
-            }
-            p1 = Path.getPointOnQuadraticBezier(
-              currentT,
-              pathCmd.start.x,
-              pathCmd.start.y,
-              pathCmd.points[0],
-              pathCmd.points[1],
-              pathCmd.points[2],
-              pathCmd.points[3]
-            );
-            break;
-        }
-
-        if (p1 !== undefined) {
-          currLen = Path.getLineLength(p0.x, p0.y, p1.x, p1.y);
-        }
-
-        if (needNewSegment) {
-          needNewSegment = false;
-          pathCmd = undefined;
-        }
-      }
-    };
-
-    // fake search for offset, this is the best approach
-    var testChar = 'C';
-    var glyphWidth = that._getTextSize(testChar).width + letterSpacing;
-    var lettersInOffset = offset / glyphWidth - 1;
-    // the idea is simple
-    // try to draw testChar until we fill offset
-    for (var k = 0; k < lettersInOffset; k++) {
-      findSegmentToFitCharacter(testChar);
-      if (p0 === undefined || p1 === undefined) {
-        break;
-      }
-      p0 = p1;
-    }
-
+    // Algorithm for calculating glyph positions:
+    // 1. Get the begging point of the glyph on the path using the offsetToGlyph,
+    // 2. Get the ending point of the glyph on the path using the offsetToGlyph plus glyph width,
+    // 3. Calculate the rotation, width, and midpoint of the glyph using the start and end points,
+    // 4. Add glyph width to the offsetToGlyph and repeat
+    let offsetToGlyph = offset;
     for (var i = 0; i < charArr.length; i++) {
-      // Find p1 such that line segment between p0 and p1 is approx. width of glyph
-      findSegmentToFitCharacter(charArr[i]);
+      const charStartPoint = this._getPointAtLength(offsetToGlyph);
+      if (!charStartPoint) return;
 
-      if (p0 === undefined || p1 === undefined) {
-        break;
+      let glyphWidth = this._getTextSize(charArr[i]).width + letterSpacing;
+      if (charArr[i] === ' ' && align === 'justify') {
+        const numberOfSpaces = this.text().split(' ').length - 1;
+        glyphWidth += (this.pathLength - textWidth) / numberOfSpaces;
       }
 
-      var width = Path.getLineLength(p0.x, p0.y, p1.x, p1.y);
+      const charEndPoint = this._getPointAtLength(offsetToGlyph + glyphWidth);
+      if (!charEndPoint) return;
 
-      var kern = 0;
+      const width = Path.getLineLength(
+        charStartPoint.x,
+        charStartPoint.y,
+        charEndPoint.x,
+        charEndPoint.y
+      );
+
+      let kern = 0;
       if (kerningFunc) {
         try {
           // getKerning is a user provided getter. Make sure it never breaks our logic
@@ -471,28 +301,32 @@ export class TextPath extends Shape<TextPathConfig> {
         }
       }
 
-      p0.x += kern;
-      p1.x += kern;
+      charStartPoint.x += kern;
+      charEndPoint.x += kern;
       this.textWidth += kern;
 
-      var midpoint = Path.getPointOnLine(
+      const midpoint = Path.getPointOnLine(
         kern + width / 2.0,
-        p0.x,
-        p0.y,
-        p1.x,
-        p1.y
+        charStartPoint.x,
+        charStartPoint.y,
+        charEndPoint.x,
+        charEndPoint.y
       );
 
-      var rotation = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+      const rotation = Math.atan2(
+        charEndPoint.y - charStartPoint.y,
+        charEndPoint.x - charStartPoint.x
+      );
       this.glyphInfo.push({
         transposeX: midpoint.x,
         transposeY: midpoint.y,
         text: charArr[i],
         rotation: rotation,
-        p0: p0,
-        p1: p1,
+        p0: charStartPoint,
+        p1: charEndPoint,
       });
-      p0 = p1;
+
+      offsetToGlyph += glyphWidth;
     }
   }
   getSelfRect() {
@@ -504,7 +338,7 @@ export class TextPath extends Shape<TextPathConfig> {
         height: 0,
       };
     }
-    var points = [];
+    var points: number[] = [];
 
     this.glyphInfo.forEach(function (info) {
       points.push(info.p0.x);
@@ -610,7 +444,7 @@ Factory.addGetterSetter(TextPath, 'fontFamily', 'Arial');
 Factory.addGetterSetter(TextPath, 'fontSize', 12, getNumberValidator());
 
 /**
- * get/set font style.  Can be 'normal', 'italic', or 'bold'.  'normal' is the default.
+ * get/set font style.  Can be 'normal', 'italic', or 'bold', '500' or even 'italic bold'.  'normal' is the default.
  * @name Konva.TextPath#fontStyle
  * @method
  * @param {String} fontStyle

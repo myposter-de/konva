@@ -488,12 +488,12 @@ describe('Caching', function () {
     context.stroke();
     context.restore();
 
-    compareLayerAndCanvas(layer, canvas, 150);
+    compareLayerAndCanvas(layer, canvas, 210, 20);
 
     // recache
     group.cache();
     layer.draw();
-    compareLayerAndCanvas(layer, canvas, 150);
+    compareLayerAndCanvas(layer, canvas, 210, 20);
   });
 
   it('cache group with rectangle and text', function () {
@@ -1469,7 +1469,7 @@ describe('Caching', function () {
     layer.draw();
     assert.equal(
       circle._cache.get('canvas').filter.width,
-      21 * circle._cache.get('canvas').filter.pixelRatio
+      20 * circle._cache.get('canvas').filter.pixelRatio
     );
     circle.filters([]);
     // TODO: should we clear cache canvas?
