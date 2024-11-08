@@ -2,7 +2,7 @@ import { Node } from './Node';
 import { Util } from './Util';
 import { getComponentValidator } from './Validators';
 
-var GET = 'get',
+const GET = 'get',
   SET = 'set';
 
 export const Factory = {
@@ -12,25 +12,25 @@ export const Factory = {
     Factory.addOverloadedGetterSetter(constructor, attr);
   },
   addGetter(constructor, attr, def?) {
-    var method = GET + Util._capitalize(attr);
+    const method = GET + Util._capitalize(attr);
 
     constructor.prototype[method] =
       constructor.prototype[method] ||
       function (this: Node) {
-        var val = this.attrs[attr];
+        const val = this.attrs[attr];
         return val === undefined ? def : val;
       };
   },
 
   addSetter(constructor, attr, validator?, after?) {
-    var method = SET + Util._capitalize(attr);
+    const method = SET + Util._capitalize(attr);
 
     if (!constructor.prototype[method]) {
       Factory.overWriteSetter(constructor, attr, validator, after);
     }
   },
   overWriteSetter(constructor, attr, validator?, after?) {
-    var method = SET + Util._capitalize(attr);
+    const method = SET + Util._capitalize(attr);
     constructor.prototype[method] = function (val) {
       if (validator && val !== undefined && val !== null) {
         val = validator.call(this, val, attr);
@@ -52,31 +52,28 @@ export const Factory = {
     validator?: Function,
     after?: Function
   ) {
-    var len = components.length,
+    const len = components.length,
       capitalize = Util._capitalize,
       getter = GET + capitalize(attr),
-      setter = SET + capitalize(attr),
-      n,
-      component;
+      setter = SET + capitalize(attr);
 
     // getter
     constructor.prototype[getter] = function () {
-      var ret = {};
+      const ret = {};
 
-      for (n = 0; n < len; n++) {
-        component = components[n];
+      for (let n = 0; n < len; n++) {
+        const component = components[n];
         ret[component] = this.getAttr(attr + capitalize(component));
       }
 
       return ret;
     };
 
-    var basicValidator = getComponentValidator(components);
+    const basicValidator = getComponentValidator(components);
 
     // setter
     constructor.prototype[setter] = function (val) {
-      var oldVal = this.attrs[attr],
-        key;
+      const oldVal = this.attrs[attr];
 
       if (validator) {
         val = validator.call(this, val);
@@ -86,7 +83,7 @@ export const Factory = {
         basicValidator.call(this, val, attr);
       }
 
-      for (key in val) {
+      for (const key in val) {
         if (!val.hasOwnProperty(key)) {
           continue;
         }
@@ -110,7 +107,7 @@ export const Factory = {
     Factory.addOverloadedGetterSetter(constructor, attr);
   },
   addOverloadedGetterSetter(constructor, attr) {
-    var capitalizedAttr = Util._capitalize(attr),
+    const capitalizedAttr = Util._capitalize(attr),
       setter = SET + capitalizedAttr,
       getter = GET + capitalizedAttr;
 
@@ -127,14 +124,14 @@ export const Factory = {
   addDeprecatedGetterSetter(constructor, attr, def, validator) {
     Util.error('Adding deprecated ' + attr);
 
-    var method = GET + Util._capitalize(attr);
+    const method = GET + Util._capitalize(attr);
 
-    var message =
+    const message =
       attr +
       ' property is deprecated and will be removed soon. Look at Konva change log for more information.';
     constructor.prototype[method] = function () {
       Util.error(message);
-      var val = this.attrs[attr];
+      const val = this.attrs[attr];
       return val === undefined ? def : val;
     };
     Factory.addSetter(constructor, attr, validator, function () {
@@ -144,9 +141,9 @@ export const Factory = {
   },
   backCompat(constructor, methods) {
     Util.each(methods, function (oldMethodName, newMethodName) {
-      var method = constructor.prototype[newMethodName];
-      var oldGetter = GET + Util._capitalize(oldMethodName);
-      var oldSetter = SET + Util._capitalize(oldMethodName);
+      const method = constructor.prototype[newMethodName];
+      const oldGetter = GET + Util._capitalize(oldMethodName);
+      const oldSetter = SET + Util._capitalize(oldMethodName);
 
       function deprecated(this: Node) {
         method.apply(this, arguments);

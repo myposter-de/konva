@@ -52,7 +52,7 @@ export declare const Konva: {
         _isNumber(obj: any): obj is number;
         _isString(obj: any): obj is string;
         _isBoolean(obj: any): obj is boolean;
-        isObject(val: any): val is Object;
+        isObject(val: any): val is object;
         isValidSelector(selector: any): boolean;
         _sign(number: number): 1 | -1;
         requestAnimFrame(callback: Function): void;
@@ -130,7 +130,7 @@ export declare const Konva: {
         throw(str: string): never;
         error(str: string): void;
         warn(str: string): void;
-        each(obj: Object, func: Function): void;
+        each(obj: object, func: Function): void;
         _inRange(val: number, left: number, right: number): boolean;
         _getProjectionToSegment(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any): any[];
         _getProjectionToLine(pt: import("./types").Vector2d, line: Array<import("./types").Vector2d>, isClosed: boolean): import("./types.js").Vector2d;

@@ -1,14 +1,13 @@
-import { Util } from '../Util';
 import { Factory } from '../Factory';
-import { Shape, ShapeConfig } from '../Shape';
-import { getNumberValidator, getNumberArrayValidator } from '../Validators';
 import { _registerNode } from '../Global';
+import { Shape, ShapeConfig } from '../Shape';
+import { getNumberArrayValidator, getNumberValidator } from '../Validators';
 
-import { GetSet } from '../types';
 import { Context } from '../Context';
+import { GetSet } from '../types';
 
 function getControlPoints(x0, y0, x1, y1, x2, y2, t) {
-  var d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2)),
+  const d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2)),
     d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)),
     fa = (t * d01) / (d01 + d12),
     fb = (t * d12) / (d01 + d12),
@@ -21,13 +20,11 @@ function getControlPoints(x0, y0, x1, y1, x2, y2, t) {
 }
 
 function expandPoints(p, tension) {
-  var len = p.length,
-    allPoints: Array<number> = [],
-    n,
-    cp;
+  const len = p.length,
+    allPoints: Array<number> = [];
 
-  for (n = 2; n < len - 2; n += 2) {
-    cp = getControlPoints(
+  for (let n = 2; n < len - 2; n += 2) {
+    const cp = getControlPoints(
       p[n - 2],
       p[n - 1],
       p[n],
@@ -105,7 +102,7 @@ export class Line<
   }
 
   _sceneFunc(context: Context) {
-    var points = this.points(),
+    let points = this.points(),
       length = points.length,
       tension = this.tension(),
       closed = this.closed(),
@@ -191,7 +188,7 @@ export class Line<
     }
   }
   _getTensionPointsClosed() {
-    var p = this.points(),
+    const p = this.points(),
       len = p.length,
       tension = this.tension(),
       firstControlPoints = getControlPoints(
@@ -238,7 +235,7 @@ export class Line<
   }
   // overload size detection
   getSelfRect() {
-    var points = this.points();
+    let points = this.points();
     if (points.length < 4) {
       return {
         x: points[0] || 0,
@@ -258,12 +255,12 @@ export class Line<
     } else {
       points = this.points();
     }
-    var minX = points[0];
-    var maxX = points[0];
-    var minY = points[1];
-    var maxY = points[1];
-    var x, y;
-    for (var i = 0; i < points.length / 2; i++) {
+    let minX = points[0];
+    let maxX = points[0];
+    let minY = points[1];
+    let maxY = points[1];
+    let x, y;
+    for (let i = 0; i < points.length / 2; i++) {
       x = points[i * 2];
       y = points[i * 2 + 1];
       minX = Math.min(minX, x);
