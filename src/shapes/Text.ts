@@ -13,12 +13,33 @@ import { _registerNode } from '../Global';
 
 import { GetSet } from '../types';
 
-export function stringToArray(string: string) {
-  // we need to use `Array.from` because it can split unicode string correctly
-  // we also can use some regexp magic from lodash:
-  // https://github.com/lodash/lodash/blob/fb1f99d9d90ad177560d771bc5953a435b2dc119/lodash.toarray/index.js#L256
-  // but I decided it is too much code for that small fix
-  return Array.from(string);
+export function stringToArray(string: string): string[] {
+  // Use Unicode-aware splitting
+  return [...string].reduce((acc, char, index, array) => {
+    // Handle emoji sequences (including ZWJ sequences)
+    if (
+      /\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?(?:\u200D\p{Emoji_Presentation})+/u.test(
+        char
+      )
+    ) {
+      acc.push(char);
+    }
+    // Handle regional indicator symbols (flags)
+    else if (
+      /\p{Regional_Indicator}{2}/u.test(char + (array[index + 1] || ''))
+    ) {
+      acc.push(char + array[index + 1]);
+    }
+    // Handle Indic scripts and other combining characters
+    else if (index > 0 && /\p{Mn}|\p{Me}|\p{Mc}/u.test(char)) {
+      acc[acc.length - 1] += char;
+    }
+    // Handle other characters
+    else {
+      acc.push(char);
+    }
+    return acc;
+  }, [] as string[]);
 }
 
 export interface TextConfig extends ShapeConfig {
@@ -202,7 +223,7 @@ export class Text extends Shape<TextConfig> {
       shouldUnderline = textDecoration.indexOf('underline') !== -1,
       shouldLineThrough = textDecoration.indexOf('line-through') !== -1,
       n;
-    
+
     direction = direction === INHERIT ? context.direction : direction;
 
     var translateY = 0;
@@ -218,7 +239,6 @@ export class Text extends Shape<TextConfig> {
     context.setAttr('font', this._getContextFont());
 
     context.setAttr('textAlign', LEFT);
-
 
     // handle vertical alignment
     if (verticalAlign === MIDDLE) {
@@ -257,18 +277,17 @@ export class Text extends Shape<TextConfig> {
         context.save();
         context.beginPath();
 
-        context.moveTo(
-          lineTranslateX,
-          translateY + lineTranslateY + Math.round(fontSize / 2)
-        );
+        let yOffset = Konva._fixTextRendering
+          ? Math.round(fontSize / 4)
+          : Math.round(fontSize / 2);
+        const x = lineTranslateX;
+        const y = translateY + lineTranslateY + yOffset;
+        context.moveTo(x, y);
         spacesNumber = text.split(' ').length - 1;
         oneWord = spacesNumber === 0;
         lineWidth =
           align === JUSTIFY && !lastLine ? totalWidth - padding * 2 : width;
-        context.lineTo(
-          lineTranslateX + Math.round(lineWidth),
-          translateY + lineTranslateY + Math.round(fontSize / 2)
-        );
+        context.lineTo(x + Math.round(lineWidth), y);
 
         // I have no idea what is real ratio
         // just /15 looks good enough
@@ -282,7 +301,8 @@ export class Text extends Shape<TextConfig> {
       if (shouldLineThrough) {
         context.save();
         context.beginPath();
-        context.moveTo(lineTranslateX, translateY + lineTranslateY);
+        let yOffset = Konva._fixTextRendering ? -Math.round(fontSize / 4) : 0;
+        context.moveTo(lineTranslateX, translateY + lineTranslateY + yOffset);
         spacesNumber = text.split(' ').length - 1;
         oneWord = spacesNumber === 0;
         lineWidth =
@@ -291,7 +311,7 @@ export class Text extends Shape<TextConfig> {
             : width;
         context.lineTo(
           lineTranslateX + Math.round(lineWidth),
-          translateY + lineTranslateY
+          translateY + lineTranslateY + yOffset
         );
         context.lineWidth = fontSize / 15;
         const gradient = this._getLinearGradient();
@@ -388,22 +408,43 @@ export class Text extends Shape<TextConfig> {
    * That method can't handle multiline text.
    * @method
    * @name Konva.Text#measureSize
-   * @param {String} [text] text to measure
-   * @returns {Object} { width , height} of measured text
+   * @param {String} text text to measure
+   * @returns {Object} { width , height } of measured text
    */
-  measureSize(text) {
+  measureSize(text: string) {
     var _context = getDummyContext(),
       fontSize = this.fontSize(),
-      metrics;
+      metrics: TextMetrics;
 
     _context.save();
     _context.font = this._getContextFont();
 
     metrics = _context.measureText(text);
     _context.restore();
+
+    // Scale the fallback values based on the provided fontSize compared to the sample size (100 in your new case)
+    const scaleFactor = fontSize / 100;
+
+    // Note, fallback values are from chrome browser with 100px font size and font-family "Arial"
     return {
+      actualBoundingBoxAscent:
+        metrics.actualBoundingBoxAscent ?? 71.58203125 * scaleFactor,
+      actualBoundingBoxDescent: metrics.actualBoundingBoxDescent ?? 0, // Remains zero as there is no descent in the provided metrics
+      actualBoundingBoxLeft:
+        metrics.actualBoundingBoxLeft ?? -7.421875 * scaleFactor,
+      actualBoundingBoxRight:
+        metrics.actualBoundingBoxRight ?? 75.732421875 * scaleFactor,
+      alphabeticBaseline: metrics.alphabeticBaseline ?? 0, // Remains zero as it's typically relative to the baseline itself
+      emHeightAscent: metrics.emHeightAscent ?? 100 * scaleFactor,
+      emHeightDescent: metrics.emHeightDescent ?? -20 * scaleFactor,
+      fontBoundingBoxAscent: metrics.fontBoundingBoxAscent ?? 91 * scaleFactor,
+      fontBoundingBoxDescent:
+        metrics.fontBoundingBoxDescent ?? 21 * scaleFactor,
+      hangingBaseline:
+        metrics.hangingBaseline ?? 72.80000305175781 * scaleFactor,
+      ideographicBaseline: metrics.ideographicBaseline ?? -21 * scaleFactor,
       width: metrics.width,
-      height: fontSize,
+      height: fontSize, // Typically set to the font size
     };
   }
   _getContextFont() {
@@ -706,7 +747,6 @@ Factory.overWriteSetter(Text, 'width', getNumberOrAutoValidator());
  */
 
 Factory.overWriteSetter(Text, 'height', getNumberOrAutoValidator());
-
 
 /**
  * get/set direction

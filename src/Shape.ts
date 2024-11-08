@@ -26,7 +26,7 @@ export type LineJoin = 'round' | 'bevel' | 'miter';
 export type LineCap = 'butt' | 'round' | 'square';
 
 export interface ShapeConfig extends NodeConfig {
-  fill?: string;
+  fill?: string | CanvasGradient;
   fillPatternImage?: HTMLImageElement;
   fillPatternX?: number;
   fillPatternY?: number;
@@ -128,8 +128,13 @@ function _fillFunc(this: Node, context) {
 function _strokeFunc(context) {
   context.stroke();
 }
-function _fillFuncHit(context) {
-  context.fill();
+function _fillFuncHit(this: Node, context) {
+  const fillRule = this.attrs.fillRule;
+  if (fillRule) {
+    context.fill(fillRule);
+  } else {
+    context.fill();
+  }
 }
 function _strokeFuncHit(context) {
   context.stroke();
@@ -528,9 +533,22 @@ export class Shape<
     };
   }
   getClientRect(config: ShapeGetClientRectConfig = {}) {
+    // if we have a cached parent, it will use cached transform matrix
+    // but we don't want to that
+    let hasCachedParent = false;
+    let parent = this.getParent();
+    while (parent) {
+      if (parent.isCached()) {
+        hasCachedParent = true;
+        break;
+      }
+      parent = parent.getParent();
+    }
     const skipTransform = config.skipTransform;
 
-    const relativeTo = config.relativeTo;
+    // force relative to stage if we have a cached parent
+    const relativeTo =
+      config.relativeTo || (hasCachedParent && this.getStage()) || undefined;
 
     const fillRect = this.getSelfRect();
 
@@ -766,7 +784,7 @@ export class Shape<
   dash: GetSet<number[], this>;
   dashEnabled: GetSet<boolean, this>;
   dashOffset: GetSet<number, this>;
-  fill: GetSet<string, this>;
+  fill: GetSet<string | CanvasGradient, this>;
   fillEnabled: GetSet<boolean, this>;
   fillLinearGradientColorStops: GetSet<Array<number | string>, this>;
   fillLinearGradientStartPoint: GetSet<Vector2d, this>;
@@ -815,7 +833,7 @@ export class Shape<
   shadowOffsetY: GetSet<number, this>;
   shadowOpacity: GetSet<number, this>;
   shadowBlur: GetSet<number, this>;
-  stroke: GetSet<string, this>;
+  stroke: GetSet<string | CanvasGradient, this>;
   strokeEnabled: GetSet<boolean, this>;
   fillAfterStrokeEnabled: GetSet<boolean, this>;
   strokeScaleEnabled: GetSet<boolean, this>;

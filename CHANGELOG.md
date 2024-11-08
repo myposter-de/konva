@@ -3,6 +3,40 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 9.3.15 (2024-09-09)
+
+- fix letter spacing for Hindi text
+- ts fixes
+
+### 9.3.14 (2024-07-16)
+
+- Fix shadow + corner radius for images
+- Support `fillRule` for `Konva.Shape` on hit graph
+
+### 9.3.13 (2024-07-05)
+
+- Fallback for `Konva.Text.measureSize()` when 2d context doesn't return full data
+
+### 9.3.12 (2024-06-20)
+
+- Fix stopped transforming when it was triggered by multi-touch
+- Fix svg `path.getPointAtLength()` calculations in some cases
+- Fix `shape.getClientRect()` when any of parents is cached
+
+### 9.3.11 (2024-05-23)
+
+- Fix chrome clear canvas issue
+- Typescript fixes
+
+### 9.3.9 (2024-05-20)
+
+- Fix underline and line-through for `Konva.Text` when `Konva._fixTextRendering = true`
+
+### 9.3.8 (2024-05-15)
+
+- Fix click events fires on stage
+- Temporary `Konva._fixTextRendering = true` flag to fix inconsistent text
+
 ### 9.3.6 (2024-03-04)
 
 - Fix transformer bug to enable hit graph back

@@ -1653,6 +1653,35 @@ describe('Shape', function () {
     assert.equal(rect.height, 100, 'should not effect width');
   });
 
+  it('getClientRect should not use cached values', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+
+    var shape = new Konva.Rect({
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      fill: 'green',
+      stroke: 'black',
+      strokeWidth: 4,
+      strokeEnabled: false,
+      shadowOffsetX: 10,
+      shadowEnabled: false,
+    });
+
+    layer.add(shape);
+    stage.add(layer);
+
+    layer.cache();
+
+    layer.scaleX(2);
+
+    const rect = shape.getClientRect();
+
+    assert.equal(rect.x, 200);
+  });
+
   it('getClientRect for shape in transformed parent', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
@@ -2273,5 +2302,37 @@ describe('Shape', function () {
 
     assert.equal(callCount, 0);
     Konva.Util.warn = oldWarn;
+  });
+
+  it('fill rule on hit graph', function () {
+    var stage = addStage();
+
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var mask = new Konva.Shape({
+      sceneFunc: function (ctx, shape) {
+        ctx.beginPath();
+        ctx.rect(0, 0, 500, 500);
+        ctx.rect(100, 100, 100, 100);
+        ctx.closePath();
+        ctx.fillShape(shape);
+      },
+      draggable: true,
+      fill: 'red',
+      fillRule: 'evenodd',
+    });
+
+    layer.add(mask);
+    layer.draw();
+    const trace = layer.getContext().getTrace();
+
+    assert.equal(
+      trace,
+      'clearRect(0,0,578,200);clearRect(0,0,578,200);save();transform(1,0,0,1,0,0);beginPath();rect(0,0,500,500);rect(100,100,100,100);closePath();fillStyle=red;fill(evenodd);restore();'
+    );
+
+    const hitShape = layer.getIntersection({ x: 150, y: 150 });
+    assert.equal(hitShape, null);
   });
 });
