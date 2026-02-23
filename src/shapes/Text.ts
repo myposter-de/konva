@@ -68,6 +68,7 @@ export interface TextConfig extends ShapeConfig {
   wrap?: string;
   ellipsis?: boolean;
   charRenderFunc?: null | ((props: CharRenderProps) => void);
+  textOffsetY?: number;
 }
 
 // constants
@@ -278,19 +279,7 @@ export class Text extends Shape<TextConfig> {
       shouldLineThrough = textDecoration.indexOf('line-through') !== -1,
       n;
 
-    let translateY = lineHeightPx / 2;
-    let baseline = MIDDLE;
-    if (!Konva.legacyTextRendering) {
-      const metrics = this.measureSize('M'); // Use a sample character to get the ascent
-
-      baseline = 'alphabetic';
-      const ascent =
-        metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent;
-      const descent =
-        metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent;
-
-      translateY = (ascent - descent) / 2 + lineHeightPx / 2;
-    }
+    let translateY = 0;
 
     if (direction !== INHERIT) {
       context.setAttr('direction', direction);
@@ -302,11 +291,11 @@ export class Text extends Shape<TextConfig> {
 
     context.setAttr('font', this._getContextFont());
 
-    context.setAttr('textBaseline', baseline);
-
     context.setAttr('textAlign', LEFT);
 
-    context.translate(padding, this._getTextTop());
+    // fork: textOffsetY places the first alphabetic baseline; vertical
+    // alignment only applies with a padding, as in the 10.3.3 fork
+    context.translate(padding, (padding ? this._getTextTop() : 0) + this.textOffsetY());
 
     // Start the callback with the same fill that normal drawing would use.
     // Assigning that color again then needs no override, including black.
@@ -909,6 +898,7 @@ export class Text extends Shape<TextConfig> {
   // 'auto' resets the fixed size; the getters return the measured size
   width: GetSet<number, this, number | 'auto' | null | undefined>;
   height: GetSet<number, this, number | 'auto' | null | undefined>;
+  textOffsetY: GetSet<number, this>;
 }
 
 Text.prototype._fillFunc = _fillFunc;
@@ -1235,3 +1225,19 @@ Factory.addGetterSetter(
  * });
  */
 Factory.addGetterSetter(Text, 'charRenderFunc', undefined);
+
+/**
+ * get/set textOffsetY
+ * @name Konva.Text#textOffsetY
+ * @method
+ * @param {Number} textOffsetY
+ * @returns {Number}
+ * @example
+ * // get text offsetY
+ * var text = text.textOffsetY();
+ *
+ * // set text offsetY
+ * text.textOffsetY(10);
+ */
+
+Factory.addGetterSetter(Text, 'textOffsetY', 0, getNumberValidator());
