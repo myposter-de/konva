@@ -213,6 +213,8 @@ export class Text extends Shape<TextConfig> {
 
   textWidth: number;
   textHeight: number;
+  _batchingTextChange = false;
+  _needsTextDataRecalc = false;
   constructor(config?: TextConfig) {
     super(checkDefaultFill(config));
     // update text data for certain attr changes
@@ -220,6 +222,27 @@ export class Text extends Shape<TextConfig> {
       this.on(ATTR_CHANGE_LIST[n] + CHANGE_KONVA, this._setTextData);
     }
     this._setTextData();
+  }
+
+  // Batch _setTextData calls when multiple attributes are set at once.
+  // Without this, each attribute change (fontSize, fontFamily, width, text, etc.)
+  // triggers a full _setTextData recalculation (~40ms for long texts).
+  setAttrs(config?: TextConfig) {
+    if (this._batchingTextChange) {
+      return super.setAttrs(config);
+    }
+    this._batchingTextChange = true;
+    this._needsTextDataRecalc = false;
+    try {
+      super.setAttrs(config);
+    } finally {
+      this._batchingTextChange = false;
+    }
+    if (this._needsTextDataRecalc) {
+      this._needsTextDataRecalc = false;
+      this._setTextData();
+    }
+    return this;
   }
 
   _sceneFunc(context: Context) {
@@ -529,6 +552,10 @@ export class Text extends Shape<TextConfig> {
     return getDummyContext().measureText(text).width + letterSpacing * length;
   }
   _setTextData() {
+    if (this._batchingTextChange) {
+      this._needsTextDataRecalc = true;
+      return;
+    }
     let lines = this.text().split('\n'),
       fontSize = +this.fontSize(),
       textWidth = 0,
@@ -566,14 +593,14 @@ export class Text extends Shape<TextConfig> {
            * use binary search to find the longest substring that
            * that would fit in the specified width
            */
+          // Convert to array once for proper emoji handling, reuse throughout
+          let lineArray = stringToArray(line);
           let low = 0,
-            high = stringToArray(line).length, // Convert to array for proper emoji handling
+            high = lineArray.length,
             match = '',
             matchWidth = 0;
           while (low < high) {
             const mid = (low + high) >>> 1,
-              // Convert array indices to string
-              lineArray = stringToArray(line),
               substr = lineArray.slice(0, mid + 1).join(''),
               substrWidth = this._getTextWidth(substr);
 
@@ -605,8 +632,7 @@ export class Text extends Shape<TextConfig> {
             // a fitting substring was found
             if (wrapAtWord) {
               // try to find a space or dash where wrapping could be done
-              const lineArray = stringToArray(line);
-              const matchArray = stringToArray(match);
+              const matchArray = lineArray.slice(0, low);
               const nextChar = lineArray[matchArray.length];
               const nextIsSpaceOrDash = nextChar === SPACE || nextChar === DASH;
 
@@ -644,8 +670,6 @@ export class Text extends Shape<TextConfig> {
               break;
             }
 
-            // Convert remaining text using array operations
-            const lineArray = stringToArray(line);
             line = lineArray.slice(low).join('').trimLeft();
 
             if (line.length > 0) {

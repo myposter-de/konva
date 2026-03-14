@@ -43,7 +43,10 @@ export declare class Text extends Shape<TextConfig> {
     _partialTextY: number;
     textWidth: number;
     textHeight: number;
+    _batchingTextChange: boolean;
+    _needsTextDataRecalc: boolean;
     constructor(config?: TextConfig);
+    setAttrs(config?: TextConfig): this;
     _sceneFunc(context: Context): void;
     _hitFunc(context: Context): void;
     setText(text: string): this;

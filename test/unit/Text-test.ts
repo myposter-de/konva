@@ -2040,4 +2040,83 @@ describe('Text', function () {
       );
     }
   });
+
+  // ======================================================
+  it('setAttrs batches _setTextData calls', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var text = new Konva.Text({
+      text: 'initial',
+      fontSize: 12,
+    });
+    layer.add(text);
+
+    // Spy on _setTextData by counting calls
+    var callCount = 0;
+    var original = text._setTextData.bind(text);
+    text._setTextData = function () {
+      callCount++;
+      return original();
+    };
+
+    // Setting 4 text-affecting attrs at once should only call _setTextData once
+    callCount = 0;
+    text.setAttrs({
+      fontSize: 24,
+      fontFamily: 'Courier',
+      text: 'hello world',
+      width: 200,
+    });
+
+    assert.equal(callCount, 1, '_setTextData should be called exactly once');
+    assert.equal(text.fontSize(), 24);
+    assert.equal(text.fontFamily(), 'Courier');
+    assert.equal(text.text(), 'hello world');
+    assert.equal(text.width(), 200);
+    // Verify text was actually recalculated (textArr should be populated)
+    assert.ok(text.textArr.length > 0, 'textArr should be populated');
+  });
+
+  // ======================================================
+  it('setAttrs resets batching flag on setter error', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var text = new Konva.Text({
+      text: 'initial',
+      fontSize: 12,
+    });
+    layer.add(text);
+
+    // Override the capitalized setter (setFontSize) that setAttrs calls
+    var originalSetFontSize = (text as any).setFontSize.bind(text);
+    (text as any).setFontSize = function (val: number) {
+      if (val === 999) {
+        throw new Error('test error');
+      }
+      return originalSetFontSize(val);
+    };
+
+    // setAttrs should not leave batching flag stuck on error
+    try {
+      text.setAttrs({ fontSize: 999 });
+    } catch (e) {
+      // expected
+    }
+
+    assert.equal(
+      text._batchingTextChange,
+      false,
+      'batching flag should be reset after error'
+    );
+
+    // Subsequent attribute changes should still trigger _setTextData
+    text.setAttrs({ fontSize: 30, text: 'after error' });
+    assert.equal(text.fontSize(), 30);
+    assert.equal(text.text(), 'after error');
+    assert.ok(text.textArr.length > 0, 'textArr should still work after error');
+  });
 });
