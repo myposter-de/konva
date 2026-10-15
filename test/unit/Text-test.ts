@@ -380,7 +380,7 @@ describe('Text', function () {
     var oldWidth = text.width();
     text.letterSpacing(10);
 
-    assert.equal(text.width(), oldWidth + 50);
+    assert.equal(text.width(), oldWidth + 40);
     layer.draw();
   });
   // ======================================================
@@ -2302,14 +2302,17 @@ describe('Text', function () {
     assert.deepEqual(stringToArray('🇺🇸👨‍👩‍👧👧🏿éa'), ['🇺🇸', '👨‍👩‍👧', '👧🏿', 'é', 'a']);
   });
 
-  it('letterSpacing adds one spacing per grapheme, like the per-character rendering does', function () {
+  it('letterSpacing adds one spacing between graphemes, none after the last', function () {
     var text = new Konva.Text({
       text: '🇺🇸🇺🇸',
       fontSize: 30,
       letterSpacing: 10,
     });
     // two flags are four UTF-16 code units but only two drawn glyphs
-    assert.equal(text.getTextWidth(), text.measureSize('🇺🇸🇺🇸').width + 2 * 10);
+    assert.equal(text.getTextWidth(), text.measureSize('🇺🇸🇺🇸').width + 10);
+
+    text.text('A');
+    assert.equal(text.getTextWidth(), text.measureSize('A').width);
   });
 
   it('measures without kerning when characters are drawn one by one', function () {

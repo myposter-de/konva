@@ -634,10 +634,10 @@ export class Text extends Shape<TextConfig> {
   }
   _getTextWidth(text: string, graphemes?: number) {
     const letterSpacing = this.letterSpacing();
-    // one spacing per grapheme, as the per-character rendering draws them
-    const spacing = letterSpacing
-      ? letterSpacing * (graphemes ?? stringToArray(text).length)
-      : 0;
+    // spacing sits between graphemes, so none trails the last one and
+    // centred or right-aligned lines align on their visible glyphs
+    const count = graphemes ?? stringToArray(text).length;
+    const spacing = letterSpacing ? letterSpacing * Math.max(0, count - 1) : 0;
     return getDummyContext().measureText(text).width + spacing;
   }
   _setTextData() {
